@@ -14,16 +14,17 @@ import {
 
 describe('Griffe', () => {
 	it('rechnet die Absenkung je Ventilkombination', () => {
-		expect(loweringOf('0')).toBe(0);
-		expect(loweringOf('2')).toBe(1);
-		expect(loweringOf('1')).toBe(2);
-		expect(loweringOf('13')).toBe(5);
-		expect(loweringOf('123')).toBe(6);
-		expect(loweringOf('')).toBeNull();
+		expect(loweringOf('0', 'valve')).toBe(0);
+		expect(loweringOf('2', 'valve')).toBe(1);
+		expect(loweringOf('1', 'valve')).toBe(2);
+		expect(loweringOf('13', 'valve')).toBe(5);
+		expect(loweringOf('123', 'valve')).toBe(6);
+		expect(loweringOf('', 'valve')).toBeNull();
+		expect(loweringOf('4', 'valve')).toBeNull();
 	});
 
 	it('behandelt 3 und 12 als gleichwertig', () => {
-		expect(loweringOf('3')).toBe(loweringOf('12'));
+		expect(loweringOf('3', 'valve')).toBe(loweringOf('12', 'valve'));
 		expect(sameFingering('3', '12', 'valve')).toBe(true);
 		expect(sameFingering('12', '3', 'valve')).toBe(true);
 		expect(sameFingering('2', '1', 'valve')).toBe(false);
@@ -31,7 +32,13 @@ describe('Griffe', () => {
 	});
 
 	it('vergleicht Zugpositionen nach Position', () => {
-		expect(loweringOf('4')).toBe(3);
+		// Zug 1 = keine Absenkung – nicht mit Ventil 1 verwechseln
+		expect(loweringOf('1', 'slide')).toBe(0);
+		expect(loweringOf('3', 'slide')).toBe(2);
+		expect(loweringOf('4', 'slide')).toBe(3);
+		expect(loweringOf('7', 'slide')).toBe(6);
+		expect(loweringOf('8', 'slide')).toBeNull();
+		expect(loweringOf('', 'slide')).toBeNull();
 		expect(sameFingering('4', '4', 'slide')).toBe(true);
 		expect(sameFingering('3', '4', 'slide')).toBe(false);
 		expect(sameFingering('x', '4', 'slide')).toBe(false);
@@ -48,12 +55,15 @@ describe('Griffe', () => {
 
 	it('Standardtabellen: jeder Ton = Naturton + Absenkung', () => {
 		for (const [midi, fing] of Object.entries(STANDARD_VALVE)) {
-			expect(isNaturalTone(+midi + (loweringOf(fing) as number)), `${midi} ${fing}`).toBe(true);
+			expect(isNaturalTone(+midi + (loweringOf(fing, 'valve') as number)), `${midi} ${fing}`).toBe(
+				true
+			);
 		}
 		for (const [midi, pos] of Object.entries(STANDARD_SLIDE)) {
-			expect(isNaturalTone(+midi + pos - 1), `${midi} Zug ${pos}`).toBe(true);
+			const lower = loweringOf(String(pos), 'slide') as number;
+			expect(isNaturalTone(+midi + lower), `${midi} Zug ${pos}`).toBe(true);
 		}
-		VALVE_BY_LOWERING.forEach((fing, i) => expect(loweringOf(fing)).toBe(i));
+		VALVE_BY_LOWERING.forEach((fing, i) => expect(loweringOf(fing, 'valve')).toBe(i));
 		expect(NATURAL_SERIES[1]).toBe(60);
 	});
 

@@ -5,15 +5,15 @@ Alles hier ist am Prototyp gemessen oder beobachtet; wo nicht, steht »ungeprüf
 ## Titel »Bad Touch 2.0«, Fassung Schuegu27
 
 - MusicXML aus Logic, MusicXML 2.0, 7 Parts: P1 Trumpet 1, P2 Trumpet 2, P3 Trombone 1, P4 Trombone 2, P5 Trombone 3, P6 Tuba, P7 SoCal (Schlagzeug).
-- Zuordnung im Produkt: P5 → **Euphonium**, P6 → **Sousaphon** – **ungeprüft**, von Matthias zu bestätigen.
+- Zuordnung im Produkt: P5 → **Euphonium**, P6 → **Sousaphon** (bestätigt von Matthias, 25.10.2026).
 - 93 Takte inkl. Vorzähler (Takt 0), durchgehend 4/4, ♩ = 115 (Tempo-Angabe ab Takt 5, gilt aber auch für Takt 0–4), nur eine Stimme pro Part, keine Dynamik im MusicXML.
 - Teile aus den Doppelstrichen: Starttakte `0,1,9,13,17,21,25,29,37,45,53,55,59,63,67,71,75,88` → Vorzähler, A–Q.
 - **Alle Stimmen sind im Violinschlüssel in B notiert** (Schweizer Guuggen-Praxis). Klang = notiert + shift:
   - Trompete: −2 (gemessen: notiert A4 klingt G4, 393,8 Hz)
   - Posaune, Euphonium in B (Violinschlüssel): −14 (gemessen an Posaune 1)
   - Sousaphon in B (Violinschlüssel): −26 (gemessen)
-- **Griffe stehen als Liedtext (lyrics)** unter den Noten: Ventile als `0`, `1`, `2`, `12`, `13`, `23`, `123`; Posaunen als Zugposition `1`–`7`. Konsistent mit Standard-Grifftabellen (geprüft für alle vorkommenden Töne). `3` und `12` sind gleichwertig (beide 3 Halbtöne tiefer).
-- **Fehlende Griffe in der MusicXML** (gefunden mit `tools/extract_notes.py` am 25.10.2026): Sousaphon (P6) Takte 17–20 und Takt 45 – 18 Noten; Trompete 2 (P2) Takt 75, Schlag 3,25 – 1 Note. Im Prototyp zeigen diese Noten keinen Griff. Entweder in Logic nachtragen oder mit `--fill-missing` aus der Standardtabelle ergänzen (dann `fing_auto: true`, in der App kennzeichnen).
+- **Griffe stehen als Liedtext (lyrics)** unter den Noten: Ventile als `0`, `1`, `2`, `12`, `13`, `23`, `123`; Posaunen als Zugposition `1`–`7`. Fast alle passen zur Naturtonreihe (automatisch geprüft in `src/lib/music/track.spec.ts`). **Ausnahme, offen bei Matthias:** Sousaphon (P6) Takte 84 und 89, je viermal notiert C5 mit Griff `1` – C5 ist offen (`0`); mit Ventil 1 ergibt sich kein Naturton. Vermutlich Tippfehler im Liedtext. Bis zur Klärung bewertet das Mithören diese Noten nicht korrekt als »falsche Stufe«. `3` und `12` sind gleichwertig (beide 3 Halbtöne tiefer).
+- **Fehlende Griffe in der MusicXML** (gefunden mit `tools/extract_notes.py` am 25.10.2026): Sousaphon (P6) Takte 17–20 und Takt 45 – 18 Noten; Trompete 2 (P2) Takt 75, Schlag 3,25 – 1 Note. Im Prototyp zeigen diese Noten keinen Griff. **Entscheid Matthias (25.10.2026): aus der Standardtabelle ergänzen** – `extract_notes.py --fill-missing`, die Tabelle deckt alle 19 Noten ab (Sousaphon notiert F4, G4, A4, C5). Die Noten tragen `fing_auto: true` und werden in der App als ergänzter Griff gekennzeichnet.
 - Teile aus Doppelstrichen: `extract_notes.py` findet alle ausser dem Ende des Vorzählers (Takt 1) – das ist kein Doppelstrich und muss pro Titel ergänzt werden.
 - Naturtonreihe in B, notiert: 48, 60, 67, 72, 76, 79, 82, 84, 86, 88 (MIDI). Für Ventil und Zug gleich, weil alles in B-Violinschlüssel notiert ist.
 
@@ -31,6 +31,7 @@ Alles hier ist am Prototyp gemessen oder beobachtet; wo nicht, steht »ungeprüf
 - Schwelle 0,15; parabolische Interpolation; RMS-Tor `max(0,006; 3 × gleitender Rauschboden)`.
 - Frequenzbereiche: Trompete 140–1100 Hz (ohne Dezimierung, Fenster ≥ 22 ms), Posaune/Euph 60–600 Hz und Sousaphon 35–300 Hz (Dezimierung 2, Analyser-Puffer 8192).
 - Bewertungsfenster pro Ton: ab Tonbeginn + min(60 ms; 30 % der Tondauer) bis Tonende − min(40 ms; 20 %). Ton »getroffen«, wenn ≥ 50 % der stimmhaften Frames innerhalb ±50 Cent liegen; »knapp« bis ±100 Cent; »falsche Stufe«, wenn der erkannte Ton + Griff-Absenkung ein Naturton ist; sonst »daneben«; ohne stimmhafte Frames »nicht gehört«.
+- **Fehler im Prototyp (gefunden 25.10.2026):** `lowerOf()` las Zugpositionen `1`–`3` wie Ventile (Zug 1 → 2 Halbtöne statt 0, Zug 3 → 3 statt 2). Dadurch war »falsche Stufe« bei der Posaune auf Zug 1 und 3 falsch. Im Produkt kennt die Absenkung die Instrumentenart (`loweringOf(fing, kind)`).
 - **Gegenprobe mit den Einzelspuren (Logic-Instrumente, nicht echte Bläser):** Trompete 1: 345/345 Töne erkannt; Posaune 1: 336/336; Sousaphon: 374/393 (95 %), 19 nicht gehört, **keiner falsch**. Synthetische Töne (Sägezahn): richtig, ±10 Cent, Naturton höher, falscher Ton korrekt klassifiziert.
 - **Ungeprüft:** echte Bläser, Handymikrofone, Hall im Probelokal, tiefe Instrumente in echt, Bluetooth-Verzögerung.
 - Verzögerung im Prototyp: Mikrofon `0,08 s + outputLatency + baseLatency`; Vorführung (eigene Spur als Spieler) 0,02 s. Muss pro Gerät abgeglichen werden.

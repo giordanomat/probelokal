@@ -86,11 +86,14 @@ export const STANDARD_SLIDE: Readonly<Record<number, number>> = {
 /**
  * Absenkung in Halbtönen: Ventilkombination nach Tabelle, Zugposition p als p − 1.
  * null, wenn kein oder ein unbekannter Griff angegeben ist.
+ *
+ * Die Art muss mit: '1' heisst Ventil 1 (2 Halbtöne) oder Zug 1 (0 Halbtöne). Der Prototyp
+ * unterschied das nicht und bewertete bei der Posaune Zug 1 und 3 falsch (gefunden 25.10.2026).
  */
-export function loweringOf(fing: string): number | null {
-	if (fing in VALVE_LOWERING) return VALVE_LOWERING[fing];
-	const pos = parseInt(fing, 10);
-	return isNaN(pos) ? null : pos - 1;
+export function loweringOf(fing: string, kind: InstrumentKind): number | null {
+	if (kind === 'valve') return fing in VALVE_LOWERING ? VALVE_LOWERING[fing] : null;
+	const pos = Number(fing);
+	return Number.isInteger(pos) && pos >= 1 && pos <= 7 ? pos - 1 : null;
 }
 
 /**
@@ -102,8 +105,8 @@ export function sameFingering(given: string, expected: string, kind: InstrumentK
 		const a = parseInt(given, 10);
 		return !isNaN(a) && a === parseInt(expected, 10);
 	}
-	const a = loweringOf(given);
-	return a !== null && a === loweringOf(expected);
+	const a = loweringOf(given, 'valve');
+	return a !== null && a === loweringOf(expected, 'valve');
 }
 
 /** Griff zum Vorlesen und für die grosse Anzeige: »offen«, »1 + 2«, »Zug 3«, »–« ohne Griff. */

@@ -1,7 +1,8 @@
 // Testtitel für M1. Später kommt dieser Datensatz aus `titles` in Supabase; bis dahin hier.
 // Werte aus docs/04-erkenntnisse-prototyp.md.
 //
-// Ungeprüft: P5 = Euphonium und P6 = Sousaphon (von Matthias zu bestätigen).
+// P5 = Euphonium, P6 = Sousaphon (bestätigt von Matthias, 25.10.2026). Noten mit --fill-missing
+// erzeugen: 19 fehlende Griffe kommen aus der Standardtabelle (docs/04).
 
 import { sectionsFromStarts } from '#lib/music/timing.ts';
 import type { Title } from '#lib/music/types.ts';

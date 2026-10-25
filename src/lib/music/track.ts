@@ -3,7 +3,7 @@
 
 import { loweringOf } from './fingering';
 import { germanName } from './notation';
-import type { Note, RawNote, Track } from './types';
+import type { InstrumentKind, Note, RawNote, Track } from './types';
 
 /** Ab dieser Pause (Schläge) zeigt die Bahn ein Atemzeichen. */
 export const BREATH_REST_BEATS = 0.75;
@@ -14,11 +14,11 @@ const EARLY = 0.02;
 const EPS = 0.001;
 
 /** Noten einer Stimme mit Namen, Absenkung, Atemzeichen, Einsätzen und Tonumfang. */
-export function buildTrack(raw: readonly RawNote[]): Track {
+export function buildTrack(raw: readonly RawNote[], kind: InstrumentKind): Track {
 	const notes: Note[] = raw.map((n) => ({
 		...n,
 		name: germanName(n.step, n.acc),
-		lower: loweringOf(n.fing)
+		lower: loweringOf(n.fing, kind)
 	}));
 	const rests: number[] = [];
 	const entries: number[] = [];

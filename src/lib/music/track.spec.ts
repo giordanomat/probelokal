@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { badTouchNotes, badTouchPart } from '../../test/badtouch';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
 import { buildTrack, isRestInBars, nextNoteIndex, noteIndexAt, noteIndicesInBars } from './track';
+import { isNaturalTone, loweringOf, standardFingering } from './fingering';
 import type { RawNote } from './types';
 
 const note = (b: number, d: number, fing = '0'): RawNote => ({
@@ -34,13 +35,40 @@ describe('Noten aus der MusicXML (Bad Touch)', () => {
 		expect(fromXml).toEqual(starts.filter((s) => s !== 1));
 	});
 
-	it('erkennt Posaunen als Zug und kennt die Lücken bei den Griffen', () => {
+	it('erkennt Posaunen als Zug', () => {
 		const parts = badTouchNotes().parts;
 		expect(parts.filter((p) => p.kind === 'slide').map((p) => p.id)).toEqual(['P3', 'P4']);
-		const missing = (id: string) => badTouchPart(id).notes.filter((x) => !x.fing).length;
-		expect(missing('P6')).toBe(18);
-		expect(missing('P2')).toBe(1);
-		expect(missing('P1')).toBe(0);
+	});
+
+	it('fehlende Griffe sind aus der Standardtabelle ergänzt und gekennzeichnet', () => {
+		const parts = badTouchNotes().parts;
+		for (const p of parts)
+			expect(
+				p.notes.every((x) => x.fing),
+				p.id
+			).toBe(true);
+		const auto = (id: string) => badTouchPart(id).notes.filter((x) => x.fing_auto);
+		expect(auto('P6')).toHaveLength(18);
+		expect(auto('P2')).toHaveLength(1);
+		expect(auto('P1')).toHaveLength(0);
+		for (const n of [...auto('P6'), ...auto('P2')]) {
+			expect(n.fing).toBe(standardFingering(n.m, 'valve'));
+		}
+	});
+
+	it('Griffe aus der MusicXML passen zur Naturtonreihe (bekannte Ausnahme ausgenommen)', () => {
+		// Sousaphon T. 84 und 89: C5 mit Griff 1, vermutlich Tippfehler – offen bei Matthias (docs/04)
+		const known = (id: string, n: RawNote) =>
+			id === 'P6' && n.m === 72 && n.fing === '1' && [84, 89].includes(Math.floor(n.b / 4));
+		const exceptions = badTouchPart('P6').notes.filter((n) => known('P6', n));
+		expect(exceptions).toHaveLength(8);
+		for (const p of badTouchNotes().parts) {
+			for (const n of p.notes) {
+				if (known(p.id, n)) continue;
+				const lower = loweringOf(n.fing, p.kind) as number;
+				expect(isNaturalTone(n.m + lower), `${p.id} b=${n.b} m=${n.m} ${n.fing}`).toBe(true);
+			}
+		}
 	});
 
 	it('jede Stimme des Titels hat einen Part mit passender Art', () => {
@@ -50,20 +78,29 @@ describe('Noten aus der MusicXML (Bad Touch)', () => {
 
 describe('Spur aufbereiten', () => {
 	it('setzt Namen und Absenkung', () => {
-		const t = buildTrack(badTouchPart('P1').notes);
+		const t = buildTrack(badTouchPart('P1').notes, 'valve');
 		expect(t.notes[0]).toMatchObject({ m: 69, name: 'A', fing: '12', lower: 3 });
 		expect(t.diaMin).toBeLessThan(t.diaMax);
+		const pos = buildTrack(badTouchPart('P3').notes, 'slide');
+		const zug1 = pos.notes.find((x) => x.fing === '1');
+		expect(zug1?.lower).toBe(0);
 	});
 
 	it('Atemzeichen ab ¾ Schlag Pause, Einsätze ab einem Schlag', () => {
-		const t = buildTrack([note(0, 1), note(1.5, 1), note(3.25, 1), note(5.25, 1)]);
+		const t = buildTrack([note(0, 1), note(1.5, 1), note(3.25, 1), note(5.25, 1)], 'valve');
 		// Lücken: 0,5 · 0,75 · 1
 		expect(t.rests).toEqual([2.5, 4.25]);
 		expect(t.entries).toEqual([0, 5.25]);
 	});
 
 	it('übersteht eine leere Stimme', () => {
-		expect(buildTrack([])).toEqual({ notes: [], rests: [], entries: [], diaMin: 0, diaMax: 0 });
+		expect(buildTrack([], 'slide')).toEqual({
+			notes: [],
+			rests: [],
+			entries: [],
+			diaMin: 0,
+			diaMax: 0
+		});
 	});
 });
 
