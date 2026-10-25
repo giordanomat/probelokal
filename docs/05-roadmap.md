@@ -5,15 +5,15 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 ## M0 · Aufsetzen  ← als Nächstes
 
 - SvelteKit-Projekt (TypeScript, ESLint, Prettier), Vitest, Playwright, GitHub Actions (Typprüfung, Lint, Tests bei jedem Push).
-- Cloudflare-Projekt mit Vorschau pro Branch; `probelokal.giordanomat.de` per CNAME bei IONOS.
+- Cloudflare-Projekt mit Vorschau pro Branch; `probelokal.giordanomat.de` als Custom Domain (DNS-Zone liegt bei Cloudflare, nicht bei IONOS – geprüft 25.10.2026).
 - Supabase-Projekt in Zürich anlegen (noch ohne Daten), Umgebungsvariablen dokumentiert in `.env.example`.
 - Befehle in `CLAUDE.md` eintragen.
 
-**Stand 25.10.2026:** Gerüst steht im Repository (Kopf, Dunkel/Hell, Manifest, Symbole, Service Worker, CI, `.env.example`); Tests grün in Chromium (Desktop, Handy-Grösse). Offen: Cloudflare-Pages-Projekt, CNAME bei IONOS, Supabase-Werte in Cloudflare, Abnahme auf echtem iPhone/iPad.
+**Stand 25.10.2026:** Gerüst steht im Repository (Kopf, Dunkel/Hell, Manifest, Symbole, Service Worker, CI, `.env.example`); Tests grün in Chromium (Desktop, Handy-Grösse). Offen: Cloudflare-Pages-Projekt, Custom Domain, Supabase-Werte in Cloudflare, Abnahme auf echtem iPhone/iPad.
 
 **Abnahme:** Leere Seite mit giordanomat-PROBELOKAL-Kopf läuft per HTTPS auf iPhone und iPad unter der Subdomain und lässt sich zum Home-Bildschirm hinzufügen.
 
-**Braucht von Matthias:** Cloudflare-Konto, Supabase-Konto, Zugang zur IONOS-DNS-Verwaltung (oder er setzt den CNAME selbst nach Anleitung).
+**Braucht von Matthias:** Cloudflare-Konto, Supabase-Konto, Zugang zur DNS-Zone giordanomat.de in Cloudflare.
 
 ## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test
 
