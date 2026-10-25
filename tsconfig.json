@@ -2,6 +2,9 @@
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"strict": true,
+		// worker-configuration.d.ts importiert den gebauten Worker (.svelte-kit/cloudflare/_worker.js);
+		// ohne das würde svelte-check nach einem Build die erzeugten JS-Dateien prüfen.
+		"checkJs": false,
 		"types": ["$app/types", "node", "./worker-configuration.d.ts"]
 	},
 	"exclude": ["src/service-worker"],
