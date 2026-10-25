@@ -32,7 +32,7 @@ Zuerst lesen, in dieser Reihenfolge:
 
 ## Befehle
 
-Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Pages). Node 22.
+Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Pages). Node 22 (`.nvmrc`, gilt auch für den Cloudflare-Build).
 
 - `npm ci` – Abhängigkeiten aus dem Lockfile (immer so, nicht `npm install`)
 - Pakete hinzufügen: `npx -y npm@11 install <paket>` – npm 10.9 bricht bei `npm install` mit »Cannot read properties of null (reading 'edgesOut')« ab. npm 11 fragt nach Freigabe für Install-Skripte (`allowScripts` in `package.json`).

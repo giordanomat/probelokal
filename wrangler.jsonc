@@ -3,5 +3,10 @@
 	"name": "probelokal",
 	"compatibility_date": "2026-10-25",
 	"compatibility_flags": ["nodejs_als"],
-	"pages_build_output_dir": ".svelte-kit/cloudflare"
+	"pages_build_output_dir": ".svelte-kit/cloudflare",
+	// Öffentliche Werte (stehen ohnehin im Browser). Geheimes nie hier, sondern als Secret.
+	"vars": {
+		"PUBLIC_SUPABASE_URL": "https://qieunfhizsxsyzmrrvci.supabase.co",
+		"PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_q_WZlDvIK9-HZ2OzNjkX1Q_OsN00E2i"
+	}
 }
