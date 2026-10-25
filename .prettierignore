@@ -16,3 +16,4 @@ bun.lockb
 /supabase/
 *.md
 /worker-configuration.d.ts
+/src/lib/sites/arrangements.html
