@@ -3,7 +3,12 @@
 	"name": "probelokal",
 	"compatibility_date": "2026-10-25",
 	"compatibility_flags": ["nodejs_als"],
-	"pages_build_output_dir": ".svelte-kit/cloudflare",
+	// Cloudflare Workers mit statischen Assets (nicht Pages). Beides erzeugt adapter-cloudflare.
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
 	// Öffentliche Werte (stehen ohnehin im Browser). Geheimes nie hier, sondern als Secret.
 	"vars": {
 		"PUBLIC_SUPABASE_URL": "https://qieunfhizsxsyzmrrvci.supabase.co",
