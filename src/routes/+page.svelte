@@ -1,3 +1,7 @@
+<script lang="ts">
+	import { resolve } from '$app/paths';
+</script>
+
 <svelte:head>
 	<title>giordanomat PROBELOKAL</title>
 	<meta
@@ -13,6 +17,7 @@
 		Bald übst du hier deine Stimme mit der Band im Ohr, siehst Griff für Griff, was dran ist, und
 		weisst, wo du im Plan deiner Guugge stehst.
 	</p>
+	<p><a class="go" href={resolve('/ueben')}>Bad Touch 2.0 auf der Bahn ansehen →</a></p>
 </section>
 
 <style>
@@ -34,5 +39,12 @@
 	p {
 		margin: 0;
 		max-width: 60ch;
+	}
+	.go {
+		display: inline-block;
+		margin-top: 6px;
+		font-weight: 700;
+		color: var(--akzent);
+		text-underline-offset: 3px;
 	}
 </style>

@@ -14,6 +14,10 @@
 	--blau: #6eacda;
 	--gruen: #3db874;
 	--akzent: #f5c242;
+	/* Tonbalken auf der Bahn: kommend, Schrift darauf, vorbei */
+	--blk: #f2efe9;
+	--blk-fg: #141619;
+	--past: #4c5057;
 	--chip-on-bg: #f2efe9;
 	--chip-on-fg: #141619;
 	--disc-ring: rgba(242, 239, 233, 0.18);
@@ -32,6 +36,9 @@
 	--grid: #ece8e0;
 	--gruen: #2e9e63;
 	--akzent: #8a6008;
+	--blk: #141619;
+	--blk-fg: #f2efe9;
+	--past: #b9b3a8;
 	--chip-on-bg: #141619;
 	--chip-on-fg: #f2efe9;
 	--disc-ring: transparent;
