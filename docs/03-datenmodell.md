@@ -18,7 +18,7 @@ Entwurf: `supabase/migrations/0001_grundmodell.sql` (ungeprüft, siehe Kopfkomme
 - Mehrere Fassungen desselben Titels (Version in `titles.version`, eigene Zeile pro Fassung).
 - Löschkonzept: Austritt aus einer Guugge, Konto löschen.
 
-## Angewendet
+## Angewendet (Stand 25.10.2026, im Supabase-Projekt `qieunfhizsxsyzmrrvci` nachgesehen)
 
-- `supabase/migrations/20261025140000_signups.sql` – Anmeldungen der Landingpage (25.10.2026, von Hand im SQL-Editor; in der CLI später mit `migration repair` als angewendet markieren).
-- `0001_grundmodell.sql` ist weiterhin nur ein Entwurf. Beim ersten Anwenden auf einen Zeitstempel-Namen umbenennen, der nach `20261025140000` liegt, sonst sortiert die CLI ihn davor.
+- `0001_grundmodell.sql` ist **bereits angewendet**, Migrationsverlauf Version `0001 grundmodell` – obwohl als ungeprüfter Entwurf markiert. Wer und womit (vermutlich `supabase db push`), ist offen. Der Security Advisor meldet dazu 8 Warnungen: `is_leitung`, `is_member`, `leaderboard`, `register_overview` sind SECURITY DEFINER und für `anon` und angemeldete Nutzer aufrufbar. Vor M2 prüfen: Ausführrecht für `anon` entziehen, Mitgliedschaft in den Funktionen selbst prüfen.
+- `20261025140000_signups.sql` – Anmeldungen der Landingpage, von Hand im SQL-Editor angewendet, **nicht** im Migrationsverlauf. In der CLI mit `supabase migration repair --status applied 20261025140000` nachtragen. Die Warnung des Advisors zu `public.signup` ist gewollt (öffentlich aufrufbar, schreibt nur).
