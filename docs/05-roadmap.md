@@ -2,20 +2,20 @@
 
 Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst, steht bei den Abnahmekriterien. Reihenfolge nicht ändern, ohne dieses Dokument nachzuziehen.
 
-## M0 · Aufsetzen  ← als Nächstes
+## M0 · Aufsetzen  ✓ abgenommen 25.10.2026
 
 - SvelteKit-Projekt (TypeScript, ESLint, Prettier), Vitest, Playwright, GitHub Actions (Typprüfung, Lint, Tests bei jedem Push).
 - Cloudflare-Projekt mit Vorschau pro Branch; `probelokal.giordanomat.de` als Custom Domain (DNS-Zone liegt bei Cloudflare, nicht bei IONOS – geprüft 25.10.2026).
 - Supabase-Projekt in Zürich anlegen (noch ohne Daten), Umgebungsvariablen dokumentiert in `.env.example`.
 - Befehle in `CLAUDE.md` eintragen.
 
-**Stand 25.10.2026:** Gerüst läuft als Cloudflare-Worker unter https://probelokal.giordanomat.workers.dev (Deploy automatisch bei Push auf `main`). Live geprüft in Chromium (Handy-Grösse): Kopf, Dunkel/Hell, Manifest, Symbole, Service Worker aktiv, lädt offline. Custom Domain https://probelokal.giordanomat.de eingerichtet, HTTPS gültig (geprüft in Chrome auf Matthias' Mac), gleiche Live-Prüfung bestanden. CI auf GitHub grün bis `main` de5178c (Lauf 13). Offen: Abnahme auf echtem iPhone/iPad (Safari, Home-Bildschirm).
+**Stand 25.10.2026:** Gerüst läuft als Cloudflare-Worker unter https://probelokal.giordanomat.workers.dev (Deploy automatisch bei Push auf `main`). Live geprüft in Chromium (Handy-Grösse): Kopf, Dunkel/Hell, Manifest, Symbole, Service Worker aktiv, lädt offline. Custom Domain https://probelokal.giordanomat.de eingerichtet, HTTPS gültig (geprüft in Chrome auf Matthias' Mac), gleiche Live-Prüfung bestanden. CI auf GitHub grün bis `main` de5178c (Lauf 13). **Abgenommen 25.10.2026:** Matthias hat die App auf iPhone und iPad in Safari geöffnet und zum Home-Bildschirm hinzugefügt. Offen geblieben: Vorschau pro Branch ist bei Workers Builds noch nicht eingeschaltet (nur `main` wird gebaut).
 
 **Abnahme:** Leere Seite mit giordanomat-PROBELOKAL-Kopf läuft per HTTPS auf iPhone und iPad unter der Subdomain und lässt sich zum Home-Bildschirm hinzufügen.
 
 **Braucht von Matthias:** Cloudflare-Konto, Supabase-Konto, Zugang zur DNS-Zone giordanomat.de in Cloudflare.
 
-## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test
+## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test  ← als Nächstes
 
 - `tools/extract_notes.py` und `tools/make_mixes.sh` für Bad Touch laufen lassen; Audio und Noten-JSON in Supabase Storage (vorerst öffentlich lesbar nur für diesen Testtitel, oder hinter einem einfachen Testzugang).
 - Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen – aus `prototype/v7` portiert, mit Tests.
