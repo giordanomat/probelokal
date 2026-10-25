@@ -1,11 +1,16 @@
 // Testtitel für M1. Später kommt dieser Datensatz aus `titles` in Supabase; bis dahin hier.
 // Werte aus docs/04-erkenntnisse-prototyp.md.
 //
-// P5 = Euphonium, P6 = Sousaphon (bestätigt von Matthias, 25.10.2026). Noten mit --fill-missing
-// erzeugen: 19 fehlende Griffe kommen aus der Standardtabelle (docs/04).
+// P5 = Euphonium, P6 = Sousaphon (bestätigt von Matthias, 25.10.2026). 19 fehlende Griffe kommen
+// aus der Standardtabelle (--fill-missing, docs/04).
 
 import { sectionsFromStarts } from '#lib/music/timing.ts';
-import type { Title } from '#lib/music/types.ts';
+import type { NotesFile, Title } from '#lib/music/types.ts';
+// Ausgabe von `npm run notes` (tools/extract_notes.py --fill-missing). Nicht von Hand ändern;
+// Quelle ist prototype/v7/badtouch.xml. Kommt ab M1-Abschluss aus Supabase Storage.
+import notes from './bad-touch.notes.json';
+
+export const BAD_TOUCH_NOTES = notes as NotesFile;
 
 const BARS = 93;
 // Teilanfänge aus den Doppelstrichen; Takt 1 (Ende Vorzähler) ist kein Doppelstrich und ergänzt.

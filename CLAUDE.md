@@ -39,7 +39,8 @@ Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Workers mit statischen Asset
 - `npm run dev` – Entwicklung auf http://localhost:5173
 - `npm run lint` – Prettier und ESLint; `npm run format` formatiert
 - `npm run check` – Typprüfung (erzeugt vorher `worker-configuration.d.ts` mit `wrangler types`; die Datei ist nicht eingecheckt)
-- `npm run test:unit -- --run` – Vitest (`src/**/*.spec.ts`); braucht `python3`, weil die Tests die Bad-Touch-Noten mit `tools/extract_notes.py` aus `prototype/v7/badtouch.xml` erzeugen (`src/test/badtouch.ts`)
+- `npm run test:unit -- --run` – Vitest (`src/**/*.spec.ts`); braucht `python3`: ein Test prüft, dass `src/lib/titles/bad-touch.notes.json` der Ausgabe von `tools/extract_notes.py` entspricht
+- `npm run notes` – Noten-JSON von Bad Touch aus `prototype/v7/badtouch.xml` neu erzeugen (nach jeder Änderung an der MusicXML)
 - `npm run test:e2e` – Playwright (`e2e/`), baut und startet die lokale Worker-Vorschau (`wrangler dev`) auf Port 4173. Playwright ist auf die hier vorinstallierte Version gepinnt; in CI installiert der Ablauf Chromium selbst.
 - `npm run build` – Build für Cloudflare nach `.svelte-kit/cloudflare` (Worker `_worker.js` + Assets)
 - `npm run icons` – App-Symbole aus dem Zeichen neu erzeugen (`tools/make_icons.mjs`)
