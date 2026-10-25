@@ -56,15 +56,9 @@ describe('Noten aus der MusicXML (Bad Touch)', () => {
 		}
 	});
 
-	it('Griffe aus der MusicXML passen zur Naturtonreihe (bekannte Ausnahme ausgenommen)', () => {
-		// Sousaphon T. 84 und 89: C5 mit Griff 1, vermutlich Tippfehler – offen bei Matthias (docs/04)
-		const known = (id: string, n: RawNote) =>
-			id === 'P6' && n.m === 72 && n.fing === '1' && [84, 89].includes(Math.floor(n.b / 4));
-		const exceptions = badTouchPart('P6').notes.filter((n) => known('P6', n));
-		expect(exceptions).toHaveLength(8);
+	it('Griffe aus der MusicXML passen zur Naturtonreihe', () => {
 		for (const p of badTouchNotes().parts) {
 			for (const n of p.notes) {
-				if (known(p.id, n)) continue;
 				const lower = loweringOf(n.fing, p.kind) as number;
 				expect(isNaturalTone(n.m + lower), `${p.id} b=${n.b} m=${n.m} ${n.fing}`).toBe(true);
 			}
