@@ -6,11 +6,11 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
 
 | Teil | Wahl | Warum |
 |---|---|---|
-| App | **SvelteKit** mit TypeScript und Vite | Wenig Laufzeit-Overhead, gut für Canvas-Bahn mit 60 fps und Audio; serverseitiges Rendern für die späteren Shop-Seiten (Suchmaschinen). Alternative Next.js wäre ebenso tragfähig; nicht mischen. |
-| Installierbar, offline | Web-App-Manifest + Service Worker (PWA) | iPhone/iPad: »Zum Home-Bildschirm«. Offline-Cache für Noten und Audio eines Stücks. |
-| Hosting | **Cloudflare** (SvelteKit-Adapter für Cloudflare) | Günstig, schnell in der Schweiz, später Cloudflare R2 für Audio ohne Ausgangsgebühren möglich. |
-| Domain | `probelokal.giordanomat.de` (später `arrangements.giordanomat.de` für den Shop) | DNS bei IONOS: CNAME auf das Cloudflare-Projekt. Genaue Schritte in IONOS beim Aufsetzen prüfen. |
-| Daten, Konten, Dateien | **Supabase**, Region **Zürich (eu-central-2)** | Postgres mit Zeilen-Zugriffsregeln (RLS), Auth, Realtime (Leitgerät, Hinweise), Storage (Audio, MusicXML), Edge Functions. Zürich als festgelegte Region verfügbar (laut Supabase-Doku, Stand 25.10.2026). |
+| App | **SvelteKit 3** (Svelte 5, Vite 8) mit TypeScript | Wenig Laufzeit-Overhead, gut für Canvas-Bahn mit 60 fps und Audio; serverseitiges Rendern für die späteren Shop-Seiten (Suchmaschinen). Alternative Next.js wäre ebenso tragfähig; nicht mischen. |
+| Installierbar, offline | Web-App-Manifest + eingebauter SvelteKit-Service-Worker (`src/service-worker/`), kein PWA-Plugin | iPhone/iPad: »Zum Home-Bildschirm«. Offline-Cache für Noten und Audio eines Stücks (ab M1). `@vite-pwa/sveltekit` unterstützt SvelteKit 3 nicht (Stand 25.10.2026, verlangt Kit 1/2). |
+| Hosting | **Cloudflare Pages** (`@sveltejs/adapter-cloudflare`, Ausgabe `.svelte-kit/cloudflare`), Git-Anbindung an GitHub: `main` = Produktion, andere Branches = Vorschau | Günstig, schnell in der Schweiz, später Cloudflare R2 für Audio ohne Ausgangsgebühren möglich. **Pages statt Workers**, weil die Domain bei IONOS bleibt: Pages erlaubt eine eigene Subdomain per CNAME, Workers-Domains verlangen, dass die ganze Zone bei Cloudflare liegt. Cloudflare empfiehlt für neue Projekte inzwischen Workers; ein späterer Umzug ist möglich, wenn die DNS-Zone zu Cloudflare wechselt. |
+| Domain | `probelokal.giordanomat.de` (später `arrangements.giordanomat.de` für den Shop) | DNS bei IONOS: CNAME `probelokal` → `<projekt>.pages.dev`. Zuerst die Domain im Pages-Projekt eintragen, dann den CNAME setzen. Ungeprüft, bis es läuft. |
+| Daten, Konten, Dateien | **Supabase**, Region **Zürich (eu-central-2)**, **ein Projekt für Shop und Probelokal** (Empfehlung; Bestätigung durch Matthias offen) – Lizenzen, Konten und Guuggen hängen zusammen, getrennte Projekte hiessen doppelte Konten | Postgres mit Zeilen-Zugriffsregeln (RLS), Auth, Realtime (Leitgerät, Hinweise), Storage (Audio, MusicXML), Edge Functions. Zürich als festgelegte Region verfügbar (laut Supabase-Doku, Stand 25.10.2026). |
 | Zahlungen | Stripe Checkout, CHF, TWINT | Erst Meilenstein M5. Voraussetzungen von TWINT bei Stripe dann aktuell prüfen. |
 | KI-Dirigent | Anthropic API über eine Supabase Edge Function | Schlüssel nie im Browser; Kostenlimit pro Guugge und Tag; Antworten kurz. |
 | Noten anzeigen | OpenSheetMusicDisplay | Wie im Prototyp; Farben für dunkle Darstellung setzen. |
@@ -33,6 +33,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
 - **Punkte nur serverseitig:** Der Browser meldet ein Prüfungs- oder Durchgangsergebnis an eine Edge Function. Diese prüft Plausibilität (Dauer seit Start ≥ Dauer des Teils beim gewählten Tempo, Anzahl bewerteter Töne = Töne des Teils, Tageslimits, Reihenfolge der Etappen) und schreibt Ergebnis und Punkte. Clients haben keine Schreibrechte auf `points_ledger` und `exam_results`.
   - **Ehrlich:** Weil die Tonerkennung im Browser läuft, lässt sich Betrug nicht ausschliessen, nur erschweren. Für eine freiwillige Rangliste unter Bekannten reicht das; keine Geldpreise an Ranglisten koppeln.
 - Kein Audio verlässt das Gerät. Keine Aufnahmen speichern.
+- Zugangsdaten: Im Browser nur Projekt-URL und publishable key (`.env.example`). Secret key, Datenbank-Passwort und Zugangstoken nie im Repository, nie im Chat; für Migrationen aus GitHub Actions als Repository-Secrets (setzt Matthias). Der Claude-Supabase-Connector hängt an der Organisation »Skim« und wird für Probelokal nicht benutzt.
 - Auth: E-Mail-Link (magic link) als Start; Einladung in eine Guugge per Link mit Rolle.
 - Audiodateien im Storage nur für Guuggen mit Lizenz für diese Fassung lesbar (signierte URLs).
 
@@ -50,7 +51,13 @@ src/
     plan/         Planerzeugung, Fälligkeiten, Stand
     game/         Ränge, Belohnungen (Anzeige; Punkte kommen vom Server)
     supabase/     Client, Typen
+    theme/        Darstellung Dunkel/Hell
+    brand/        Zeichen und Lockup
+    styles/       Farben, Schriften
   routes/         SvelteKit-Seiten
+  service-worker/ Offline-Cache (eigenes tsconfig)
+  env.ts          Umgebungsvariablen (SvelteKit 3)
+e2e/              Playwright-Abläufe
 supabase/
   migrations/     SQL
   functions/      Edge Functions (exam-result, pass-result, dirigent-ask, stripe-webhook)

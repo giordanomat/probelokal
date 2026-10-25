@@ -32,7 +32,21 @@ Zuerst lesen, in dieser Reihenfolge:
 
 ## Befehle
 
-Werden beim Aufsetzen (Meilenstein M0) ergänzt: Entwicklung, Tests, Build, Deploy, Supabase-Migrationen.
+Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Pages). Node 22.
+
+- `npm ci` – Abhängigkeiten aus dem Lockfile (immer so, nicht `npm install`)
+- Pakete hinzufügen: `npx -y npm@11 install <paket>` – npm 10.9 bricht bei `npm install` mit »Cannot read properties of null (reading 'edgesOut')« ab. npm 11 fragt nach Freigabe für Install-Skripte (`allowScripts` in `package.json`).
+- `npm run dev` – Entwicklung auf http://localhost:5173
+- `npm run lint` – Prettier und ESLint; `npm run format` formatiert
+- `npm run check` – Typprüfung (erzeugt vorher `worker-configuration.d.ts` mit `wrangler types`; die Datei ist nicht eingecheckt)
+- `npm run test:unit -- --run` – Vitest (`src/**/*.spec.ts`)
+- `npm run test:e2e` – Playwright (`e2e/`), baut und startet die Cloudflare-Vorschau auf Port 4173. Playwright ist auf die hier vorinstallierte Version gepinnt; in CI installiert der Ablauf Chromium selbst.
+- `npm run build` – Build für Cloudflare Pages nach `.svelte-kit/cloudflare`
+- `npm run icons` – App-Symbole aus dem Zeichen neu erzeugen (`tools/make_icons.mjs`)
+- Deploy: automatisch durch Cloudflare Pages bei jedem Push (Produktion = `main`, Vorschau = andere Branches). Kein Deploy aus CI.
+- Supabase-Migrationen: noch nicht eingerichtet (M2). Geplant: Supabase CLI in GitHub Actions mit Secrets, nicht über den Claude-Connector.
+
+SvelteKit-3-Eigenheiten: Alias `#lib/…` statt `$lib`; Umgebungsvariablen in `src/env.ts` definieren und über `$app/env/public` lesen; Service Worker in `src/service-worker/` mit eigenem `tsconfig.json`.
 
 ## Werkzeuge in `tools/`
 
@@ -41,3 +55,4 @@ Werden beim Aufsetzen (Meilenstein M0) ergänzt: Entwicklung, Tests, Build, Depl
 - `make_mixes.sh` – Minus-One-Mischungen pro Stimme und Gesamtmischung
 - `detect_eval.py` – prüft die Tonerkennung gegen die erwarteten Noten (Qualitätsprüfung pro Titel)
 - `rangeserver.js` – kleiner Server mit HTTP-Range für lokale Audio-Tests
+- `make_icons.mjs` – App-Symbole (Home-Bildschirm, Favicon) aus dem giordanomat-Zeichen

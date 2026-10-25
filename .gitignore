@@ -28,3 +28,6 @@ supabase/.branches/
 # System
 .DS_Store
 Thumbs.db
+
+# Von »wrangler types« erzeugt (bei build/check)
+/worker-configuration.d.ts

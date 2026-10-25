@@ -1,0 +1,35 @@
+# Prüfung bei jedem Push und Pull Request: Format/Lint, Typen, Unit-Tests, Build, Abläufe im Browser.
+# Das Veröffentlichen übernimmt Cloudflare Pages selbst (Git-Anbindung), nicht dieser Ablauf.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check
+      - run: npm run test:unit -- --run
+      - run: npx playwright install --with-deps chromium
+      # baut die App im webServer-Schritt von playwright.config.ts
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-ergebnisse
+          path: test-results/
+          retention-days: 7

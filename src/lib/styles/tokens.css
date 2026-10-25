@@ -1,0 +1,67 @@
+/* Farben und Schriften von giordanomat PROBELOKAL. Werte aus prototype/v7 übernommen.
+   Dunkel ist Standard; hell über data-theme="light" am <html> (siehe src/lib/theme). */
+
+:root {
+	--bg: #141619;
+	--surface: #1d2024;
+	--surface2: #191c1f;
+	--ink: #f2efe9;
+	--muted: #a39f97;
+	--line: #33373d;
+	--grid: #262a2f;
+	--gelb: #f5c242;
+	--rot: #e0473c;
+	--blau: #6eacda;
+	--gruen: #3db874;
+	--akzent: #f5c242;
+	--chip-on-bg: #f2efe9;
+	--chip-on-fg: #141619;
+	--disc-ring: rgba(242, 239, 233, 0.18);
+	--font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+	color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+	--bg: #f2efe9;
+	--surface: #ffffff;
+	--surface2: #f7f5f0;
+	--ink: #141619;
+	--muted: #5a5751;
+	--line: #ddd8ce;
+	--grid: #ece8e0;
+	--gruen: #2e9e63;
+	--akzent: #8a6008;
+	--chip-on-bg: #141619;
+	--chip-on-fg: #f2efe9;
+	--disc-ring: transparent;
+	color-scheme: light;
+}
+
+html,
+body {
+	background: var(--bg);
+	color: var(--ink);
+}
+
+body {
+	margin: 0;
+	font-family: var(--font-body);
+	font-size: 15px;
+	line-height: 1.5;
+	-webkit-text-size-adjust: 100%;
+}
+
+.label {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--muted);
+	margin: 0;
+}
+
+:focus-visible {
+	outline: 2px solid var(--blau);
+	outline-offset: 2px;
+}
