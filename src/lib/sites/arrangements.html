@@ -521,10 +521,10 @@ html:not(.js) .legal:target,.legal.open{display:block}
     <h3>Was diese Seite nicht tut</h3>
     <p>Diese Seite setzt keine Cookies, nutzt kein Tracking und keine Analyse-Werkzeuge und speichert nichts in deinem Browser. Schriften und die 3D-Grafik werden mit der Seite selbst ausgeliefert; es werden keine Inhalte von Drittanbietern geladen. Die Hörprobe wird in deinem Browser erzeugt und nirgends hin übertragen.</p>
     <h3>Hosting und Server-Protokolle</h3>
-    <p>Die Seite liegt bei <span class="todo">HOSTER EINSETZEN</span>. Beim Aufruf verarbeitet der Server technisch notwendige Daten (IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, Browser-Kennung), um die Seite auszuliefern und abzusichern. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Die Protokolle werden nach <span class="todo">X</span> Tagen gelöscht. Mit dem Hoster besteht ein Vertrag zur Auftragsverarbeitung.</p>
+    <p>Die Seite liegt bei Cloudflare (Cloudflare, Inc.). Beim Aufruf verarbeitet der Server technisch notwendige Daten (IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, Browser-Kennung), um die Seite auszuliefern und abzusichern. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Die Protokolle werden nach <span class="todo">X</span> Tagen gelöscht. Mit dem Hoster besteht ein Vertrag zur Auftragsverarbeitung.</p>
     <h3>Benachrichtigung zum Start</h3>
     <p>Wenn du dich einträgst, speichern wir deine E-Mail-Adresse, den Zeitpunkt der Eintragung und deine Einwilligung, um dir Bescheid zu geben, sobald es losgeht. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit widerrufen, per Mail an <a href="mailto:arrangements@giordanomat.de">arrangements@giordanomat.de</a> oder über den Abmeldelink in jeder Mail. Nach dem Widerruf löschen wir deine Adresse.</p>
-    <p>Die Eintragungen speichern wir bei Supabase (Supabase Inc.) als Auftragsverarbeiter, auf Servern in der EU. <span class="todo">REGION, AV-VERTRAG UND GRUNDLAGE FÜR EINE MÖGLICHE ÜBERMITTLUNG IN DIE USA PRÜFEN UND EINTRAGEN</span></p>
+    <p>Die Eintragungen speichern wir bei Supabase (Supabase Inc.) als Auftragsverarbeiter, auf Servern in Zürich (Schweiz). Für die Schweiz gilt ein Angemessenheitsbeschluss der EU-Kommission. <span class="todo">AV-VERTRAG MIT SUPABASE ABSCHLIESSEN UND GRUNDLAGE FÜR EINEN MÖGLICHEN ZUGRIFF AUS DEN USA EINTRAGEN</span></p>
     <p><span class="todo">ERST VERÖFFENTLICHEN, WENN DOUBLE-OPT-IN GEBAUT IST: »Nach dem Eintragen bekommst du eine Mail mit einem Bestätigungslink. Erst nach der Bestätigung schreiben wir dir.«</span></p>
     <h3>Kontakt per E-Mail</h3>
     <p>Wenn du uns schreibst, verarbeiten wir deine Nachricht und Adresse, um zu antworten (Art. 6 Abs. 1 lit. b und f DSGVO), und löschen sie, wenn sie nicht mehr gebraucht werden.</p>
@@ -745,11 +745,12 @@ html:not(.js) .legal:target,.legal.open{display:block}
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeLegal(false); });
   if (location.hash === '#impressum' || location.hash === '#datenschutz') openLegal(location.hash.slice(1), false);
 
-  // Anmeldung: speichert in Supabase (Tabelle public.signups, nur Einfügen erlaubt).
+  // Anmeldung: speichert in Supabase über die Funktion public.signup (siehe
+  // supabase/migrations/20261025140000_signups.sql). Doppelte Adressen werden still übergangen.
   // Solange SUPABASE_URL leer ist, wird nichts gespeichert: die Seite öffnet dann nur eine vorbereitete Mail.
-  var SUPABASE_URL = '';
-  var SUPABASE_PUBLISHABLE_KEY = '';
-  var FORM_ENDPOINT = SUPABASE_URL ? SUPABASE_URL + '/rest/v1/signups' : '';
+  var SUPABASE_URL = 'https://qieunfhizsxsyzmrrvci.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_q_WZlDvIK9-HZ2OzNjkX1Q_OsN00E2i';
+  var FORM_ENDPOINT = SUPABASE_URL ? SUPABASE_URL + '/rest/v1/rpc/signup' : '';
   var MAIL_TO = 'arrangements@giordanomat.de';
   document.querySelectorAll('form[data-signup]').forEach(function(f){
     var msg = f.querySelector('.msg'), btn = f.querySelector('button');
@@ -766,9 +767,9 @@ html:not(.js) .legal:target,.legal.open{display:block}
         return;
       }
       btn.disabled = true; say('Einen Moment …');
-      fetch(FORM_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer ' + SUPABASE_PUBLISHABLE_KEY,'Prefer':'return=minimal'}, body: JSON.stringify({email: email.toLowerCase(), consent: true, source: location.hostname})})
+      fetch(FORM_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer ' + SUPABASE_PUBLISHABLE_KEY,}, body: JSON.stringify({p_email: email.toLowerCase(), p_consent: true, p_source: location.hostname})})
         .then(function(r){
-          if (!r.ok && r.status !== 409) throw new Error(r.status);
+          if (!r.ok) throw new Error(r.status);
           f.reset(); say('Danke. Du bekommst Bescheid, sobald es losgeht.');
           var b = btn.getBoundingClientRect(); raeppli(b.left + b.width / 2, b.top + b.height / 2);
         })

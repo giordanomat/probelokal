@@ -17,3 +17,8 @@ Entwurf: `supabase/migrations/0001_grundmodell.sql` (ungeprüft, siehe Kopfkomme
 - Ob Baustellen (heute nur lokal) serverseitig gespeichert werden sollen – Vorschlag: nein, bleiben auf dem Gerät.
 - Mehrere Fassungen desselben Titels (Version in `titles.version`, eigene Zeile pro Fassung).
 - Löschkonzept: Austritt aus einer Guugge, Konto löschen.
+
+## Angewendet
+
+- `supabase/migrations/20261025140000_signups.sql` – Anmeldungen der Landingpage (25.10.2026, von Hand im SQL-Editor; in der CLI später mit `migration repair` als angewendet markieren).
+- `0001_grundmodell.sql` ist weiterhin nur ein Entwurf. Beim ersten Anwenden auf einen Zeitstempel-Namen umbenennen, der nach `20261025140000` liegt, sonst sortiert die CLI ihn davor.
