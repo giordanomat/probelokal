@@ -39,14 +39,14 @@ Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Workers mit statischen Asset
 - `npm run dev` – Entwicklung auf http://localhost:5173
 - `npm run lint` – Prettier und ESLint; `npm run format` formatiert
 - `npm run check` – Typprüfung (erzeugt vorher `worker-configuration.d.ts` mit `wrangler types`; die Datei ist nicht eingecheckt)
-- `npm run test:unit -- --run` – Vitest (`src/**/*.spec.ts`)
+- `npm run test:unit -- --run` – Vitest (`src/**/*.spec.ts`); braucht `python3`, weil die Tests die Bad-Touch-Noten mit `tools/extract_notes.py` aus `prototype/v7/badtouch.xml` erzeugen (`src/test/badtouch.ts`)
 - `npm run test:e2e` – Playwright (`e2e/`), baut und startet die lokale Worker-Vorschau (`wrangler dev`) auf Port 4173. Playwright ist auf die hier vorinstallierte Version gepinnt; in CI installiert der Ablauf Chromium selbst.
 - `npm run build` – Build für Cloudflare nach `.svelte-kit/cloudflare` (Worker `_worker.js` + Assets)
 - `npm run icons` – App-Symbole aus dem Zeichen neu erzeugen (`tools/make_icons.mjs`)
 - Deploy: automatisch durch Cloudflare Workers Builds bei jedem Push auf `main` (Build `npm run build`, Deploy `npx wrangler deploy`). Kein Deploy aus CI. Prüfen ohne Hochladen: `npx wrangler deploy --dry-run`.
 - Supabase-Migrationen: noch nicht eingerichtet (M2). Geplant: Supabase CLI in GitHub Actions mit Secrets, nicht über den Claude-Connector.
 
-SvelteKit-3-Eigenheiten: Alias `#lib/…` statt `$lib`; Umgebungsvariablen in `src/env.ts` definieren und über `$app/env/public` lesen; Service Worker in `src/service-worker/` mit eigenem `tsconfig.json`.
+SvelteKit-3-Eigenheiten: Alias `#lib/…` statt `$lib`, immer mit Dateiendung (`#lib/music/timing.ts`, sonst findet TypeScript das Modul nicht); Umgebungsvariablen in `src/env.ts` definieren und über `$app/env/public` lesen; Service Worker in `src/service-worker/` mit eigenem `tsconfig.json`.
 
 ## Werkzeuge in `tools/`
 

@@ -19,7 +19,7 @@ Alles hier ist am Prototyp gemessen oder beobachtet; wo nicht, steht »ungeprüf
 
 ## Audio
 
-- **Die Einzelspuren beginnen 6,237 s (= 3 Takte bei ♩ 115) vor Takt 0 des Tutti-Bounce.** Gemessen per Kreuzkorrelation der Summe aller Einzelspuren gegen den Tutti-Bounce an 10/60/120/180 s, konstant, keine Drift. Im Prototyp gilt deshalb für alle Mischungen `OFF = 6,237 s` vor Takt 0.
+- **Die Einzelspuren beginnen 6,237 s vor Takt 0 des Tutti-Bounce.** Gemessen per Kreuzkorrelation der Summe aller Einzelspuren gegen den Tutti-Bounce an 10/60/120/180 s, konstant, keine Drift. Im Prototyp gilt deshalb für alle Mischungen `OFF = 6,237 s` vor Takt 0. Das sind knapp 3 Takte: genau 3 Takte bei ♩ 115 wären 6,261 s (24 ms mehr, aufgefallen beim Test am 25.10.2026). Massgebend ist der gemessene Wert; ob die Bahn damit hörbar zu früh oder zu spät läuft, beim Gerätetest in M1 prüfen.
 - **Export-Regel für alle weiteren Titel:** Einzelspuren und Tutti ab demselben Startpunkt exportieren; Vorzähler mit Klick mitexportieren. Dann entfällt die Messung (sie bleibt als Prüfung in `tools/measure_offset.py`).
 - Minus-One-Mischungen per ffmpeg `amix=inputs=N:normalize=0,alimiter=limit=0.95`, MP3 128 kbit/s. Längen: Gesamtmischung 204,4 s, Einzelspuren 200,7 s (Schlagzeug länger) – unkritisch, Start gleich.
 - Die alten »Übungsfiles« (Fokus-Mischungen vom Juni) liefen bei ♩ ≈ 110 und passten nicht zur MusicXML; nicht mehr verwendet.
