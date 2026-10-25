@@ -1,0 +1,30 @@
+# Abhängigkeiten und Builds
+node_modules/
+.svelte-kit/
+build/
+dist/
+.wrangler/
+.vercel/
+coverage/
+playwright-report/
+test-results/
+
+# Umgebungen und Schlüssel
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+
+# Audio gehört in den Storage, nie ins Repository
+*.mp3
+*.wav
+*.aif
+*.aiff
+*.m4a
+*.flac
+*.ogg
+
+# System
+.DS_Store
+Thumbs.db
