@@ -58,7 +58,7 @@ Zwei bis drei Wochen mit einem echten Gesamtplan. Fragen: Nutzen sie Echo/Etappe
 ## M5 · Shop
 
 - `arrangements.giordanomat.de`: Katalog, Hörproben, Kauf über Stripe Checkout (CHF, TWINT), Lizenz pro Guugge.
-- Bis dahin: vorläufige Landingpage aus einem separaten claude.ai-Chat, als fertige HTML-Datei in `src/lib/sites/arrangements.html`, ausgeliefert über `src/hooks.server.ts` für den Hostnamen `arrangements.*`. Quelle (`index.src.html`, `build.py`) fehlt im Repository. Offen vor dem Bekanntmachen: gelb markierte Lücken im Impressum und in der Datenschutzerklärung; Anmeldeformular erst mit Double-Opt-in an Supabase anschliessen (bis dahin öffnet es nur eine Mail).
+- Bis dahin: vorläufige Landingpage (live unter https://arrangements.giordanomat.de seit 25.10.2026) aus einem separaten claude.ai-Chat, als fertige HTML-Datei in `src/lib/sites/arrangements.html`, ausgeliefert über `src/hooks.server.ts` für den Hostnamen `arrangements.*`. Quelle (`index.src.html`, `build.py`) fehlt im Repository. Offen vor dem Bekanntmachen: gelb markierte Lücken im Impressum und in der Datenschutzerklärung; Anmeldeformular erst mit Double-Opt-in an Supabase anschliessen (bis dahin öffnet es nur eine Mail).
 - Rechnungen, Impressum, AGB, Datenschutz (Inhalte von Matthias).
 
 ## M6 · Produktionsstrecke und weitere Titel
