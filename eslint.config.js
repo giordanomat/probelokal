@@ -11,7 +11,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
 	// Referenz-Prototyp und Hilfsskripte gehören nicht zur App
-	{ ignores: ['prototype/**', 'tools/rangeserver.js', 'worker-configuration.d.ts'] },
+	{ ignores: ['prototype/**', 'tools/rangeserver.js', 'worker-configuration.d.ts', 'sites/**'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

@@ -1,0 +1,15 @@
+{
+  "name": "arrangements-landing",
+  "private": true,
+  "description": "Vorläufige Landingpage arrangements.giordanomat.de (Quelle). Ergebnis: src/lib/sites/arrangements.html",
+  "scripts": {
+    "scene": "esbuild scene/entry.js --bundle --minify --format=iife --define:DEBUG=false --outfile=scene/orch.js --tsconfig-raw={}",
+    "build": "npm run scene && python3 build.py"
+  },
+  "dependencies": {
+    "@fontsource/figtree": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "esbuild": "0.28.2",
+    "three": "0.186.1"
+  }
+}

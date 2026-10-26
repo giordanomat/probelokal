@@ -1,8 +1,8 @@
 import type { Handle } from '@sveltejs/kit/hooks';
 import { siteForHost } from './lib/sites/host';
 // Vorläufige Landingpage für arrangements.giordanomat.de: eine fertige HTML-Datei
-// (Schriften eingebettet, keine fremden Ressourcen). Erstellt in einem separaten claude.ai-Chat;
-// die Quelle (index.src.html + build.py) liegt noch nicht im Repository. Wird in M5 durch den Shop ersetzt.
+// (Schriften eingebettet, keine fremden Ressourcen). Quelle und Bauanleitung: sites/arrangements/.
+// Wird in M5 durch den Shop ersetzt.
 import arrangementsLanding from './lib/sites/arrangements.html?raw';
 
 export const handle: Handle = async ({ event, resolve }) => {

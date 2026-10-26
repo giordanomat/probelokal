@@ -44,7 +44,8 @@ Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Workers mit statischen Asset
 - `npm run build` – Build für Cloudflare nach `.svelte-kit/cloudflare` (Worker `_worker.js` + Assets)
 - `npm run icons` – App-Symbole aus dem Zeichen neu erzeugen (`tools/make_icons.mjs`)
 - Deploy: automatisch durch Cloudflare Workers Builds bei jedem Push auf `main` (Build `npm run build`, Deploy `npx wrangler deploy`). Kein Deploy aus CI. Prüfen ohne Hochladen: `npx wrangler deploy --dry-run`.
-- Supabase-Migrationen: noch nicht eingerichtet (M2). Geplant: Supabase CLI in GitHub Actions mit Secrets, nicht über den Claude-Connector.
+- Supabase-Migrationen: Die Supabase-GitHub-Integration ist aktiv (»Deploy to production«, Branch `main`) und wendet bei jedem Push auf `main` neue Dateien aus `supabase/migrations/` auf die Produktionsdatenbank an. Keine Vorschau-Branches (Free-Plan). **Stand 26.10.2026: Die Läufe scheitern seit dem 25.10. 15:00** mit »relation "signups" already exists«, weil `20261025140000_signups` und `20261025180000_anon_sperren` von Hand angewendet, aber nicht in `supabase_migrations.schema_migrations` eingetragen wurden (dort steht nur `0001`). Erst als angewendet markieren (`supabase migration repair --status applied 20261025140000 20261025180000`), danach Migrationen nicht mehr von Hand anwenden. Nicht über den Claude-Connector.
+- Landingpage arrangements.giordanomat.de: Quelle in `sites/arrangements/`, dort `npm ci && npm run build` (schreibt `src/lib/sites/arrangements.html`)
 
 SvelteKit-3-Eigenheiten: Alias `#lib/…` statt `$lib`; Umgebungsvariablen in `src/env.ts` definieren und über `$app/env/public` lesen; Service Worker in `src/service-worker/` mit eigenem `tsconfig.json`.
 
