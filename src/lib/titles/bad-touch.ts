@@ -86,7 +86,7 @@ export const BAD_TOUCH: Title = {
 			register: 'tief'
 		}
 	],
-	// Einzelspuren beginnen 6,237 s vor Takt 0, per Kreuzkorrelation gemessen. Knapp 3 Takte –
-	// genau 3 Takte wären 6,261 s; massgebend ist die Messung (docs/04).
-	stem_offset_sec: 6.237
+	// Einzelspuren beginnen genau 3 Takte vor Takt 0 (am ersten Einsatz gemessen, docs/04).
+	// Die früheren 6,237 s kamen vom MP3-Vorlauf des Tutti-Bounce.
+	stem_offset_sec: (3 * 4 * 60) / 115
 };

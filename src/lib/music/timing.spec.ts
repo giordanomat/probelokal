@@ -10,15 +10,14 @@ import {
 	wallSeconds
 } from './timing';
 
-describe('Takt und Zeit (Bad Touch, ♩ 115, Versatz 6,237 s)', () => {
-	it('Versatz ist knapp drei Takte (gemessen, nicht gerechnet)', () => {
-		const bars = BAD_TOUCH.stem_offset_sec / (4 * secondsPerBeat(BAD_TOUCH));
-		expect(bars).toBeGreaterThan(2.98);
-		expect(bars).toBeLessThan(3);
+describe('Takt und Zeit (Bad Touch, ♩ 115, Versatz 3 Takte)', () => {
+	it('Versatz ist genau drei Takte (am ersten Einsatz gemessen, docs/04)', () => {
+		expect(BAD_TOUCH.stem_offset_sec).toBeCloseTo(6.261, 3);
+		expect(BAD_TOUCH.stem_offset_sec / (4 * secondsPerBeat(BAD_TOUCH))).toBeCloseTo(3, 9);
 	});
 
 	it('rechnet Takt ↔ Zeit hin und zurück', () => {
-		expect(timeForBar(BAD_TOUCH, 0)).toBeCloseTo(6.237);
+		expect(timeForBar(BAD_TOUCH, 0)).toBeCloseTo(6.261, 3);
 		const t = timeForBar(BAD_TOUCH, 9);
 		expect(beatAtTime(BAD_TOUCH, t)).toBeCloseTo(36);
 		expect(timeForBar(BAD_TOUCH, -10)).toBe(0);
