@@ -17,7 +17,7 @@ Ablage der Quellen: Google Drive, Projektordner »Arrangements und Musikservice�
 | Versatz prüfen | `tools/measure_offset.py tutti.wav stems/*.wav` | Versatz Einzelspuren ↔ Tutti; soll 0 sein (sonst in `titles.stem_offset_sec`) |
 | Mischungen | `tools/make_mixes.sh stems/ out/` | `minus_<stimme>.mp3`, `all.mp3`, Einzelspuren als MP3 |
 | Qualitätsprüfung | `tools/detect_eval.py` (anpassen auf Titelparameter) | Erkennungsquote pro Stimme; Ziel ≥ 95 % ohne falsch erkannte Töne |
-| Hochladen | Supabase Storage (M6: Skript) | Dateien unter `titles/<slug>/<fassung>/…` |
+| Hochladen | Supabase Storage (M6: Skript) | Privater Bucket `titles`, Dateien unter `<slug>/<fassung>/…` (Fassung klein geschrieben, z. B. `bad-touch-2-0/schuegu27/minus_trp1.mp3`) |
 | Titel anlegen | SQL/Admin-Seite | Zeile in `titles`, `title_assets` |
 
 ## Prüfen vor Freigabe

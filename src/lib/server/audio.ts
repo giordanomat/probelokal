@@ -1,0 +1,55 @@
+// Audio des Testtitels aus dem privaten Storage-Bucket: Pfad prüfen, signierte Adresse holen.
+// Ablage wie in docs/06-produktionsstrecke.md: Bucket `titles`, Pfad <slug>/<fassung>/<datei>.
+// Dateien je Stimme: minus_<id>.mp3 (Band ohne mich), <id>.mp3 (eigene Stimme), dazu all.mp3.
+
+import { createClient } from '@supabase/supabase-js';
+import type { Title } from '../music/types';
+
+export const AUDIO_BUCKET = 'titles';
+/** Gültigkeit der signierten Adresse. Lang genug für eine Übe-Sitzung mit Springen. */
+export const SIGNED_URL_SECONDS = 6 * 60 * 60;
+
+/** Erlaubte Dateinamen eines Titels; alles andere ist 404 (kein freies Durchreichen von Pfaden). */
+export function audioFiles(title: Pick<Title, 'voices'>): Set<string> {
+	const files = new Set(['all.mp3']);
+	for (const v of title.voices) {
+		files.add(`minus_${v.id}.mp3`);
+		files.add(`${v.id}.mp3`);
+	}
+	return files;
+}
+
+/** Storage-Pfad, oder null wenn Titel, Fassung oder Datei nicht passen. */
+export function audioPath(
+	title: Pick<Title, 'slug' | 'version' | 'voices'>,
+	slug: string,
+	version: string,
+	file: string
+): string | null {
+	if (slug !== title.slug || version.toLowerCase() !== title.version.toLowerCase()) return null;
+	if (!audioFiles(title).has(file)) return null;
+	return `${title.slug}/${title.version.toLowerCase()}/${file}`;
+}
+
+export interface StorageAccess {
+	url: string;
+	secretKey: string;
+	fetch?: typeof fetch;
+}
+
+/**
+ * Signierte, zeitlich begrenzte Adresse für eine Datei im privaten Bucket.
+ * Ungeprüft gegen das echte Projekt (braucht Bucket und Secret) – prüfen nach dem ersten Upload.
+ */
+export async function signedAudioUrl(access: StorageAccess, path: string): Promise<string> {
+	const supabase = createClient(access.url, access.secretKey, {
+		auth: { persistSession: false, autoRefreshToken: false },
+		global: access.fetch ? { fetch: access.fetch } : undefined
+	});
+	const { data, error } = await supabase.storage
+		.from(AUDIO_BUCKET)
+		.createSignedUrl(path, SIGNED_URL_SECONDS);
+	if (error || !data?.signedUrl)
+		throw new Error('Signieren fehlgeschlagen: ' + (error?.message ?? 'leer'));
+	return data.signedUrl;
+}

@@ -8,7 +8,12 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [['github'], ['list']] : 'list',
-	webServer: { command: 'npm run build && npm run preview', port: 4173, timeout: 180_000 },
+	// Testzugang mit festem Code für die Abläufe; ohne Supabase-Schlüssel (Audio antwortet dann 503).
+	webServer: {
+		command: 'npm run build && npm run preview -- --var TEST_ACCESS_CODE:e2e-zugang',
+		port: 4173,
+		timeout: 180_000
+	},
 	use: { baseURL: 'http://localhost:4173' },
 	projects: [
 		{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
