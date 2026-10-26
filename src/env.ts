@@ -23,6 +23,11 @@ export const variables = defineEnvVars({
 		description:
 			'Supabase secret key (sb_secret_…), nur für signierte Audio-Adressen. Nie ins Repository.'
 	},
+	CANONICAL_HOST: {
+		schema: optional,
+		description:
+			'Hauptadresse des Probelokals, z. B. probelokal.ch. Gesetzt leiten die alten Adressen dorthin um.'
+	},
 	TEST_ACCESS_CODE: {
 		schema: optional,
 		description: 'Code für den Testzugang (M1). Ohne Wert ist der Testzugang aus.'
