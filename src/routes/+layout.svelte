@@ -6,7 +6,6 @@
 	import '#lib/styles/tokens.css';
 	import Lockup from '#lib/brand/Lockup.svelte';
 	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
-	import { resolve } from '$app/paths';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -14,7 +13,7 @@
 
 <div class="wrap">
 	<header class="topbar">
-		<a href={resolve('/')} class="home"><Lockup /></a>
+		<span class="home"><Lockup /></span>
 		<ThemeSwitch />
 	</header>
 
