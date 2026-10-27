@@ -37,9 +37,14 @@ export interface StorageAccess {
 	fetch?: typeof fetch;
 }
 
+/** Die Datei ist erlaubt, liegt aber (noch) nicht im Bucket. */
+export class AudioMissingError extends Error {}
+
 /**
  * Signierte, zeitlich begrenzte Adresse für eine Datei im privaten Bucket.
  * Ungeprüft gegen das echte Projekt (braucht Bucket und Secret) – prüfen nach dem ersten Upload.
+ * Fehlt die Datei, antwortet Storage mit »Object not found« (so in storage-js dokumentiert;
+ * gegen das echte Projekt ebenfalls ungeprüft) → AudioMissingError.
  */
 export async function signedAudioUrl(access: StorageAccess, path: string): Promise<string> {
 	const supabase = createClient(access.url, access.secretKey, {
@@ -49,6 +54,7 @@ export async function signedAudioUrl(access: StorageAccess, path: string): Promi
 	const { data, error } = await supabase.storage
 		.from(AUDIO_BUCKET)
 		.createSignedUrl(path, SIGNED_URL_SECONDS);
+	if (error && /not.?found/i.test(error.message)) throw new AudioMissingError(path);
 	if (error || !data?.signedUrl)
 		throw new Error('Signieren fehlgeschlagen: ' + (error?.message ?? 'leer'));
 	return data.signedUrl;

@@ -3,7 +3,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL } from '$app/env/public';
 import { SUPABASE_SECRET_KEY, TEST_ACCESS_CODE } from '$app/env/private';
-import { audioPath, signedAudioUrl } from '#lib/server/audio.ts';
+import { AudioMissingError, audioPath, signedAudioUrl } from '#lib/server/audio.ts';
 import { ACCESS_COOKIE, hasAccess } from '#lib/server/test-access.ts';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
 import type { RequestHandler } from './$types';
@@ -19,6 +19,7 @@ export const GET: RequestHandler = async ({ params, cookies, setHeaders }) => {
 	try {
 		url = await signedAudioUrl({ url: PUBLIC_SUPABASE_URL, secretKey: SUPABASE_SECRET_KEY }, path);
 	} catch (e) {
+		if (e instanceof AudioMissingError) error(404, 'Aufnahme fehlt noch');
 		console.error(e);
 		error(502, 'Audio gerade nicht erreichbar');
 	}

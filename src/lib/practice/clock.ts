@@ -1,6 +1,6 @@
 // Übe-Uhr: Position in Sekunden der Aufnahme (Originaltempo), läuft mit dem gewählten Tempo.
-// Solange es noch keine Audiodateien gibt, treibt sie die Bahn allein. Mit Audio liefert später
-// die Band-Spur (currentTime) die Position; die Bahn liest dann dieselbe Schnittstelle.
+// FreeClock treibt die Bahn ohne Ton (kein Testzugang, Aufnahme fehlt). Mit Ton liefert die
+// Band-Spur die Position (StemPlayer in src/lib/audio/stems.ts, gleiche Schnittstelle).
 
 export interface PracticeClock {
 	/** Sekunden in der Aufnahme */

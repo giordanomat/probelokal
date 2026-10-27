@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
-import { AUDIO_BUCKET, audioFiles, audioPath, signedAudioUrl } from './audio';
+import { AUDIO_BUCKET, AudioMissingError, audioFiles, audioPath, signedAudioUrl } from './audio';
 import { accessToken, codeMatches, hasAccess, normalizeCode } from './test-access';
 
 describe('Testzugang', () => {
@@ -73,20 +73,23 @@ describe('Audio-Pfade', () => {
 		expect(headers.get('apikey')).toBe('sb_secret_test');
 	});
 
-	it('meldet Fehler des Storage', async () => {
-		const failing = (async () =>
-			new Response(
-				JSON.stringify({ statusCode: '404', error: 'not_found', message: 'Object not found' }),
-				{
-					status: 400,
+	it('meldet eine fehlende Datei eigens, andere Fehler allgemein', async () => {
+		const answer = (status: number, body: object) =>
+			(async () =>
+				new Response(JSON.stringify(body), {
+					status,
 					headers: { 'content-type': 'application/json' }
-				}
-			)) as typeof fetch;
-		await expect(
+				})) as typeof fetch;
+		const sign = (f: typeof fetch) =>
 			signedAudioUrl(
-				{ url: 'https://beispiel.supabase.co', secretKey: 'k', fetch: failing },
+				{ url: 'https://beispiel.supabase.co', secretKey: 'k', fetch: f },
 				'x/y/all.mp3'
-			)
+			);
+		await expect(
+			sign(answer(400, { statusCode: '404', error: 'not_found', message: 'Object not found' }))
+		).rejects.toBeInstanceOf(AudioMissingError);
+		await expect(
+			sign(answer(400, { statusCode: '403', error: 'Unauthorized', message: 'invalid signature' }))
 		).rejects.toThrow(/Signieren fehlgeschlagen/);
 	});
 });

@@ -1,7 +1,11 @@
 <script lang="ts">
-	// Stück üben, Stand M1: Bahn und Griff-Anzeige für Bad Touch. Noch ohne Ton – die Bahn läuft
-	// mit einer eigenen Uhr, bis die Mischungen im Storage liegen (docs/05-roadmap.md, M1).
-	import { onMount } from 'svelte';
+	// Stück üben, Stand M1: Bahn und Griff-Anzeige für Bad Touch mit Ton (Band ohne mich und eigene
+	// Stimme, docs/02-architektur.md »Audio«). Die Band ist die Uhr der Bahn. Ohne Testzugang oder
+	// ohne Aufnahmen läuft die Bahn mit einer eigenen Uhr weiter, und ein Hinweis sagt warum.
+	import { onDestroy, onMount } from 'svelte';
+	import { resolve } from '$app/paths';
+	import { AUDIO_NOTICE, probeAudio, stemUrls, type AudioStatus } from '#lib/audio/access.ts';
+	import { StemPlayer } from '#lib/audio/stems.ts';
 	import GripPanel from '#lib/lane/GripPanel.svelte';
 	import Lane from '#lib/lane/Lane.svelte';
 	import { HELP_LABELS, zoomStep, type HelpLevel } from '#lib/lane/geometry.ts';
@@ -14,14 +18,24 @@
 		timeForBar
 	} from '#lib/music/timing.ts';
 	import { buildTrack } from '#lib/music/track.ts';
-	import { FreeClock } from '#lib/practice/clock.ts';
+	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import { TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
-	import { DEFAULT_PREFS, loadPrefs, savePrefs, type LanePrefs } from '#lib/practice/prefs.ts';
+	import {
+		DEFAULT_PREFS,
+		OWN_LEVELS,
+		loadPrefs,
+		savePrefs,
+		type LanePrefs
+	} from '#lib/practice/prefs.ts';
 	import { BAD_TOUCH, BAD_TOUCH_NOTES } from '#lib/titles/bad-touch.ts';
 
 	const title = BAD_TOUCH;
 	const voiceIds = title.voices.map((v) => v.id);
-	const clock = new FreeClock();
+	let clock: PracticeClock = new FreeClock();
+	let stems: StemPlayer | null = null;
+	let bandEl: HTMLAudioElement;
+	let ownEl: HTMLAudioElement;
+	let audio = $state<AudioStatus | 'loading'>('loading');
 
 	let prefs = $state<LanePrefs>({ ...DEFAULT_PREFS });
 	let time = $state(0);
@@ -67,6 +81,51 @@
 		jumpTo(title.sections[i].from);
 	}
 
+	/** Uhr wechseln (eigene Uhr ↔ Band) und an derselben Stelle im gleichen Tempo weitermachen. */
+	function useClock(next: PracticeClock) {
+		const t = clock.time();
+		const was = clock.playing;
+		clock.pause();
+		next.rate = tempo / 100;
+		next.seek(t);
+		clock = next;
+		if (was) next.play();
+		playing = next.playing;
+		time = t;
+	}
+
+	async function startAudio() {
+		const status = await probeAudio(stemUrls(title, voice.id).band);
+		if (status !== 'ok') {
+			audio = status;
+			return;
+		}
+		const player = new StemPlayer(bandEl, ownEl);
+		player.ownGain = prefs.own;
+		player.onerror = () => {
+			if (stems !== player) return;
+			stems = null;
+			audio = 'unavailable';
+			useClock(new FreeClock());
+			player.destroy();
+		};
+		// Stimme neu lesen: Sie kann während der Vorabprüfung gewechselt haben.
+		player.load(stemUrls(title, voice.id), clock.time());
+		useClock(player);
+		stems = player;
+		audio = 'ok';
+	}
+
+	function chooseVoice(id: string) {
+		setPrefs({ voice: id });
+		stems?.load(stemUrls(title, id));
+	}
+
+	function chooseOwn(level: number) {
+		setPrefs({ own: level });
+		if (stems) stems.ownGain = level;
+	}
+
 	function togglePlay() {
 		if (clock.playing) {
 			clock.pause();
@@ -78,6 +137,7 @@
 	}
 
 	function tick() {
+		stems?.maybeSync(performance.now());
 		time = clock.time();
 		const b = beat / 4;
 		if (loop && b >= section.to + 1) {
@@ -86,6 +146,8 @@
 			clock.pause();
 			playing = false;
 		}
+		// Band zu Ende, von aussen angehalten oder Abspielen abgelehnt
+		if (!clock.playing) playing = false;
 		if (target !== null && !loop && b > target + 0.5) target = null;
 		if (!loop) {
 			const i = sectionIndexOf(title.sections, target ?? b);
@@ -123,6 +185,11 @@
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
 		jumpTo(title.sections[1].from);
+		void startAudio();
+	});
+
+	onDestroy(() => {
+		stems?.destroy();
 	});
 </script>
 
@@ -136,21 +203,40 @@
 	<p class="label">Stück üben</p>
 	<h1>{title.name}</h1>
 	<p class="hint">
-		Fassung {title.version} · ♩ {title.bpm}. Noch ohne Ton: Band und eigene Stimme kommen, sobald
-		die Aufnahmen bereit sind. Die Bahn läuft schon im gewählten Tempo.
+		Fassung {title.version} · ♩ {title.bpm}. Du hörst die Band ohne deine Stimme. Deine Stimme
+		kannst du laut, leise oder gar nicht dazunehmen.
 	</p>
+	{#if audio !== 'ok' && audio !== 'loading'}
+		<p class="notice" role="status" data-testid="ton-hinweis">
+			{AUDIO_NOTICE[audio]}
+			{#if audio === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
+		</p>
+	{/if}
 </section>
 
 <section class="row">
 	<div class="seg" role="group" aria-label="Stimme">
 		{#each title.voices as v (v.id)}
-			<button
-				type="button"
-				aria-pressed={v.id === voice.id}
-				onclick={() => setPrefs({ voice: v.id })}>{v.short}</button
+			<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
+				>{v.short}</button
 			>
 		{/each}
 	</div>
+</section>
+
+<section class="row">
+	<span class="toggle">Meine Stimme</span>
+	<div class="seg" role="group" aria-label="Meine Stimme im Kopfhörer">
+		{#each OWN_LEVELS as l (l.value)}
+			<button
+				type="button"
+				aria-pressed={l.value === prefs.own}
+				disabled={audio !== 'ok'}
+				onclick={() => chooseOwn(l.value)}>{l.label}</button
+			>
+		{/each}
+	</div>
+	<span class="hint">»Aus« heisst: Du spielst deine Stimme selbst.</span>
 </section>
 
 <section class="row opts">
@@ -240,6 +326,11 @@
 	</label>
 </section>
 
+<!-- Band ohne mich und eigene Stimme; Quelle setzt StemPlayer. crossorigin, weil /audio/ auf
+	 Supabase weiterleitet: Ohne CORS liefert MediaElementSource nur Stille. -->
+<audio bind:this={bandEl} data-stem="band" crossorigin="anonymous" preload="auto"></audio>
+<audio bind:this={ownEl} data-stem="own" crossorigin="anonymous" preload="auto"></audio>
+
 <style>
 	.head h1 {
 		margin: 2px 0 4px;
@@ -252,6 +343,20 @@
 		color: var(--muted);
 		font-size: 14px;
 		max-width: 62ch;
+	}
+	.notice {
+		margin: 8px 0 0;
+		font-size: 14px;
+		font-weight: 600;
+		max-width: 62ch;
+	}
+	.notice a {
+		color: inherit;
+		margin-left: 4px;
+	}
+	.seg button:disabled {
+		opacity: 0.45;
+		cursor: default;
 	}
 	.row {
 		display: flex;

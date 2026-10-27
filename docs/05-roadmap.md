@@ -39,12 +39,12 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
   - Matthias hat sie bekommen. Der Upload nach `titles/bad-touch-2-0/schuegu27/` ist **noch nicht bestätigt**.
   - Die Einzelspuren (WAV) liegen in Google Drive, Ordner »arrangements«. Sie liegen nicht im Repository und nicht im Storage. Wer die Mischungen neu erzeugen muss, holt sie dort.
 - **Offen, in dieser Reihenfolge:**
-  1. Nach dem Upload `/audio/…` live prüfen: Code unter `/zugang` eingeben, dann `/audio/bad-touch-2-0/schuegu27/all.mp3` aufrufen. Erwartet wird eine 302-Weiterleitung auf eine signierte Supabase-Adresse. Das Signieren gegen das echte Projekt ist bisher **ungeprüft**.
-  2. **Ton in `/ueben`:**
-     - Neues Modul `src/lib/audio/` nach docs/02 »Audio«: Band (Minus-One) und eigene Stimme, eigene Stimme über einen `GainNode`, Nachführen ab 50 ms Abstand, Tempo über `playbackRate` mit `preservesPitch`.
-     - Die Audio-Zeit ersetzt `FreeClock` als Uhr der Bahn. Der Takt dazu kommt aus `timeForBar` und `stem_offset_sec`.
-     - Ohne Zugang (401) auf `/zugang` verweisen.
-     - Playwright-Test mit synthetischem Audio aus `tools/rangeserver.js` oder einer abgefangenen Route.
+  1. Nach dem Upload `/audio/…` live prüfen: Code unter `/zugang` eingeben, dann `/audio/bad-touch-2-0/schuegu27/all.mp3` aufrufen. Erwartet wird eine 302-Weiterleitung auf eine signierte Supabase-Adresse. Fehlt die Datei, kommt 404 »Aufnahme fehlt noch«. Das Signieren gegen das echte Projekt ist bisher **ungeprüft**. Danach `/ueben` mit Ton prüfen (siehe Punkt 2). Geht erst nach dem Merge, weil nur `main` deployt wird.
+  2. ~~**Ton in `/ueben`**~~ erledigt am 27.10.2026, siehe docs/02 »Audio«:
+     - `src/lib/audio/` mit `StemPlayer` (Band als Uhr der Bahn, eigene Stimme über einen `GainNode`, Nachführen ab 50 ms, Tempo mit `preservesPitch`) und `probeAudio` (Vorabprüfung).
+     - Lautstärke »Meine Stimme« (Aus/Leise/Laut). Hinweise bei 401 (mit Weg zu `/zugang`), 404 und 502/503. Bei jedem Fehler läuft die Bahn mit `FreeClock` weiter.
+     - Getestet mit Vitest (nachgebaute Elemente) und Playwright: synthetisches WAV über eine abgefangene Route mit Range-Antworten.
+     - **Ungeprüft:** gegen das echte Supabase-Projekt. Ob CORS und Range-Anfragen nach der Weiterleitung klappen, zeigt Punkt 1. Dazu in `/ueben` abspielen, hören und springen. Ebenfalls ungeprüft: Gleichlauf auf iPhone/iPad.
   3. Mitspielen, Echo und Rhythmus tippen in der Oberfläche. Die Logik dazu ist fertig: `practice/rhythm.ts`, `echo.ts`, `pass.ts`, `baustellen.ts`.
   4. **Mithören:**
      - `pitch/yin.ts` in einem AudioWorklet laufen lassen.

@@ -40,13 +40,20 @@ describe('Einstellungen der Bahn', () => {
 	it('Standard bei leerem oder kaputtem Speicher', () => {
 		expect(parsePrefs(null, voices)).toEqual(DEFAULT_PREFS);
 		expect(parsePrefs('kaputt', voices)).toEqual(DEFAULT_PREFS);
-		expect(parsePrefs('{"voice":"tuba","help":"x","zoom":3,"names":"ja"}', voices)).toEqual(
-			DEFAULT_PREFS
-		);
+		expect(
+			parsePrefs('{"voice":"tuba","help":"x","zoom":3,"names":"ja","own":0.5}', voices)
+		).toEqual(DEFAULT_PREFS);
 	});
 
 	it('übernimmt gültige Werte', () => {
-		const p = { voice: 'pos1', help: 'memo' as const, names: true, staff: true, zoom: 1.6 };
+		const p = {
+			voice: 'pos1',
+			help: 'memo' as const,
+			names: true,
+			staff: true,
+			zoom: 1.6,
+			own: 0.35
+		};
 		expect(parsePrefs(JSON.stringify(p), voices)).toEqual(p);
 	});
 

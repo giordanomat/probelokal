@@ -10,7 +10,15 @@ export interface LanePrefs {
 	names: boolean;
 	staff: boolean;
 	zoom: number;
+	/** Lautstärke meiner Stimme im Kopfhörer (wie im Prototyp: Aus, Leise, Laut). */
+	own: number;
 }
+
+export const OWN_LEVELS = [
+	{ value: 0, label: 'Aus' },
+	{ value: 0.35, label: 'Leise' },
+	{ value: 1, label: 'Laut' }
+] as const;
 
 export const PREFS_KEY = 'probelokal.bahn';
 
@@ -19,7 +27,8 @@ export const DEFAULT_PREFS: LanePrefs = {
 	help: 'all',
 	names: false,
 	staff: false,
-	zoom: 1
+	zoom: 1,
+	own: 1
 };
 
 const HELP: readonly HelpLevel[] = ['all', 'nogrip', 'rhythm', 'memo'];
@@ -45,7 +54,8 @@ export function parsePrefs(raw: string | null | undefined, voiceIds: readonly st
 		staff: typeof data.staff === 'boolean' ? data.staff : d.staff,
 		zoom: (ZOOM_STEPS as readonly number[]).includes(data.zoom as number)
 			? (data.zoom as number)
-			: d.zoom
+			: d.zoom,
+		own: OWN_LEVELS.some((l) => l.value === data.own) ? (data.own as number) : d.own
 	};
 }
 
