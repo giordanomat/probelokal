@@ -74,7 +74,8 @@ export interface LaneScene {
 	sections: readonly Section[];
 	judged?: ReadonlyMap<number, NoteVerdict>;
 	countIn?: number | null;
-	overlay?: { text: string; color: string } | null;
+	/** Echo-Phase oben rechts: »HÖR ZU« blau, »JETZT DU« gelb */
+	overlay?: { text: string; tone: 'blau' | 'gelb' } | null;
 	trace?: readonly TracePoint[] | null;
 	/** Aktuell gehörte Tonhöhe (diatonisch) an der Spiellinie */
 	current?: number | null;
@@ -339,7 +340,7 @@ export function drawLane(
 		cx.font = `700 13px ${MONO}`;
 		const tw = cx.measureText(s.overlay.text).width;
 		roundRect(cx, W - tw - 28, g.laneTop, tw + 20, 26, 13);
-		cx.fillStyle = s.overlay.color;
+		cx.fillStyle = c[s.overlay.tone];
 		cx.fill();
 		cx.fillStyle = '#141619';
 		cx.fillText(s.overlay.text, W - tw - 18, g.laneTop + 17);

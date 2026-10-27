@@ -4,8 +4,10 @@ import type { NoteVerdict } from '../pitch/classify';
 import {
 	BAUSTELLE_TEMPO,
 	baustellenKey,
+	loadBarStats,
 	parseBarStats,
 	recordPass,
+	saveBarStats,
 	topBaustellen
 } from './baustellen';
 import { echoStep, ownVoiceVolume, type EchoState } from './echo';
@@ -90,6 +92,26 @@ describe('Baustellen', () => {
 		expect(parseBarStats('kaputt')).toEqual({});
 		expect(parseBarStats(null)).toEqual({});
 		expect(parseBarStats('{"7":{"t":"x"},"8":{"t":0,"b":0}}')).toEqual({});
+	});
+
+	it('liest und schreibt im Gerätespeicher, übersteht gesperrten Speicher', () => {
+		const data = new Map<string, string>();
+		const store = {
+			getItem: (k: string) => data.get(k) ?? null,
+			setItem: (k: string, v: string) => void data.set(k, v)
+		};
+		saveBarStats(store, 'k', { 13: { t: 2, b: 1 } });
+		expect(loadBarStats(store, 'k')).toEqual({ 13: { t: 2, b: 1 } });
+		const broken = {
+			getItem: () => {
+				throw new Error('gesperrt');
+			},
+			setItem: () => {
+				throw new Error('gesperrt');
+			}
+		};
+		expect(loadBarStats(broken, 'k')).toEqual({});
+		expect(() => saveBarStats(broken, 'k', {})).not.toThrow();
 	});
 });
 

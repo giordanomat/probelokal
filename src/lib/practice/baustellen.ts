@@ -69,3 +69,22 @@ export function parseBarStats(raw: string | null): BarStats {
 		return {};
 	}
 }
+
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+
+/** Gespeicherte Statistik lesen; gesperrter Speicher ergibt leer. */
+export function loadBarStats(storage: StorageLike | undefined, key: string): BarStats {
+	try {
+		return parseBarStats(storage?.getItem(key) ?? null);
+	} catch {
+		return {};
+	}
+}
+
+export function saveBarStats(storage: StorageLike | undefined, key: string, stats: BarStats) {
+	try {
+		storage?.setItem(key, JSON.stringify(stats));
+	} catch {
+		// absichtlich leer: gilt dann nur bis zum Neuladen
+	}
+}

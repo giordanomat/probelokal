@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
 import { audioStatusOf, probeAudio, stemUrls } from './access';
-import { MAX_DRIFT_SEC, needsResync, StemPlayer, type AudioGraph, type MediaLike } from './stems';
+import {
+	FALLBACK_LATENCY_SEC,
+	MAX_DRIFT_SEC,
+	needsResync,
+	StemPlayer,
+	type AudioGraph,
+	type MediaLike
+} from './stems';
 
 /** Nachgebautes <audio>: Metadaten kommen erst, wenn der Test es sagt. */
 class FakeMedia extends EventTarget {
@@ -50,7 +57,8 @@ function setup(opts: { graphThrows?: boolean } = {}) {
 		if (opts.graphThrows) throw new Error('kein AudioContext');
 		return {
 			resume: () => resumes++,
-			setOwnGain: (v) => gains.push(v)
+			setOwnGain: (v) => gains.push(v),
+			latency: () => 0.04
 		} satisfies AudioGraph;
 	});
 	return { band, own, player, gains, graphs: () => graphs, resumes: () => resumes };
@@ -121,12 +129,14 @@ describe('Band und eigene Stimme', () => {
 		const { band, own, player, gains, graphs, resumes } = setup();
 		player.ownGain = 0.35;
 		expect(graphs()).toBe(0);
+		expect(player.latency()).toBe(FALLBACK_LATENCY_SEC);
 		band.meta();
 		own.meta();
 		band.currentTime = 20;
 		own.currentTime = 19;
 		await player.play();
 		expect(graphs()).toBe(1);
+		expect(player.latency()).toBe(0.04);
 		expect(gains).toEqual([0.35]);
 		expect(own.currentTime).toBe(20);
 		expect(player.playing).toBe(true);

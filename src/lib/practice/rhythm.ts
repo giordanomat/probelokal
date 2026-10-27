@@ -21,8 +21,8 @@ export interface TapContext {
 	notes: readonly RawNote[];
 	/** Ab diesem Schlag zählt der Durchgang. */
 	passFrom: number;
-	/** Bereits bewertete Töne (Index). */
-	judged: ReadonlySet<number>;
+	/** Bereits bewertete Töne (Index), z. B. Set oder Map. */
+	judged: { has(index: number): boolean };
 	/** Sekunden pro Schlag im Originaltempo. */
 	spb: number;
 	/** Tempo, 1 = 100 %. */

@@ -7,13 +7,18 @@
 	let {
 		scene,
 		zoom = 1,
-		onpick
+		onpick,
+		onpress
 	}: {
 		scene: LaneScene;
 		zoom?: number;
 		/** Antippen der Bahn: Schlag unter dem Finger */
 		onpick?: (beat: number) => void;
+		/** Finger oder Maus geht runter (Rhythmus tippen); true = verbraucht, kein onpick */
+		onpress?: () => boolean;
 	} = $props();
+
+	let pressed = false;
 
 	let wrap: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
@@ -63,7 +68,16 @@
 		if (cx) drawLane(cx, geometry, scene, colors, dpr);
 	});
 
+	function press(e: PointerEvent) {
+		pressed = onpress?.() ?? false;
+		if (pressed) e.preventDefault();
+	}
+
 	function pick(e: MouseEvent) {
+		if (pressed) {
+			pressed = false;
+			return;
+		}
 		if (!geometry || !onpick) return;
 		const r = canvas.getBoundingClientRect();
 		onpick(beatAtX(geometry, e.clientX - r.left, scene.beat));
@@ -77,7 +91,12 @@
 	role="figure"
 	aria-label="Bahn: Die Töne laufen von rechts zur roten Linie, unten die Griffe."
 >
-	<canvas bind:this={canvas} onclick={pick} aria-hidden="true" data-beat={scene.beat.toFixed(2)}
+	<canvas
+		bind:this={canvas}
+		onpointerdown={press}
+		onclick={pick}
+		aria-hidden="true"
+		data-beat={scene.beat.toFixed(2)}
 	></canvas>
 </div>
 

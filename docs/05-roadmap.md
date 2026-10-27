@@ -45,7 +45,15 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Lautstärke »Meine Stimme« (Aus/Leise/Laut). Hinweise bei 401 (mit Weg zu `/zugang`), 404 und 502/503. Bei jedem Fehler läuft die Bahn mit `FreeClock` weiter.
      - Getestet mit Vitest (nachgebaute Elemente) und Playwright: synthetisches WAV über eine abgefangene Route mit Range-Antworten.
      - **Ungeprüft:** gegen das echte Supabase-Projekt. Ob CORS und Range-Anfragen nach der Weiterleitung klappen, zeigt Punkt 1. Dazu in `/ueben` abspielen, hören und springen. Ebenfalls ungeprüft: Gleichlauf auf iPhone/iPad.
-  3. Mitspielen, Echo und Rhythmus tippen in der Oberfläche. Die Logik dazu ist fertig: `practice/rhythm.ts`, `echo.ts`, `pass.ts`, `baustellen.ts`.
+  3. ~~Mitspielen, Echo und Rhythmus tippen in der Oberfläche~~ erledigt am 27.10.2026:
+     - Ablauf in `src/lib/practice/session.ts` (`PracticeSession`): Modus, Übebereich, Echo-Phasen, Schleife, Bewertung beim Tippen und Auswertung. `/ueben` verdrahtet ihn nur.
+     - **Echo:** »Hör zu« und »Jetzt du« auf der Bahn und in der Griff-Anzeige. Die eigene Stimme ist im »Hör zu« laut und im »Jetzt du« stumm.
+     - **Rhythmus tippen:** Tipp-Taste, die Bahn antippen oder die Leertaste. Rückmeldung in ms, verpasste Töne werden markiert.
+     - **Auswertung:** Nach einem ganzen Durchgang (Schleife bzw. Echo-Bereich) kommt das Ergebnis mit Tempo-Vorschlag, beim Anhalten ein Zwischenstand.
+     - Wacklige Takte werden pro Titel und Stimme auf dem Gerät gespeichert. Die Liste dazu kommt mit Punkt 5.
+     - Bewertet wird vorerst nur beim Rhythmus tippen. Mitspielen und Echo bewerten erst mit dem Mithören (Punkt 4).
+     - Getestet mit Vitest (`session.spec.ts`, u. a. exakt getippter Teil A bei 80 %) und Playwright (Rhythmus in der Schleife, Echo-Phasen).
+     - **Ungeprüft:** echte Finger auf echten Handys. Ebenso die Ausgabe-Latenz, die iOS über `AudioContext.outputLatency` meldet: Ohne Meldung gelten 20 ms wie im Prototyp, ohne Ton 0 ms.
   4. **Mithören:**
      - `pitch/yin.ts` in einem AudioWorklet laufen lassen.
      - `getUserMedia` mit `echoCancellation`, `noiseSuppression` und `autoGainControl` aus.

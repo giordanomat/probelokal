@@ -33,7 +33,12 @@ export type MediaLike = Pick<
 export interface AudioGraph {
 	resume(): void;
 	setOwnGain(value: number): void;
+	/** Ausgabe-Latenz in Sekunden (Rhythmus tippen, später Mithören) */
+	latency(): number;
 }
+
+/** Wie im Prototyp, wenn das Gerät keine Latenz meldet oder es keinen AudioContext gibt. */
+export const FALLBACK_LATENCY_SEC = 0.02;
 
 export type GraphFactory = (band: MediaLike, own: MediaLike) => AudioGraph;
 
@@ -55,6 +60,10 @@ export const webAudioGraph: GraphFactory = (band, own) => {
 		},
 		setOwnGain(value) {
 			gain.gain.value = value;
+		},
+		latency() {
+			// outputLatency fehlt in älterem Safari; ungeprüft, was iOS hier meldet.
+			return (ctx.outputLatency || 0) + (ctx.baseLatency || 0) || FALLBACK_LATENCY_SEC;
 		}
 	};
 };
@@ -134,6 +143,11 @@ export class StemPlayer implements PracticeClock {
 	set ownGain(v: number) {
 		this._ownGain = v;
 		this.applyOwnGain();
+	}
+
+	/** Ausgabe-Latenz des Geräts in Sekunden. */
+	latency(): number {
+		return this.graph?.latency() ?? FALLBACK_LATENCY_SEC;
 	}
 
 	play() {

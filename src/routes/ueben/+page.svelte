@@ -2,6 +2,7 @@
 	// Stück üben, Stand M1: Bahn und Griff-Anzeige für Bad Touch mit Ton (Band ohne mich und eigene
 	// Stimme, docs/02-architektur.md »Audio«). Die Band ist die Uhr der Bahn. Ohne Testzugang oder
 	// ohne Aufnahmen läuft die Bahn mit einer eigenen Uhr weiter, und ein Hinweis sagt warum.
+	// Modi Mitspielen, Echo und Rhythmus tippen: Ablauf in #lib/practice/session.ts.
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { AUDIO_NOTICE, probeAudio, stemUrls, type AudioStatus } from '#lib/audio/access.ts';
@@ -14,11 +15,19 @@
 		beatAtTime,
 		countIn,
 		sectionIndexOf,
+		secondsPerBeat,
 		sectionLabel,
 		timeForBar
 	} from '#lib/music/timing.ts';
 	import { buildTrack } from '#lib/music/track.ts';
+	import {
+		baustellenKey,
+		loadBarStats,
+		recordPass,
+		saveBarStats
+	} from '#lib/practice/baustellen.ts';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
+	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
 	import { TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
 	import {
 		DEFAULT_PREFS,
@@ -27,6 +36,16 @@
 		savePrefs,
 		type LanePrefs
 	} from '#lib/practice/prefs.ts';
+	import { tapFeedback } from '#lib/practice/rhythm.ts';
+	import {
+		MODE_HINTS,
+		MODE_LABELS,
+		PracticeSession,
+		type FrameInfo,
+		type PassReport
+	} from '#lib/practice/session.ts';
+	import type { Tone } from '#lib/pitch/coach.ts';
+	import type { NoteVerdict } from '#lib/pitch/classify.ts';
 	import { BAD_TOUCH, BAD_TOUCH_NOTES } from '#lib/titles/bad-touch.ts';
 
 	const title = BAD_TOUCH;
@@ -45,6 +64,13 @@
 	let sectionIndex = $state(1);
 	/** Sprungziel mit einem Takt Anlauf (Einzählen), sonst null */
 	let target = $state<number | null>(null);
+	// Spiegel des Übe-Ablaufs für die Anzeige (session selbst ist nicht reaktiv)
+	let mode = $state<PracticeMode>('play');
+	let echoPhase = $state<EchoPhase>('hear');
+	let judged = $state.raw<ReadonlyMap<number, NoteVerdict>>(new Map());
+	let report = $state<PassReport | null>(null);
+	let feedback = $state<{ text: string; tone: Tone } | null>(null);
+	let flash = $state(false);
 
 	const voice = $derived(title.voices.find((v) => v.id === prefs.voice) ?? title.voices[0]);
 	const track = $derived.by(() => {
@@ -55,8 +81,18 @@
 	const bar = $derived(Math.max(0, beat / 4));
 	const section = $derived(title.sections[sectionIndex]);
 	const counting = $derived(countIn(beat, target));
+	const phaseText = $derived(
+		mode === 'echo' ? (echoPhase === 'hear' ? 'Hör zu' : 'Jetzt du') : null
+	);
 	const panel = $derived(
-		panelState({ notes: track.notes, beat, kind: voice.kind, help: prefs.help, countIn: counting })
+		panelState({
+			notes: track.notes,
+			beat,
+			kind: voice.kind,
+			help: prefs.help,
+			countIn: counting,
+			phaseText
+		})
 	);
 	const scene = $derived({
 		track,
@@ -66,10 +102,35 @@
 		names: prefs.names,
 		staff: prefs.staff,
 		sections: title.sections,
-		countIn: counting
+		countIn: counting,
+		judged,
+		overlay:
+			mode === 'echo'
+				? echoPhase === 'hear'
+					? { text: 'HÖR ZU', tone: 'blau' as const }
+					: { text: 'JETZT DU', tone: 'gelb' as const }
+				: null
 	});
 
-	function jumpTo(toBar: number, preroll = true) {
+	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
+	const session = new PracticeSession([], secondsPerBeat(title), rangeOf(1));
+
+	/** Anzeige und Lautstärke der eigenen Stimme nach jeder Änderung am Übe-Ablauf nachziehen. */
+	function sync() {
+		mode = session.mode;
+		echoPhase = session.echo.phase;
+		judged = new Map(session.judged);
+		if (stems) stems.ownGain = session.ownVolume(prefs.own);
+	}
+
+	function frameInfo(): FrameInfo {
+		// Ohne Ton gibt es keine Ausgabe-Latenz: getippt wird nach der Bahn.
+		return { beat, latency: stems?.latency() ?? 0, rate: tempo / 100, target };
+	}
+
+	/** keepPass: Sprung innerhalb eines Durchgangs (Echo); sonst beginnt die Bewertung neu. */
+	function jumpTo(toBar: number, preroll = true, keepPass = false) {
+		if (!keepPass) session.resetPass();
 		const b = Math.max(0, Math.min(title.bars - 0.01, toBar));
 		target = preroll && b >= 1 ? b : null;
 		clock.seek(timeForBar(title, target !== null ? b - 1 : b));
@@ -78,7 +139,48 @@
 
 	function chooseSection(i: number) {
 		sectionIndex = i;
+		session.setRange(rangeOf(i));
 		jumpTo(title.sections[i].from);
+		sync();
+	}
+
+	function chooseMode(m: PracticeMode) {
+		session.setMode(m);
+		report = null;
+		feedback = null;
+		if (m === 'echo' && clock.playing) {
+			const from = session.startEcho();
+			if (from !== null) jumpTo(from);
+		}
+		sync();
+	}
+
+	function toggleLoop() {
+		loop = !loop;
+		session.loop = loop;
+		session.resetPass();
+		sync();
+	}
+
+	function showReport(r: PassReport) {
+		report = r;
+		if (!r.final || !r.judged.length) return;
+		// Baustellen pro Titel und Stimme, nur auf dem Gerät (Liste kommt mit M1 Punkt 5)
+		const key = baustellenKey(title.slug, voice.id);
+		saveBarStats(
+			localStorage,
+			key,
+			recordPass(loadBarStats(localStorage, key), r.judged, track.notes)
+		);
+	}
+
+	function doTap() {
+		if (!clock.playing) return;
+		const fb = tapFeedback(session.tap(frameInfo()));
+		if (fb) feedback = fb;
+		flash = true;
+		setTimeout(() => (flash = false), 90);
+		sync();
 	}
 
 	/** Uhr wechseln (eigene Uhr ↔ Band) und an derselben Stelle im gleichen Tempo weitermachen. */
@@ -101,7 +203,7 @@
 			return;
 		}
 		const player = new StemPlayer(bandEl, ownEl);
-		player.ownGain = prefs.own;
+		player.ownGain = session.ownVolume(prefs.own);
 		player.onerror = () => {
 			if (stems !== player) return;
 			stems = null;
@@ -118,19 +220,26 @@
 
 	function chooseVoice(id: string) {
 		setPrefs({ voice: id });
+		session.setNotes(track.notes);
 		stems?.load(stemUrls(title, id));
+		sync();
 	}
 
 	function chooseOwn(level: number) {
 		setPrefs({ own: level });
-		if (stems) stems.ownGain = level;
+		sync();
 	}
 
 	function togglePlay() {
 		if (clock.playing) {
 			clock.pause();
+			const r = session.finish(false, tempo);
+			if (r) report = r;
 		} else {
 			if (bar >= title.bars - 0.01) jumpTo(section.from);
+			const echoFrom = session.startEcho();
+			if (echoFrom !== null) jumpTo(echoFrom);
+			sync();
 			clock.play();
 		}
 		playing = clock.playing;
@@ -139,20 +248,26 @@
 	function tick() {
 		stems?.maybeSync(performance.now());
 		time = clock.time();
-		const b = beat / 4;
-		if (loop && b >= section.to + 1) {
-			jumpTo(section.from);
-		} else if (b >= title.bars) {
-			clock.pause();
-			playing = false;
+		if (clock.playing) {
+			const step = session.advance(frameInfo(), tempo);
+			if (step.seekTo !== null) jumpTo(step.seekTo, true, true);
+			if (step.report) showReport(step.report);
+			if (step.seekTo !== null || step.report) sync();
 		}
+		const b = beat / 4;
+		if (b >= title.bars) clock.pause();
 		// Band zu Ende, von aussen angehalten oder Abspielen abgelehnt
 		if (!clock.playing) playing = false;
-		if (target !== null && !loop && b > target + 0.5) target = null;
-		if (!loop) {
+		const free = !loop && mode !== 'echo';
+		if (target !== null && free && b > target + 0.5) target = null;
+		if (free) {
 			const i = sectionIndexOf(title.sections, target ?? b);
-			if (i !== sectionIndex) sectionIndex = i;
+			if (i !== sectionIndex) {
+				sectionIndex = i;
+				session.setRange(rangeOf(i));
+			}
 		}
+		if (clock.playing && session.catchMisses(frameInfo())) sync();
 	}
 
 	$effect(() => {
@@ -178,12 +293,15 @@
 		if (t && /INPUT|SELECT|TEXTAREA|BUTTON/.test(t.tagName)) return;
 		if (e.code === 'Space') {
 			e.preventDefault();
-			togglePlay();
+			if (e.repeat) return;
+			if (mode === 'rhythm' && clock.playing) doTap();
+			else togglePlay();
 		}
 	}
 
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
+		session.setNotes(track.notes);
 		jumpTo(title.sections[1].from);
 		void startAudio();
 	});
@@ -222,6 +340,17 @@
 			>
 		{/each}
 	</div>
+</section>
+
+<section class="row">
+	<div class="seg" role="group" aria-label="Übe-Modus">
+		{#each Object.entries(MODE_LABELS) as [m, label] (m)}
+			<button type="button" aria-pressed={m === mode} onclick={() => chooseMode(m as PracticeMode)}
+				>{label}</button
+			>
+		{/each}
+	</div>
+	<span class="hint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</span>
 </section>
 
 <section class="row">
@@ -287,11 +416,70 @@
 		{scene}
 		zoom={prefs.zoom}
 		onpick={(b) => {
-			if (!clock.playing) jumpTo(Math.floor(b / 4));
+			if (clock.playing) return;
+			const toBar = Math.max(0, Math.floor(b / 4));
+			if (mode === 'echo') session.echoFrom(toBar);
+			jumpTo(toBar);
+			sync();
+		}}
+		onpress={() => {
+			if (mode !== 'rhythm' || !clock.playing) return false;
+			doTap();
+			return true;
 		}}
 	/>
-	<GripPanel state={panel} />
+	<div class="side">
+		<GripPanel state={panel} />
+		{#if mode === 'rhythm'}
+			<div class="tapbox">
+				<button
+					type="button"
+					class="tapbtn"
+					class:flash
+					onpointerdown={(e) => {
+						e.preventDefault();
+						doTap();
+					}}
+					onkeydown={(e) => {
+						if (e.code !== 'Space' && e.code !== 'Enter') return;
+						e.preventDefault();
+						if (!e.repeat) doTap();
+					}}>Tippen</button
+				>
+				<p class="hint">oder auf die Bahn tippen · Leertaste</p>
+				<p
+					class="say"
+					data-tone={feedback?.tone ?? ''}
+					aria-live="polite"
+					data-testid="tipp-rueckmeldung"
+				>
+					{feedback?.text ?? 'Tippe bei jedem Ton. Grün heisst: genau im Takt.'}
+				</p>
+			</div>
+		{/if}
+	</div>
 </section>
+
+{#if report}
+	<section class="result" role="status" data-testid="ergebnis">
+		<b>{report.headline}</b>
+		{#if report.detail}<span class="detail">{report.detail}</span>{/if}
+		{#if report.advice?.kind === 'faster' || report.advice?.kind === 'slower'}
+			{@const next = report.advice.tempo}
+			<button
+				type="button"
+				class="mini"
+				onclick={() => {
+					tempo = next;
+					report = null;
+				}}
+				>{report.advice.kind === 'faster' ? `Tempo auf ${next} %` : `Langsamer: ${next} %`}</button
+			>
+		{:else if report.advice?.kind === 'done'}
+			<span>Originaltempo sitzt.</span>
+		{/if}
+	</section>
+{/if}
 
 <section class="transport" aria-label="Wiedergabe">
 	<button
@@ -316,9 +504,7 @@
 			{/each}
 		</select>
 	</label>
-	<button type="button" class="mini" aria-pressed={loop} onclick={() => (loop = !loop)}
-		>Schleife</button
-	>
+	<button type="button" class="mini" aria-pressed={loop} onclick={toggleLoop}>Schleife</button>
 	<label class="tempo">
 		Tempo
 		<input type="range" min={TEMPO_MIN} max={TEMPO_MAX} step="5" bind:value={tempo} />
@@ -411,6 +597,69 @@
 		min-height: 40px;
 		padding: 0 12px;
 		max-width: 100%;
+	}
+	.side {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+	.tapbox {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.tapbox .hint {
+		text-align: center;
+		font-size: 13px;
+	}
+	.tapbtn {
+		appearance: none;
+		width: 100%;
+		min-height: 72px;
+		border-radius: 14px;
+		border: 2px solid var(--ink);
+		background: var(--surface);
+		color: var(--ink);
+		font: 700 20px var(--font-body);
+		cursor: pointer;
+		touch-action: manipulation;
+		user-select: none;
+	}
+	.tapbtn:active,
+	.tapbtn.flash {
+		background: var(--blau);
+		border-color: var(--blau);
+		color: #141619;
+	}
+	.say {
+		margin: 0;
+		font-size: 14px;
+		font-weight: 600;
+		min-height: 1.4em;
+	}
+	.say[data-tone='ok'] {
+		color: var(--gruen);
+	}
+	.say[data-tone='warn'] {
+		color: var(--akzent);
+	}
+	.say[data-tone='bad'] {
+		color: var(--rot);
+	}
+	.result {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px 14px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		padding: 12px 14px;
+		font-size: 14px;
+	}
+	.result .detail {
+		color: var(--muted);
 	}
 	.stage {
 		display: grid;
