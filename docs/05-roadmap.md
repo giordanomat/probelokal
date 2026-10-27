@@ -53,10 +53,15 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Bewertet wird vorerst nur beim Rhythmus tippen. Mitspielen und Echo bewerten erst mit dem Mithören (Punkt 4).
      - Getestet mit Vitest (`session.spec.ts`, u. a. exakt getippter Teil A bei 80 %) und Playwright (Rhythmus in der Schleife, Echo-Phasen).
      - **Ungeprüft:** echte Finger auf echten Handys. Ebenso die Ausgabe-Latenz, die iOS über `AudioContext.outputLatency` meldet: Ohne Meldung gelten 20 ms wie im Prototyp, ohne Ton 0 ms.
-  4. **Mithören:**
-     - `pitch/yin.ts` in einem AudioWorklet laufen lassen.
-     - `getUserMedia` mit `echoCancellation`, `noiseSuppression` und `autoGainControl` aus.
-     - Latenz-Abgleich pro Gerät, Bewertung mit `classify.ts`.
+  4. ~~**Mithören**~~ erledigt am 27.10.2026, siehe docs/02 »Audio«:
+     - `PitchTracker` (YIN mit Ringpuffer) läuft im AudioWorklet `src/lib/audio/pitch-worklet.ts`. Das Mikrofon läuft ohne Echo-Unterdrückung, Rauschfilter und Pegelautomatik.
+     - Bewertung in `PracticeSession.hear` mit `classify.ts`: Mitspielen und Echo (nur »Jetzt du«), Rückmeldung (`coach.ts`) mit Zeiger tief/hoch, Tonspur auf der Bahn.
+     - Beim Mithören ist die eigene Stimme stumm.
+     - »Vorführung mit Aufnahme«: Die eigene Spur wird statt des Mikrofons bewertet.
+     - »Verzögerung abgleichen« mit acht Klicks über den Lautsprecher, gespeichert pro Gerät. Ab 150 ms erscheint ein Hinweis auf Bluetooth.
+     - Getestet mit Vitest (sauber gespielter Teil A, eine Stufe zu hoch, nichts gehört, Verzögerung, Echo, letzter Ton in der Schleife) und Playwright mit künstlichem Mikrofon (Chromium spielt ein erzeugtes WAV ab).
+     - **Ungeprüft:** echte Bläser, Handymikrofone und Hall. Ebenso die Rechenzeit des Worklets auf iPhone/iPad (Aussetzer der Band?), der Abgleich auf echten Geräten und die Mikrofon-Freigabe in Safari. Das ist der Gerätetest der Abnahme.
+     - **Offen:** Tipp-Abgleich der Verzögerung für Rhythmus tippen.
   5. Notenansicht, Vollbild, Baustellen-Liste.
   6. **Offline-Cache für Bad Touch.** Ungeprüft und offen: `/audio/` leitet auf wechselnde signierte Adressen weiter. Der Service Worker müsste deshalb unter dem `/audio/`-Pfad speichern, nicht unter der signierten Adresse. Auf iOS im Flugmodus prüfen.
   7. Testprotokoll für die Abnahme in `docs/testprotokolle/`.

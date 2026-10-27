@@ -41,6 +41,19 @@ export interface Frame {
 	window: number;
 }
 
+function frameShape(sampleRate: number, range: PitchRange) {
+	const sr = sampleRate / range.decimation;
+	const tauMin = Math.floor(sr / range.fmax);
+	const tauMax = Math.ceil(sr / range.fmin);
+	const window = Math.max(tauMax, Math.round(sr * MIN_WINDOW_SEC));
+	return { sr, tauMin, tauMax, window, length: window + tauMax + 2 };
+}
+
+/** Wie viele Abtastungen (in der Originalrate) ein Ausschnitt für YIN braucht. */
+export function frameSpan(sampleRate: number, range: PitchRange): number {
+	return frameShape(sampleRate, range).length * range.decimation;
+}
+
 /**
  * Nimmt das Ende des Puffers, mittelt je `decimation` Abtastungen und misst den Pegel.
  * null, wenn der Puffer für die tiefste Frequenz zu kurz ist.
@@ -51,11 +64,7 @@ export function prepareFrame(
 	range: PitchRange
 ): Frame | null {
 	const dec = range.decimation;
-	const sr = sampleRate / dec;
-	const tauMin = Math.floor(sr / range.fmax);
-	const tauMax = Math.ceil(sr / range.fmin);
-	const window = Math.max(tauMax, Math.round(sr * MIN_WINDOW_SEC));
-	const length = window + tauMax + 2;
+	const { sr, tauMin, tauMax, window, length } = frameShape(sampleRate, range);
 	const start = buffer.length - length * dec;
 	if (start < 0) return null;
 	const samples = new Float32Array(length);

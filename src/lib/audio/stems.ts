@@ -33,8 +33,11 @@ export type MediaLike = Pick<
 export interface AudioGraph {
 	resume(): void;
 	setOwnGain(value: number): void;
-	/** Ausgabe-Latenz in Sekunden (Rhythmus tippen, später Mithören) */
+	/** Ausgabe-Latenz in Sekunden (Rhythmus tippen, Mithören) */
 	latency(): number;
+	/** Für das Mithören: derselbe AudioContext und die eigene Stimme vor dem GainNode */
+	context?: AudioContext;
+	ownSource?: AudioNode;
 }
 
 /** Wie im Prototyp, wenn das Gerät keine Latenz meldet oder es keinen AudioContext gibt. */
@@ -50,11 +53,11 @@ export const webAudioGraph: GraphFactory = (band, own) => {
 	const ctx = new Ctx();
 	ctx.createMediaElementSource(band as HTMLMediaElement).connect(ctx.destination);
 	const gain = ctx.createGain();
-	ctx
-		.createMediaElementSource(own as HTMLMediaElement)
-		.connect(gain)
-		.connect(ctx.destination);
+	const ownSource = ctx.createMediaElementSource(own as HTMLMediaElement);
+	ownSource.connect(gain).connect(ctx.destination);
 	return {
+		context: ctx,
+		ownSource,
 		resume() {
 			if (ctx.state === 'suspended') void ctx.resume();
 		},
@@ -148,6 +151,21 @@ export class StemPlayer implements PracticeClock {
 	/** Ausgabe-Latenz des Geräts in Sekunden. */
 	latency(): number {
 		return this.graph?.latency() ?? FALLBACK_LATENCY_SEC;
+	}
+
+	/**
+	 * AudioContext der Wiedergabe (für das Mithören), erzeugt ihn bei Bedarf. Nur aus einer
+	 * Berührung heraus aufrufen (iOS). null ohne Web Audio.
+	 */
+	audioContext(): AudioContext | null {
+		this.ensureGraph();
+		this.graph?.resume();
+		return this.graph?.context ?? null;
+	}
+
+	/** Eigene Stimme vor der Lautstärke: Quelle für »Vorführung mit Aufnahme«. */
+	ownSource(): AudioNode | null {
+		return this.graph?.ownSource ?? null;
 	}
 
 	play() {

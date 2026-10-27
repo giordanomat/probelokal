@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
+import {
+	LATENCY_KEY,
+	defaultRoundTrip,
+	estimateRoundTrip,
+	latencyWarning,
+	loadLatency,
+	saveLatency
+} from './latency';
 import { audioStatusOf, probeAudio, stemUrls } from './access';
 import {
 	FALLBACK_LATENCY_SEC,
@@ -221,5 +229,69 @@ describe('Band und eigene Stimme', () => {
 		own.meta();
 		expect(band.currentTime).toBe(42);
 		expect(own.currentTime).toBe(42);
+	});
+});
+
+describe('Verzögerung abgleichen', () => {
+	const clicks = Array.from({ length: 8 }, (_, k) => 10 + k * 0.5);
+
+	it('Median der gehörten Klicks; einzelne Ausreisser und fehlende Klicks stören nicht', () => {
+		const onsets = clicks.map((c, k) => c + 0.112 + (k % 2 ? 0.002 : -0.002));
+		onsets[3] = clicks[3] + 0.3; // Ausreisser (z. B. Husten)
+		onsets.splice(6, 1); // ein Klick nicht gehört
+		const est = estimateRoundTrip(clicks, [9.5, ...onsets]);
+		expect(est?.sec).toBeCloseTo(0.112, 2);
+		expect(est?.matched).toBe(6);
+	});
+
+	it('zu wenige oder zu stark streuende Klicks: kein Ergebnis', () => {
+		expect(
+			estimateRoundTrip(
+				clicks,
+				clicks.slice(0, 4).map((c) => c + 0.1)
+			)
+		).toBeNull();
+		expect(
+			estimateRoundTrip(
+				clicks,
+				clicks.map((c, k) => c + 0.05 + k * 0.03)
+			)
+		).toBeNull();
+		expect(estimateRoundTrip(clicks, [])).toBeNull();
+	});
+
+	it('Standard wie im Prototyp, Warnung bei grosser Verzögerung', () => {
+		expect(defaultRoundTrip(0.02)).toBeCloseTo(0.1, 5);
+		expect(latencyWarning(0.12)).toBeNull();
+		expect(latencyWarning(0.22)).toMatch(/Bluetooth/);
+	});
+
+	it('pro Gerät gespeichert, Unsinn und gesperrter Speicher ergeben null', () => {
+		const data = new Map<string, string>();
+		const store = {
+			getItem: (k: string) => data.get(k) ?? null,
+			setItem: (k: string, v: string) => void data.set(k, v),
+			removeItem: (k: string) => void data.delete(k)
+		};
+		expect(loadLatency(store)).toBeNull();
+		saveLatency(store, 0.1234);
+		expect(loadLatency(store)).toBeCloseTo(0.1234, 4);
+		data.set(LATENCY_KEY, 'kaputt');
+		expect(loadLatency(store)).toBeNull();
+		saveLatency(store, null);
+		expect(data.has(LATENCY_KEY)).toBe(false);
+		const broken = {
+			getItem: () => {
+				throw new Error('gesperrt');
+			},
+			setItem: () => {
+				throw new Error('gesperrt');
+			},
+			removeItem: () => {
+				throw new Error('gesperrt');
+			}
+		};
+		expect(loadLatency(broken)).toBeNull();
+		expect(() => saveLatency(broken, 0.1)).not.toThrow();
 	});
 });

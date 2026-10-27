@@ -35,6 +35,8 @@ Alles hier ist am Prototyp gemessen oder beobachtet; wo nicht, steht »ungeprüf
 - **Gegenprobe mit den Einzelspuren (Logic-Instrumente, nicht echte Bläser):** Trompete 1: 345/345 Töne erkannt; Posaune 1: 336/336; Sousaphon: 374/393 (95 %), 19 nicht gehört, **keiner falsch**. Synthetische Töne (Sägezahn): richtig, ±10 Cent, Naturton höher, falscher Ton korrekt klassifiziert.
 - **Ungeprüft:** echte Bläser, Handymikrofone, Hall im Probelokal, tiefe Instrumente in echt, Bluetooth-Verzögerung.
 - Verzögerung im Prototyp: Mikrofon `0,08 s + outputLatency + baseLatency`; Vorführung (eigene Spur als Spieler) 0,02 s. Muss pro Gerät abgeglichen werden.
+- **Wie stark schadet eine falsche Verzögerung?** Simuliert am 27.10.2026 mit Teil A von Trompete 1 (`session.spec.ts`, keine echten Bläser): Kommen die Töne 120 ms zu spät an und wird nichts zurückgerechnet, bleiben trotzdem alle Töne »getroffen«. Das Bewertungsfenster spart Ansatz und Ende aus, und viele Töne wiederholen die Tonhöhe. Bei 250 ms (typisch Bluetooth) sind es unter 80 %. Ein grober Abgleich reicht also; Bluetooth nicht.
+- **Fehler im Prototyp (gefunden 27.10.2026):** In der Schleife blieb beim Mithören der letzte Ton eines Teils unbewertet. Die Meldungen hinken um die Verzögerung hinter der Band her, und der Rücksprung kam vorher. Im Produkt schliesst `PracticeSession` am Bereichsende alle angefangenen Töne ab.
 
 ## Rhythmus tippen
 

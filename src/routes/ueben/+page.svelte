@@ -3,10 +3,19 @@
 	// Stimme, docs/02-architektur.md »Audio«). Die Band ist die Uhr der Bahn. Ohne Testzugang oder
 	// ohne Aufnahmen läuft die Bahn mit einer eigenen Uhr weiter, und ein Hinweis sagt warum.
 	// Modi Mitspielen, Echo und Rhythmus tippen: Ablauf in #lib/practice/session.ts.
+	// Mithören: AudioWorklet mit der Tonerkennung (#lib/audio/listen.ts), Bewertung in der session.
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { AUDIO_NOTICE, probeAudio, stemUrls, type AudioStatus } from '#lib/audio/access.ts';
+	import {
+		defaultRoundTrip,
+		latencyWarning,
+		loadLatency,
+		saveLatency
+	} from '#lib/audio/latency.ts';
+	import { Listener, measureRoundTrip, micErrorText } from '#lib/audio/listen.ts';
 	import { StemPlayer } from '#lib/audio/stems.ts';
+	import type { TrackerMessage } from '#lib/pitch/tracker.ts';
 	import GripPanel from '#lib/lane/GripPanel.svelte';
 	import Lane from '#lib/lane/Lane.svelte';
 	import { HELP_LABELS, zoomStep, type HelpLevel } from '#lib/lane/geometry.ts';
@@ -42,6 +51,7 @@
 		MODE_LABELS,
 		PracticeSession,
 		type FrameInfo,
+		type Listening,
 		type PassReport
 	} from '#lib/practice/session.ts';
 	import type { Tone } from '#lib/pitch/coach.ts';
@@ -71,6 +81,27 @@
 	let report = $state<PassReport | null>(null);
 	let feedback = $state<{ text: string; tone: Tone } | null>(null);
 	let flash = $state(false);
+	// Mithören
+	let listening = $state<Listening>('off');
+	let listener: Listener | null = null;
+	let listenCtx: AudioContext | null = null;
+	/** Eigener AudioContext fürs Mithören, wenn es keinen Ton gibt (ohne Testzugang) */
+	let spareCtx: AudioContext | null = null;
+	let current = $state<number | null>(null);
+	let deviation = $state<number | null>(null);
+	/** Gehörte Tonhöhe, notiert und gerundet (für die Anzeige) */
+	let heard = $state<number | null>(null);
+	let lastCoach = 0;
+	/** Gemessene Verzögerung dieses Geräts (s) oder null */
+	let measured = $state<number | null>(null);
+	let calibration = $state<'idle' | 'running' | 'failed'>('idle');
+	let calibrationError = $state('');
+	/** Mikrofon liess sich nicht starten */
+	let listenError = $state('');
+
+	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
+	// Ablauf des Übens (nicht reaktiv; sync() spiegelt ihn in die Anzeige)
+	const session = new PracticeSession([], secondsPerBeat(title), rangeOf(1));
 
 	const voice = $derived(title.voices.find((v) => v.id === prefs.voice) ?? title.voices[0]);
 	const track = $derived.by(() => {
@@ -104,6 +135,8 @@
 		sections: title.sections,
 		countIn: counting,
 		judged,
+		trace: listening !== 'off' ? session.trace : null,
+		current: listening !== 'off' ? current : null,
 		overlay:
 			mode === 'echo'
 				? echoPhase === 'hear'
@@ -111,9 +144,6 @@
 					: { text: 'JETZT DU', tone: 'gelb' as const }
 				: null
 	});
-
-	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
-	const session = new PracticeSession([], secondsPerBeat(title), rangeOf(1));
 
 	/** Anzeige und Lautstärke der eigenen Stimme nach jeder Änderung am Übe-Ablauf nachziehen. */
 	function sync() {
@@ -123,10 +153,135 @@
 		if (stems) stems.ownGain = session.ownVolume(prefs.own);
 	}
 
-	function frameInfo(): FrameInfo {
+	function frameInfo(atBeat = beat): FrameInfo {
 		// Ohne Ton gibt es keine Ausgabe-Latenz: getippt wird nach der Bahn.
-		return { beat, latency: stems?.latency() ?? 0, rate: tempo / 100, target };
+		return { beat: atBeat, latency: stems?.latency() ?? 0, rate: tempo / 100, target };
 	}
+
+	/** Verzögerung beim Mithören mit Mikrofon: gemessen oder wie im Prototyp geschätzt. */
+	const roundTrip = $derived(measured ?? defaultRoundTrip(audio === 'ok' ? 0.02 : 0));
+
+	/** AudioContext fürs Mithören: der der Wiedergabe, sonst ein eigener. Nur aus einer Berührung. */
+	function audioContextForListening(): AudioContext | null {
+		const ctx = stems?.audioContext();
+		if (ctx) return ctx;
+		if (!spareCtx && typeof AudioContext !== 'undefined') spareCtx = new AudioContext();
+		void spareCtx?.resume();
+		return spareCtx;
+	}
+
+	async function toggleListening(kind: Exclude<Listening, 'off'>) {
+		if (listening === kind) {
+			stopListening();
+			return;
+		}
+		stopListening(true);
+		const ctx = audioContextForListening();
+		const input = kind === 'mic' ? 'mic' : stems?.ownSource();
+		listenError = '';
+		if (!ctx || !input) {
+			listenError = micErrorText({ name: 'NoMedia' });
+			return;
+		}
+		try {
+			listener = await Listener.start(ctx, input, { instrument: voice.instrument });
+		} catch (e) {
+			listenError = micErrorText(e);
+			return;
+		}
+		listenCtx = ctx;
+		listener.onmessage = onTracker;
+		session.setListening(kind);
+		listening = kind;
+		report = null;
+		feedback = {
+			text:
+				kind === 'mic'
+					? 'Ich höre zu. Play drücken und mitspielen.'
+					: 'Vorführung: Die Aufnahme deiner Stimme spielt, das Mithören bewertet sie.',
+			tone: ''
+		};
+		sync();
+		if (kind === 'demo' && !clock.playing) togglePlay();
+	}
+
+	function stopListening(silent = false) {
+		listener?.stop();
+		listener = null;
+		if (listening === 'off') return;
+		session.setListening('off');
+		listening = 'off';
+		current = null;
+		deviation = null;
+		heard = null;
+		sync();
+		if (!silent) feedback = { text: 'Mithören ist aus.', tone: '' };
+	}
+
+	function onTracker(m: TrackerMessage) {
+		if (m.type !== 'pitch' || !listenCtx) return;
+		const written = m.midi === null ? null : m.midi - voice.shift;
+		heard = written === null ? null : Math.round(written);
+		if (!clock.playing) return;
+		// Alter der Meldung plus Verzögerung des Geräts (bei der Vorführung kommt der Ton direkt)
+		const age = Math.max(0, listenCtx.currentTime - m.t);
+		const delay = age + (listening === 'mic' ? roundTrip : 0);
+		const changed = session.hear(written, frameInfo(beatAtTime(title, clock.time())), delay);
+		current = session.current;
+		deviation = session.lastDeviation;
+		if (changed) sync();
+		const now = performance.now();
+		if (now - lastCoach >= 350) {
+			lastCoach = now;
+			const msg = session.coach(voice.kind, clock.playing, tempo / 100);
+			if (msg) feedback = msg;
+		}
+	}
+
+	async function calibrate() {
+		stopListening(true);
+		if (clock.playing) togglePlay();
+		const ctx = audioContextForListening();
+		if (!ctx) return;
+		calibration = 'running';
+		calibrationError = '';
+		try {
+			const est = await measureRoundTrip(ctx, voice.instrument);
+			if (est) {
+				measured = est.sec;
+				saveLatency(localStorage, est.sec);
+				calibration = 'idle';
+			} else {
+				calibration = 'failed';
+			}
+		} catch (e) {
+			calibration = 'failed';
+			calibrationError = micErrorText(e);
+		}
+	}
+
+	const listenHint = $derived(
+		listening === 'mic'
+			? 'Deine Stimme ist beim Mithören stumm, du spielst sie selbst. Kopfhörer empfohlen.'
+			: listening === 'demo'
+				? 'So sieht es aus, wenn jemand die Stimme fehlerfrei spielt.'
+				: 'Das Mikrofon hört, ob du die Töne triffst. Mit Kopfhörer, sonst hört es die Band mit.'
+	);
+
+	const latencyText = $derived.by(() => {
+		if (calibration === 'running')
+			return 'Kopfhörer ab, Lautsprecher an. Gleich kommen acht Klicks …';
+		if (calibration === 'failed') {
+			return (
+				calibrationError ||
+				'Das hat nicht geklappt. Lauter stellen, Kopfhörer ab und nochmals versuchen.'
+			);
+		}
+		const ms = Math.round(roundTrip * 1000);
+		if (measured === null)
+			return `Verzögerung ${ms} ms, geschätzt. Abgleichen macht die Bewertung genauer.`;
+		return [`Verzögerung ${ms} ms, gemessen.`, latencyWarning(measured)].filter(Boolean).join(' ');
+	});
 
 	/** keepPass: Sprung innerhalb eines Durchgangs (Echo); sonst beginnt die Bewertung neu. */
 	function jumpTo(toBar: number, preroll = true, keepPass = false) {
@@ -145,6 +300,7 @@
 	}
 
 	function chooseMode(m: PracticeMode) {
+		if (m === 'rhythm') stopListening(true);
 		session.setMode(m);
 		report = null;
 		feedback = null;
@@ -221,6 +377,7 @@
 	function chooseVoice(id: string) {
 		setPrefs({ voice: id });
 		session.setNotes(track.notes);
+		listener?.setInstrument(voice.instrument);
 		stems?.load(stemUrls(title, id));
 		sync();
 	}
@@ -301,13 +458,16 @@
 
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
+		measured = loadLatency(localStorage);
 		session.setNotes(track.notes);
 		jumpTo(title.sections[1].from);
 		void startAudio();
 	});
 
 	onDestroy(() => {
+		stopListening(true);
 		stems?.destroy();
+		void spareCtx?.close();
 	});
 </script>
 
@@ -366,6 +526,40 @@
 		{/each}
 	</div>
 	<span class="hint">»Aus« heisst: Du spielst deine Stimme selbst.</span>
+</section>
+
+<section class="row listen">
+	<button
+		type="button"
+		class="micbtn"
+		aria-pressed={listening === 'mic'}
+		disabled={mode === 'rhythm' || calibration === 'running'}
+		onclick={() => toggleListening('mic')}
+	>
+		<svg viewBox="0 0 24 24" aria-hidden="true"
+			><path
+				d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"
+			/></svg
+		>
+		Mithören
+	</button>
+	<button
+		type="button"
+		class="mini"
+		aria-pressed={listening === 'demo'}
+		disabled={audio !== 'ok' || mode === 'rhythm' || calibration === 'running'}
+		onclick={() => toggleListening('demo')}
+		>{listening === 'demo' ? 'Vorführung beenden' : 'Vorführung mit Aufnahme'}</button
+	>
+	<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
+		>Verzögerung abgleichen</button
+	>
+	{#if listenError}
+		<span class="say" data-tone="bad" role="alert">{listenError}</span>
+	{:else}
+		<span class="hint">{listenHint}</span>
+	{/if}
+	<span class="hint" data-testid="verzoegerung">{latencyText}</span>
 </section>
 
 <section class="row opts">
@@ -454,6 +648,23 @@
 					data-testid="tipp-rueckmeldung"
 				>
 					{feedback?.text ?? 'Tippe bei jedem Ton. Grün heisst: genau im Takt.'}
+				</p>
+			</div>
+		{:else if listening !== 'off'}
+			<div class="feedback" data-testid="mithoeren" data-heard={heard ?? ''}>
+				<p class="label">Rückmeldung</p>
+				<div class="tuner" aria-hidden="true">
+					<span class="lo">tief</span><span class="hi">hoch</span>
+					<div class="zero"></div>
+					{#if deviation !== null}
+						<div
+							class="needle"
+							style:left="{50 + Math.max(-100, Math.min(100, deviation * 100)) / 2}%"
+						></div>
+					{/if}
+				</div>
+				<p class="say" data-tone={feedback?.tone ?? ''} aria-live="polite">
+					{feedback?.text ?? ''}
 				</p>
 			</div>
 		{/if}
@@ -631,6 +842,80 @@
 		background: var(--blau);
 		border-color: var(--blau);
 		color: #141619;
+	}
+	.micbtn {
+		appearance: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		border: 2px solid var(--ink);
+		background: var(--surface);
+		color: var(--ink);
+		font: 700 15px var(--font-body);
+		border-radius: 999px;
+		min-height: 44px;
+		padding: 6px 16px;
+		cursor: pointer;
+	}
+	.micbtn svg {
+		width: 20px;
+		height: 20px;
+		fill: currentColor;
+	}
+	.micbtn[aria-pressed='true'] {
+		background: var(--rot);
+		border-color: var(--rot);
+		color: #fff;
+	}
+	.micbtn:disabled,
+	.mini:disabled {
+		opacity: 0.45;
+		cursor: default;
+	}
+	.feedback {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.feedback .label {
+		margin: 0;
+	}
+	.tuner {
+		position: relative;
+		height: 28px;
+		border-radius: 14px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		font: 500 11px var(--font-mono);
+		color: var(--muted);
+	}
+	.tuner .lo,
+	.tuner .hi {
+		position: absolute;
+		top: 6px;
+	}
+	.tuner .lo {
+		left: 10px;
+	}
+	.tuner .hi {
+		right: 10px;
+	}
+	.tuner .zero {
+		position: absolute;
+		left: 50%;
+		top: 4px;
+		bottom: 4px;
+		width: 2px;
+		background: var(--gruen);
+	}
+	.tuner .needle {
+		position: absolute;
+		top: 2px;
+		bottom: 2px;
+		width: 6px;
+		margin-left: -3px;
+		border-radius: 3px;
+		background: var(--blau);
 	}
 	.say {
 		margin: 0;

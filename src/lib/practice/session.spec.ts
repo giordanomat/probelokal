@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { badTouchPart } from '../../test/badtouch';
 import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
 import { secondsPerBeat } from '../music/timing';
-import { noteIndicesInBars } from '../music/track';
+import { NATURAL_SERIES } from '../music/fingering';
+import { buildTrack, noteIndicesInBars } from '../music/track';
 import type { RawNote } from '../music/types';
 import { TAP_EXTRA_LATENCY_SEC } from './rhythm';
 import { PracticeSession, type FrameInfo } from './session';
@@ -178,5 +179,139 @@ describe('Übe-Ablauf: Mitspielen', () => {
 		s.setNotes(quarters.slice(4));
 		expect(s.judged.size).toBe(0);
 		expect(s.passFrom).toBeNull();
+	});
+});
+
+describe('Übe-Ablauf: Mithören', () => {
+	const notes = buildTrack(badTouchPart('P1').notes, 'valve').notes;
+	const a = BAD_TOUCH.sections[1];
+	const inA = noteIndicesInBars(notes, a.from, a.to);
+	const STEP = 0.02; // eine Meldung alle 20 ms wie im Worklet
+
+	/**
+	 * Spielt Teil A mit 50 Messpunkten pro Sekunde. pitchAt: was die Person zum Schlag spielt
+	 * (notiert) oder null. lateSec: so viel später kommt es im Mikrofon an; delaySec: so viel
+	 * rechnet die Bewertung zurück.
+	 */
+	function playA(
+		s: PracticeSession,
+		pitchAt: (n: (typeof notes)[number]) => number | null,
+		{ lateSec = 0, delaySec = 0, rate = 1 } = {}
+	) {
+		const bps = rate / spb;
+		const from = (a.from - 1) * 4; // Anlauftakt
+		const to = (a.to + 1) * 4 + 1;
+		for (let beat = from; beat < to; beat += STEP * bps) {
+			// gespielt wurde zum Schlag beat − lateSec
+			const played = beat - lateSec * bps;
+			const i = notes.findIndex((n) => played >= n.b && played < n.b + n.d);
+			const written = i >= 0 ? pitchAt(notes[i]) : null;
+			s.hear(written, frame(beat, { target: a.from, rate }), delaySec);
+		}
+	}
+
+	function listeningSession(listening: 'mic' | 'demo' = 'mic') {
+		const s = new PracticeSession(notes, spb, { from: a.from, to: a.to });
+		s.setListening(listening);
+		return s;
+	}
+
+	it('sauber gespielter Teil A: jeder Ton getroffen, auch bei 70 %', () => {
+		for (const rate of [1, 0.7]) {
+			const s = listeningSession();
+			playA(s, (n) => n.m, { rate });
+			for (const i of inA) expect(s.judged.get(i), `Ton ${i}`).toBe('hit');
+			expect(s.finish(true, 70)?.headline).toBe(
+				`Durchgang 1: ${inA.length} von ${inA.length} Tönen getroffen (100 %)`
+			);
+		}
+	});
+
+	it('richtiger Griff, eine Stufe zu hoch: falsche Stufe; nichts gespielt: nicht gehört', () => {
+		const above = (n: (typeof notes)[number]) => {
+			const sounding = n.m + (n.lower ?? 0);
+			const next = NATURAL_SERIES.find((x) => x > sounding);
+			return next === undefined ? null : next - (n.lower ?? 0);
+		};
+		const s = listeningSession();
+		playA(s, above);
+		for (const i of inA) expect(s.judged.get(i)).toBe('partial');
+		expect(s.coach('valve', true, 1)?.text).toMatch(/^Richtiger Griff, aber eine Stufe zu hoch/);
+
+		const quiet = listeningSession();
+		playA(quiet, () => null);
+		for (const i of inA) expect(quiet.judged.get(i)).toBe('none');
+		expect(quiet.coach('valve', true, 1)?.text).toMatch(/Ich höre dich nicht|Pause/);
+	});
+
+	it('Verzögerung des Geräts: richtig zurückgerechnet trifft alles', () => {
+		for (const late of [0.12, 0.25]) {
+			const s = listeningSession();
+			playA(s, (n) => n.m, { lateSec: late, delaySec: late });
+			for (const i of inA) expect(s.judged.get(i)).toBe('hit');
+		}
+	});
+
+	it('ohne Abgleich: 120 ms schaden in Teil A kaum, 250 ms (Bluetooth) schon', () => {
+		const hits = (late: number) => {
+			const s = listeningSession();
+			playA(s, (n) => n.m, { lateSec: late, delaySec: 0 });
+			return inA.filter((i) => s.judged.get(i) === 'hit').length;
+		};
+		// Das Bewertungsfenster spart Ansatz und Ende aus; viele Töne wiederholen die Tonhöhe.
+		expect(hits(0.12)).toBe(inA.length);
+		expect(hits(0.25)).toBeLessThan(inA.length * 0.8);
+	});
+
+	it('Schleife: der letzte Ton zählt, obwohl die Meldungen hinter der Band herhinken', () => {
+		const s = listeningSession();
+		s.loop = true;
+		const bps = 1 / spb;
+		const delay = 0.1;
+		const end = (a.to + 1) * 4;
+		for (let beat = (a.from - 1) * 4; beat < end; beat += 0.02 * bps) {
+			const played = beat - delay * bps;
+			const n = notes.find((x) => played >= x.b && played < x.b + x.d);
+			s.hear(n ? n.m : null, frame(beat, { target: a.from }), delay);
+		}
+		const step = s.advance(frame(end + 0.01, { target: a.from }), 100);
+		expect(step.report?.headline).toBe(
+			`Durchgang 1: ${inA.length} von ${inA.length} Tönen getroffen (100 %)`
+		);
+	});
+
+	it('Spur auf der Bahn und Abweichung für die Anzeige', () => {
+		const s = listeningSession();
+		playA(s, (n) => n.m + 0.2);
+		expect(s.trace.length).toBeGreaterThan(100);
+		expect(s.trace.some((p) => p.c === 'hit')).toBe(true);
+		expect(s.lastDeviation).toBeCloseTo(0.2, 5);
+		expect(s.coach('valve', true, 1)).toEqual({ text: 'Sitzt, eher etwas hoch.', tone: 'ok' });
+	});
+
+	it('Echo bewertet nur »Jetzt du«; Mithören stellt die eigene Stimme stumm, die Vorführung nicht', () => {
+		const s = new PracticeSession(notes, spb, { from: a.from, to: a.to });
+		s.setMode('echo');
+		s.setListening('mic');
+		expect(s.judging).toBe(false); // »Hör zu«
+		expect(s.coach('valve', true, 1)?.text).toBe('Hör zu – gleich bist du dran.');
+		s.echo = { from: a.from, phase: 'play' };
+		expect(s.judging).toBe(true);
+
+		const m = listeningSession('mic');
+		expect(m.ownVolume(1)).toBe(0);
+		const d = listeningSession('demo');
+		expect(d.ownVolume(0.35)).toBe(0.35);
+	});
+
+	it('Rhythmus tippen und Mithören schliessen sich aus', () => {
+		const s = new PracticeSession(notes, spb, { from: a.from, to: a.to });
+		s.setMode('rhythm');
+		s.setListening('mic');
+		expect(s.mode).toBe('play');
+		expect(s.tap(frame(4))).toEqual({ kind: 'ignored' });
+		s.setListening('off');
+		expect(s.hear(70, frame(5), 0)).toBe(false);
+		expect(s.trace).toHaveLength(0);
 	});
 });
