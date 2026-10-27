@@ -6,7 +6,14 @@
 	// Mithören: AudioWorklet mit der Tonerkennung (#lib/audio/listen.ts), Bewertung in der session.
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { AUDIO_NOTICE, probeAudio, stemUrls, type AudioStatus } from '#lib/audio/access.ts';
+	import {
+		AUDIO_NOTICE,
+		audioStatusOf,
+		audioUrl,
+		probeAudio,
+		stemUrls,
+		type AudioStatus
+	} from '#lib/audio/access.ts';
 	import {
 		defaultRoundTrip,
 		latencyWarning,
@@ -30,11 +37,15 @@
 	} from '#lib/music/timing.ts';
 	import { buildTrack } from '#lib/music/track.ts';
 	import {
+		BAUSTELLE_TEMPO,
 		baustellenKey,
 		loadBarStats,
 		recordPass,
-		saveBarStats
+		saveBarStats,
+		topBaustellen,
+		type BarStats
 	} from '#lib/practice/baustellen.ts';
+	import ScoreView from '#lib/score/ScoreView.svelte';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
 	import { TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
@@ -98,6 +109,17 @@
 	let calibrationError = $state('');
 	/** Mikrofon liess sich nicht starten */
 	let listenError = $state('');
+	// Notenansicht, Vollbild, Baustellen
+	let view = $state<'bahn' | 'noten'>('bahn');
+	let fingering = $state(true);
+	let scoreXml = $state<string | null>(null);
+	let scoreStatus = $state<AudioStatus | 'idle' | 'loading'>('idle');
+	let fokus = $state(false);
+	let innerHeight = $state(800);
+	/** Übebereich aus der Baustellen-Liste statt eines Teils */
+	let customRange = $state<{ from: number; to: number } | null>(null);
+	let bauStats = $state<BarStats>({});
+	const baustellen = $derived(topBaustellen(bauStats));
 
 	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
 	// Ablauf des Übens (nicht reaktiv; sync() spiegelt ihn in die Anzeige)
@@ -260,6 +282,13 @@
 		}
 	}
 
+	const SCORE_NOTICE: Record<AudioStatus, string> = {
+		ok: '',
+		locked: 'Für die Noten brauchst du den Testzugang.',
+		missing: 'Die Noten sind noch nicht hochgeladen.',
+		unavailable: 'Die Noten sind gerade nicht erreichbar.'
+	};
+
 	const listenHint = $derived(
 		listening === 'mic'
 			? 'Deine Stimme ist beim Mithören stumm, du spielst sie selbst. Kopfhörer empfohlen.'
@@ -294,6 +323,7 @@
 
 	function chooseSection(i: number) {
 		sectionIndex = i;
+		customRange = null;
 		session.setRange(rangeOf(i));
 		jumpTo(title.sections[i].from);
 		sync();
@@ -314,6 +344,10 @@
 	function toggleLoop() {
 		loop = !loop;
 		session.loop = loop;
+		if (!loop && customRange) {
+			customRange = null;
+			session.setRange(rangeOf(sectionIndex));
+		}
 		session.resetPass();
 		sync();
 	}
@@ -323,11 +357,63 @@
 		if (!r.final || !r.judged.length) return;
 		// Baustellen pro Titel und Stimme, nur auf dem Gerät (Liste kommt mit M1 Punkt 5)
 		const key = baustellenKey(title.slug, voice.id);
-		saveBarStats(
-			localStorage,
-			key,
-			recordPass(loadBarStats(localStorage, key), r.judged, track.notes)
-		);
+		bauStats = recordPass(loadBarStats(localStorage, key), r.judged, track.notes);
+		saveBarStats(localStorage, key, bauStats);
+	}
+
+	function loadBaustellen() {
+		bauStats = loadBarStats(localStorage, baustellenKey(title.slug, voice.id));
+	}
+
+	function resetBaustellen() {
+		bauStats = {};
+		saveBarStats(localStorage, baustellenKey(title.slug, voice.id), {});
+	}
+
+	/** Baustelle üben: zwei Takte in der Schleife bei 70 % (wie im Prototyp, practiceBars). */
+	function practiceBars(from: number) {
+		const to = Math.min(title.bars - 1, from + 1);
+		customRange = { from, to };
+		session.setRange(customRange);
+		loop = true;
+		session.loop = true;
+		tempo = BAUSTELLE_TEMPO;
+		view = 'bahn';
+		jumpTo(from);
+		sync();
+		document.querySelector('.stage')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	}
+
+	function chooseView(v: 'bahn' | 'noten') {
+		view = v;
+		if (v === 'noten') {
+			setFokus(false);
+			void loadScore();
+		}
+	}
+
+	/** MusicXML aus dem Bucket, hinter dem Testzugang wie das Audio. */
+	async function loadScore() {
+		if (scoreStatus === 'loading' || scoreStatus === 'ok') return;
+		scoreStatus = 'loading';
+		try {
+			const res = await fetch(audioUrl(title.slug, title.version, 'score.musicxml'));
+			if (!res.ok) {
+				scoreStatus = audioStatusOf(res);
+				return;
+			}
+			scoreXml = await res.text();
+			scoreStatus = 'ok';
+		} catch {
+			// auch, wenn Supabase nach der Weiterleitung keine CORS-Kopfzeilen schickt
+			scoreStatus = 'unavailable';
+		}
+	}
+
+	function setFokus(on: boolean) {
+		fokus = on;
+		document.documentElement.classList.toggle('fokus', on);
+		if (on) window.scrollTo(0, 0);
 	}
 
 	function doTap() {
@@ -377,6 +463,7 @@
 	function chooseVoice(id: string) {
 		setPrefs({ voice: id });
 		session.setNotes(track.notes);
+		loadBaustellen();
 		listener?.setInstrument(voice.instrument);
 		stems?.load(stemUrls(title, id));
 		sync();
@@ -446,6 +533,10 @@
 	}
 
 	function onKey(e: KeyboardEvent) {
+		if (e.code === 'Escape' && fokus) {
+			setFokus(false);
+			return;
+		}
 		const t = e.target as HTMLElement | null;
 		if (t && /INPUT|SELECT|TEXTAREA|BUTTON/.test(t.tagName)) return;
 		if (e.code === 'Space') {
@@ -460,8 +551,11 @@
 		prefs = loadPrefs(localStorage, voiceIds);
 		measured = loadLatency(localStorage);
 		session.setNotes(track.notes);
+		loadBaustellen();
 		jumpTo(title.sections[1].from);
 		void startAudio();
+		// Vollbild nicht auf andere Seiten mitnehmen (nur im Browser, darum hier statt in onDestroy)
+		return () => document.documentElement.classList.remove('fokus');
 	});
 
 	onDestroy(() => {
@@ -475,7 +569,7 @@
 	<title>{title.name} üben · giordanomat PROBELOKAL</title>
 </svelte:head>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} bind:innerHeight />
 
 <section class="head">
 	<p class="label">Stück üben</p>
@@ -563,65 +657,112 @@
 </section>
 
 <section class="row opts">
-	<label class="toggle"
-		><input
-			type="checkbox"
-			checked={prefs.names}
-			onchange={(e) => setPrefs({ names: e.currentTarget.checked })}
-		/> Notennamen</label
-	>
-	<label class="toggle"
-		><input
-			type="checkbox"
-			checked={prefs.staff}
-			onchange={(e) => setPrefs({ staff: e.currentTarget.checked })}
-		/> Notenlinien</label
-	>
-	<label class="toggle"
-		>Hilfen
-		<select
-			value={prefs.help}
-			onchange={(e) => setPrefs({ help: e.currentTarget.value as HelpLevel })}
+	<div class="seg" role="group" aria-label="Ansicht">
+		<button type="button" aria-pressed={view === 'bahn'} onclick={() => chooseView('bahn')}
+			>Bahn</button
 		>
-			{#each Object.entries(HELP_LABELS) as [k, label] (k)}
-				<option value={k}>{label}</option>
-			{/each}
-		</select>
-	</label>
-	<span class="toggle">
-		Abstand
-		<button
-			type="button"
-			class="mini"
-			aria-label="Enger"
-			onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, -1) })}>−</button
+		<button type="button" aria-pressed={view === 'noten'} onclick={() => chooseView('noten')}
+			>Noten</button
 		>
-		<button
-			type="button"
-			class="mini"
-			aria-label="Weiter"
-			onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, 1) })}>+</button
+	</div>
+	{#if view === 'noten'}
+		<label class="toggle"
+			><input type="checkbox" bind:checked={fingering} /> Griffe und Zugpositionen</label
 		>
-	</span>
+	{:else}
+		<label class="toggle"
+			><input
+				type="checkbox"
+				checked={prefs.names}
+				onchange={(e) => setPrefs({ names: e.currentTarget.checked })}
+			/> Notennamen</label
+		>
+		<label class="toggle"
+			><input
+				type="checkbox"
+				checked={prefs.staff}
+				onchange={(e) => setPrefs({ staff: e.currentTarget.checked })}
+			/> Notenlinien</label
+		>
+		<label class="toggle"
+			>Hilfen
+			<select
+				value={prefs.help}
+				onchange={(e) => setPrefs({ help: e.currentTarget.value as HelpLevel })}
+			>
+				{#each Object.entries(HELP_LABELS) as [k, label] (k)}
+					<option value={k}>{label}</option>
+				{/each}
+			</select>
+		</label>
+		<span class="toggle">
+			Abstand
+			<button
+				type="button"
+				class="mini"
+				aria-label="Enger"
+				onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, -1) })}>−</button
+			>
+			<button
+				type="button"
+				class="mini"
+				aria-label="Weiter"
+				onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, 1) })}>+</button
+			>
+		</span>
+		<button type="button" class="mini" aria-pressed={fokus} onclick={() => setFokus(!fokus)}
+			>Vollbild</button
+		>
+	{/if}
 </section>
 
+{#if fokus}
+	<button type="button" class="mini fokusexit" onclick={() => setFokus(false)}
+		>Vollbild beenden</button
+	>
+{/if}
+
 <section class="stage">
-	<Lane
-		{scene}
-		zoom={prefs.zoom}
-		onpick={(b) => {
-			if (clock.playing) return;
-			const toBar = Math.max(0, Math.floor(b / 4));
-			if (mode === 'echo') session.echoFrom(toBar);
-			jumpTo(toBar);
-			sync();
-		}}
-		onpress={() => {
-			if (mode !== 'rhythm' || !clock.playing) return false;
-			doTap();
-			return true;
-		}}
-	/>
+	{#if view === 'noten'}
+		{#if scoreStatus === 'ok' && scoreXml}
+			<ScoreView
+				xml={scoreXml}
+				partId={voice.part}
+				bar={Math.min(title.bars - 1, Math.floor(bar))}
+				{fingering}
+				onpick={(b) => {
+					if (mode === 'echo') session.echoFrom(b);
+					jumpTo(b);
+					sync();
+				}}
+			/>
+		{:else}
+			<p class="notice scoremsg" data-testid="noten-hinweis">
+				{scoreStatus === 'loading' || scoreStatus === 'idle'
+					? 'Noten werden geladen …'
+					: SCORE_NOTICE[scoreStatus]}
+				{#if scoreStatus === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
+			</p>
+		{/if}
+	{:else}
+		<Lane
+			{scene}
+			zoom={prefs.zoom}
+			height={fokus ? Math.max(240, innerHeight - 190) : undefined}
+			onpick={(b) => {
+				if (clock.playing) return;
+				const toBar = Math.max(0, Math.floor(b / 4));
+				if (mode === 'echo') session.echoFrom(toBar);
+				jumpTo(toBar);
+				sync();
+			}}
+			onpress={() => {
+				if (mode !== 'rhythm' || !clock.playing) return false;
+				doTap();
+				return true;
+			}}
+		/>
+	{/if}
 	<div class="side">
 		<GripPanel state={panel} />
 		{#if mode === 'rhythm'}
@@ -692,6 +833,35 @@
 	</section>
 {/if}
 
+<section class="bau" aria-labelledby="bau-titel">
+	<p class="label" id="bau-titel">Baustellen</p>
+	{#if baustellen.length}
+		<ul>
+			{#each baustellen as b (b.bar)}
+				<li>
+					<div>
+						<b>Takt {b.bar}–{Math.min(title.bars - 1, b.bar + 1)}</b>
+						<span
+							>{sectionLabel(title.sections[sectionIndexOf(title.sections, b.bar)])} · {Math.round(
+								b.ratio * 100
+							)} % der Töne wackeln ({b.tries} Versuche)</span
+						>
+					</div>
+					<button type="button" class="mini" onclick={() => practiceBars(b.bar)}
+						>Üben bei {BAUSTELLE_TEMPO} %</button
+					>
+				</li>
+			{/each}
+		</ul>
+		<button type="button" class="link" onclick={resetBaustellen}>Baustellen zurücksetzen</button>
+	{:else}
+		<p class="hint">
+			Noch keine. Nach Durchgängen mit »Rhythmus tippen« oder Mithören sammelt das Probelokal hier
+			die Takte, die noch wackeln.
+		</p>
+	{/if}
+</section>
+
 <section class="transport" aria-label="Wiedergabe">
 	<button
 		type="button"
@@ -709,10 +879,20 @@
 	</div>
 	<label class="toggle">
 		<span class="sr">Teil</span>
-		<select value={sectionIndex} onchange={(e) => chooseSection(Number(e.currentTarget.value))}>
+		<select
+			value={customRange ? 'c' : String(sectionIndex)}
+			onchange={(e) => {
+				if (e.currentTarget.value !== 'c') chooseSection(Number(e.currentTarget.value));
+			}}
+		>
 			{#each title.sections as s, i (i)}
-				<option value={i}>{sectionLabel(s)} · T. {s.from}{s.to > s.from ? '–' + s.to : ''}</option>
+				<option value={String(i)}
+					>{sectionLabel(s)} · T. {s.from}{s.to > s.from ? '–' + s.to : ''}</option
+				>
 			{/each}
+			{#if customRange}
+				<option value="c">Baustelle · T. {customRange.from}–{customRange.to}</option>
+			{/if}
 		</select>
 	</label>
 	<button type="button" class="mini" aria-pressed={loop} onclick={toggleLoop}>Schleife</button>
@@ -740,6 +920,68 @@
 		color: var(--muted);
 		font-size: 14px;
 		max-width: 62ch;
+	}
+	.scoremsg {
+		padding: 16px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+	}
+	.bau ul {
+		list-style: none;
+		margin: 6px 0 8px;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.bau li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px 14px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		padding: 10px 14px;
+	}
+	.bau li div {
+		display: flex;
+		flex-direction: column;
+		font-size: 14px;
+	}
+	.bau li span {
+		color: var(--muted);
+	}
+	.link {
+		appearance: none;
+		background: none;
+		border: 0;
+		padding: 0;
+		color: var(--muted);
+		font: 600 13px var(--font-body);
+		text-decoration: underline;
+		cursor: pointer;
+	}
+	.fokusexit {
+		position: fixed;
+		top: max(10px, env(safe-area-inset-top, 0px));
+		right: max(12px, env(safe-area-inset-right, 0px));
+		z-index: 20;
+	}
+	/* Vollbild: nur Bahn (mit Griff-Anzeige) und Wiedergabe */
+	:global(html.fokus .topbar),
+	:global(html.fokus) .head,
+	:global(html.fokus) .row,
+	:global(html.fokus) .result,
+	:global(html.fokus) .bau {
+		display: none;
+	}
+	@media (max-width: 760px) {
+		:global(html.fokus) .side {
+			display: none;
+		}
 	}
 	.notice {
 		margin: 8px 0 0;

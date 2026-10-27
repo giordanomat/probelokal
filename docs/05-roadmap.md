@@ -62,7 +62,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Getestet mit Vitest (sauber gespielter Teil A, eine Stufe zu hoch, nichts gehört, Verzögerung, Echo, letzter Ton in der Schleife) und Playwright mit künstlichem Mikrofon (Chromium spielt ein erzeugtes WAV ab).
      - **Ungeprüft:** echte Bläser, Handymikrofone und Hall. Ebenso die Rechenzeit des Worklets auf iPhone/iPad (Aussetzer der Band?), der Abgleich auf echten Geräten und die Mikrofon-Freigabe in Safari. Das ist der Gerätetest der Abnahme.
      - **Offen:** Tipp-Abgleich der Verzögerung für Rhythmus tippen.
-  5. Notenansicht, Vollbild, Baustellen-Liste.
+  5. ~~Notenansicht, Vollbild, Baustellen-Liste~~ erledigt am 27.10.2026:
+     - **Notenansicht:** `src/lib/score/ScoreView.svelte` mit OpenSheetMusicDisplay 2.2.1 (BSD-3, wird erst beim Öffnen geladen). Nur die gewählte Stimme, Griffe und Zugpositionen ein- und ausschaltbar. Der aktuelle Takt ist markiert und bleibt im Blick, Antippen springt.
+     - **Die MusicXML kommt aus dem Bucket** (`score.musicxml`, hinter dem Testzugang wie das Audio). **Matthias:** `prototype/v7/badtouch.xml` als `titles/bad-touch-2-0/schuegu27/score.musicxml` hochladen. Ohne Datei steht »Die Noten sind noch nicht hochgeladen.«
+     - **Vollbild:** nur Bahn, Griff-Anzeige (auf dem Handy ohne) und Wiedergabe; Esc oder »Vollbild beenden«.
+     - **Baustellen-Liste:** die drei wackligsten Takte pro Stimme, »Üben bei 70 %« (zwei Takte in der Schleife), »Baustellen zurücksetzen«.
+     - Getestet mit Vitest (Takt-Kästen, Mitscrollen) und Playwright (Noten mit der MusicXML aus dem Prototyp, Takt läuft mit, Antippen, ohne Testzugang, Vollbild, Baustellen).
+     - **Ungeprüft:** Abruf der MusicXML über die Weiterleitung (CORS bei Supabase, wie beim Audio), Ladezeit und Speicher der 1,9-MB-MusicXML auf iPhone/iPad.
   6. **Offline-Cache für Bad Touch.** Ungeprüft und offen: `/audio/` leitet auf wechselnde signierte Adressen weiter. Der Service Worker müsste deshalb unter dem `/audio/`-Pfad speichern, nicht unter der signierten Adresse. Auf iOS im Flugmodus prüfen.
   7. Testprotokoll für die Abnahme in `docs/testprotokolle/`.
 - **Nebenbei offen:**

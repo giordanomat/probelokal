@@ -1,6 +1,8 @@
 // Audio des Testtitels aus dem privaten Storage-Bucket: Pfad prüfen, signierte Adresse holen.
 // Ablage wie in docs/06-produktionsstrecke.md: Bucket `titles`, Pfad <slug>/<fassung>/<datei>.
-// Dateien je Stimme: minus_<id>.mp3 (Band ohne mich), <id>.mp3 (eigene Stimme), dazu all.mp3.
+// Dateien je Stimme: minus_<id>.mp3 (Band ohne mich), <id>.mp3 (eigene Stimme), dazu all.mp3 und
+// die MusicXML für die Notenansicht (score.musicxml). Die Noten liegen bewusst ebenfalls hinter dem
+// Testzugang und nicht offen im App-Bundle: Sie sind das, was verkauft wird.
 
 import { createClient } from '@supabase/supabase-js';
 import type { Title } from '../music/types';
@@ -8,10 +10,12 @@ import type { Title } from '../music/types';
 export const AUDIO_BUCKET = 'titles';
 /** Gültigkeit der signierten Adresse. Lang genug für eine Übe-Sitzung mit Springen. */
 export const SIGNED_URL_SECONDS = 6 * 60 * 60;
+/** MusicXML eines Titels im Bucket (Notenansicht) */
+export const SCORE_FILE = 'score.musicxml';
 
 /** Erlaubte Dateinamen eines Titels; alles andere ist 404 (kein freies Durchreichen von Pfaden). */
 export function audioFiles(title: Pick<Title, 'voices'>): Set<string> {
-	const files = new Set(['all.mp3']);
+	const files = new Set(['all.mp3', SCORE_FILE]);
 	for (const v of title.voices) {
 		files.add(`minus_${v.id}.mp3`);
 		files.add(`${v.id}.mp3`);

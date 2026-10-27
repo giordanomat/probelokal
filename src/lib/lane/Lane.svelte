@@ -8,10 +8,13 @@
 		scene,
 		zoom = 1,
 		onpick,
-		onpress
+		onpress,
+		height
 	}: {
 		scene: LaneScene;
 		zoom?: number;
+		/** Feste Höhe in Pixeln (Vollbild), sonst aus der Breite */
+		height?: number;
 		/** Antippen der Bahn: Schlag unter dem Finger */
 		onpick?: (beat: number) => void;
 		/** Finger oder Maus geht runter (Rhythmus tippen); true = verbraucht, kein onpick */
@@ -29,7 +32,7 @@
 		width
 			? computeGeometry(scene.track, {
 					width,
-					height: defaultLaneHeight(width),
+					height: height ?? defaultLaneHeight(width),
 					help: scene.help,
 					kind: scene.kind,
 					staff: scene.staff,

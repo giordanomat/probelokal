@@ -29,9 +29,10 @@ describe('Testzugang', () => {
 });
 
 describe('Audio-Pfade', () => {
-	it('kennt pro Stimme Minus-One und eigene Spur, dazu die Gesamtmischung', () => {
+	it('kennt pro Stimme Minus-One und eigene Spur, dazu Gesamtmischung und MusicXML', () => {
 		const files = audioFiles(BAD_TOUCH);
-		expect(files.size).toBe(1 + 2 * 6);
+		expect(files.size).toBe(2 + 2 * 6);
+		expect(files.has('score.musicxml')).toBe(true);
 		expect(files.has('minus_trp1.mp3')).toBe(true);
 		expect(files.has('sous.mp3')).toBe(true);
 	});
