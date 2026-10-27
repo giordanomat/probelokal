@@ -15,7 +15,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 
 **Braucht von Matthias:** Cloudflare-Konto, Supabase-Konto, Zugang zur DNS-Zone giordanomat.de in Cloudflare.
 
-## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test  ← als Nächstes
+## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test  ← in Arbeit
 
 - `tools/extract_notes.py` und `tools/make_mixes.sh` für Bad Touch laufen lassen; Audio und Noten-JSON in Supabase Storage, **hinter einem Testzugang** (Entscheid Matthias, 26.10.2026; siehe docs/02-architektur.md).
 - Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen – aus `prototype/v7` portiert, mit Tests.
@@ -23,6 +23,40 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 - Dunkel/Hell, Vollbild, Offline-Cache für diesen einen Titel.
 
 **Stand 25.10.2026:** Reine Logik portiert und getestet (Noten, Griffe, Takt/Zeit, YIN, Bewertung, Coach-Texte, Rhythmus tippen, Tempoleiter, Baustellen, Echo-Ablauf). Bahn mit Griffspur, Hilfen-Stufen, Notenlinien/-namen, Abstand und Griff-Anzeige unter `/ueben` – noch ohne Ton, eine eigene Uhr treibt die Bahn. Noten-JSON vorerst eingecheckt (`src/lib/titles/bad-touch.notes.json`). Offen: Audio (Mischungen aus den Einzelspuren, Storage), Mitspielen/Echo/Rhythmus in der Oberfläche, Mithören als AudioWorklet mit Latenz-Abgleich, Notenansicht, Vollbild, Offline-Cache, Baustellen-Liste.
+
+**Stand 27.10.2026 (Übergabe an den nächsten Chat):**
+
+- **Wo der Code liegt:** Branch `claude/ecstatic-rubin-6t8xzh`, PR https://github.com/giordanomat/probelokal/pull/1. CI ist grün, es gibt keinen Konflikt mit `main`. Matthias muss ihn noch mergen. Bis dahin auf diesem Branch weiterarbeiten oder von ihm abzweigen. Erst nach dem Merge ist er live, weil nur `main` deployt wird.
+- **Fertig und getestet:**
+  - Logik: `src/lib/music/`, `src/lib/pitch/`, `src/lib/practice/`.
+  - Bahn: `src/lib/lane/` und `/ueben`.
+  - Testzugang: `/zugang` und `/audio/<slug>/<fassung>/<datei>`, siehe docs/02.
+  - Umleitung auf die Hauptadresse: `canonicalRedirect`. Noch aus, weil `CANONICAL_HOST` nicht gesetzt ist.
+  - Versatz der Einzelspuren: genau 3 Takte, siehe docs/04.
+- **Eingerichtet von Matthias:** privater Bucket `titles` in Supabase, Cloudflare-Secrets `SUPABASE_SECRET_KEY` und `TEST_ACCESS_CODE`.
+- **Audio:**
+  - Die 13 Mischungen sind erzeugt (`tools/make_mixes.sh`, Spitzen −0,5 bis −1,0 dB): `all.mp3`, `minus_<stimme>.mp3` und `<stimme>.mp3` für `trp1 trp2 pos1 pos2 euph sous`.
+  - Matthias hat sie bekommen. Der Upload nach `titles/bad-touch-2-0/schuegu27/` ist **noch nicht bestätigt**.
+  - Die Einzelspuren (WAV) liegen in Google Drive, Ordner »arrangements«. Sie liegen nicht im Repository und nicht im Storage. Wer die Mischungen neu erzeugen muss, holt sie dort.
+- **Offen, in dieser Reihenfolge:**
+  1. Nach dem Upload `/audio/…` live prüfen: Code unter `/zugang` eingeben, dann `/audio/bad-touch-2-0/schuegu27/all.mp3` aufrufen. Erwartet wird eine 302-Weiterleitung auf eine signierte Supabase-Adresse. Das Signieren gegen das echte Projekt ist bisher **ungeprüft**.
+  2. **Ton in `/ueben`:**
+     - Neues Modul `src/lib/audio/` nach docs/02 »Audio«: Band (Minus-One) und eigene Stimme, eigene Stimme über einen `GainNode`, Nachführen ab 50 ms Abstand, Tempo über `playbackRate` mit `preservesPitch`.
+     - Die Audio-Zeit ersetzt `FreeClock` als Uhr der Bahn. Der Takt dazu kommt aus `timeForBar` und `stem_offset_sec`.
+     - Ohne Zugang (401) auf `/zugang` verweisen.
+     - Playwright-Test mit synthetischem Audio aus `tools/rangeserver.js` oder einer abgefangenen Route.
+  3. Mitspielen, Echo und Rhythmus tippen in der Oberfläche. Die Logik dazu ist fertig: `practice/rhythm.ts`, `echo.ts`, `pass.ts`, `baustellen.ts`.
+  4. **Mithören:**
+     - `pitch/yin.ts` in einem AudioWorklet laufen lassen.
+     - `getUserMedia` mit `echoCancellation`, `noiseSuppression` und `autoGainControl` aus.
+     - Latenz-Abgleich pro Gerät, Bewertung mit `classify.ts`.
+  5. Notenansicht, Vollbild, Baustellen-Liste.
+  6. **Offline-Cache für Bad Touch.** Ungeprüft und offen: `/audio/` leitet auf wechselnde signierte Adressen weiter. Der Service Worker müsste deshalb unter dem `/audio/`-Pfad speichern, nicht unter der signierten Adresse. Auf iOS im Flugmodus prüfen.
+  7. Testprotokoll für die Abnahme in `docs/testprotokolle/`.
+- **Nebenbei offen:**
+  - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
+  - probelokal.ch einrichten (läuft in einem anderen Chat). Danach `CANONICAL_HOST` setzen, siehe docs/02.
+  - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.
 
 **Abnahme (Testprotokoll in `docs/testprotokolle/`):**
 - iPhone und iPad, Safari: Bahn läuft flüssig; Band und eigene Spur bleiben über das ganze Stück innerhalb 50 ms.
