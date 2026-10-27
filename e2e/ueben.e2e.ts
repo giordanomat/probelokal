@@ -6,8 +6,8 @@ const canvasBeat = (page: import('@playwright/test').Page) =>
 test('Bahn: Stimme, Griff-Anzeige, Hilfen und Wiedergabe', async ({ page }) => {
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
-	await page.goto('/');
-	await page.getByRole('link', { name: /Bad Touch 2.0/ }).click();
+	// Keine App-Startseite mehr (Landingpage unter /): Testpersonen bekommen den Link zu /ueben.
+	await page.goto('/ueben');
 	await expect(page.getByRole('heading', { level: 1, name: 'Bad Touch 2.0' })).toBeVisible();
 	await expect(page.getByRole('figure', { name: /Bahn/ })).toBeVisible();
 

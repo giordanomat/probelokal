@@ -31,7 +31,6 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
   - Logik: `src/lib/music/`, `src/lib/pitch/`, `src/lib/practice/`.
   - Bahn: `src/lib/lane/` und `/ueben`.
   - Testzugang: `/zugang` und `/audio/<slug>/<fassung>/<datei>`, siehe docs/02.
-  - Umleitung auf die Hauptadresse: `canonicalRedirect`. Noch aus, weil `CANONICAL_HOST` nicht gesetzt ist.
   - Versatz der Einzelspuren: genau 3 Takte, siehe docs/04.
 - **Eingerichtet von Matthias:** privater Bucket `titles` in Supabase, Cloudflare-Secrets `SUPABASE_SECRET_KEY` und `TEST_ACCESS_CODE`.
 - **Audio:**
@@ -63,7 +62,6 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
   7. Testprotokoll für die Abnahme in `docs/testprotokolle/`.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
-  - probelokal.ch einrichten (läuft in einem anderen Chat). Danach `CANONICAL_HOST` setzen, siehe docs/02.
   - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.
 
 **Abnahme (Testprotokoll in `docs/testprotokolle/`):**
@@ -102,7 +100,7 @@ Zwei bis drei Wochen mit einem echten Gesamtplan. Fragen: Nutzen sie Echo/Etappe
 ## M5 · Shop
 
 - `arrangements.giordanomat.de`: Katalog, Hörproben, Kauf über Stripe Checkout (CHF, TWINT), Lizenz pro Guugge.
-- Bis dahin: vorläufige Landingpage (live unter https://arrangements.giordanomat.de seit 25.10.2026) aus einem separaten claude.ai-Chat, als fertige HTML-Datei in `src/lib/sites/arrangements.html`, ausgeliefert über `src/hooks.server.ts` für den Hostnamen `arrangements.*`. Quelle (`index.src.html`, `build.py`) fehlt im Repository. Offen vor dem Bekanntmachen: gelb markierte Lücken im Impressum und in der Datenschutzerklärung; Anmeldeformular speichert seit 25.10.2026 in Supabase (`public.signups` über Funktion `public.signup`, Migration `supabase/migrations/20261025140000_signups.sql`); ansehen im Supabase-Dashboard → Table Editor. **Double-Opt-in fehlt: niemanden anschreiben, bevor es gebaut ist** (`confirmed_at` bleibt leer).
+- Bis dahin: vorläufige Landingpage (live seit 25.10.2026, seit 27.10.2026 Startseite unter allen Adressen, Hauptadresse https://probelokal.ch) aus einem separaten claude.ai-Chat, als fertige HTML-Datei in `src/lib/sites/arrangements.html`, ausgeliefert über `src/hooks.server.ts` für `/`; alle anderen Pfade gehören der App (`/ueben`, `/zugang`, `/audio/…`), Unbekanntes liefert 404. Die Seite nennt im Fuss noch `arrangements.giordanomat.de` und `probelokal.giordanomat.de` als Adressen – anpassen, sobald die Quelle im Repository liegt. Quelle (`index.src.html`, `build.py`) fehlt im Repository. Offen vor dem Bekanntmachen: gelb markierte Lücken im Impressum und in der Datenschutzerklärung; Anmeldeformular speichert seit 25.10.2026 in Supabase (`public.signups` über Funktion `public.signup`, Migration `supabase/migrations/20261025140000_signups.sql`); ansehen im Supabase-Dashboard → Table Editor. **Double-Opt-in fehlt: niemanden anschreiben, bevor es gebaut ist** (`confirmed_at` bleibt leer).
 - Rechnungen, Impressum, AGB, Datenschutz (Inhalte von Matthias).
 
 ## M6 · Produktionsstrecke und weitere Titel
