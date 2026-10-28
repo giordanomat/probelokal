@@ -185,6 +185,9 @@ describe('Band und eigene Stimme', () => {
 		expect(player.maybeSync(1200)).toBe(false); // zu früh
 		expect(player.maybeSync(1500)).toBe(true);
 		expect(own.currentTime).toBe(30);
+		// Für die Abnahme: grösste Abweichung und Zahl der Korrekturen
+		expect(player.maxDriftSec).toBeCloseTo(0.2, 5);
+		expect(player.resyncs).toBe(1);
 		player.pause();
 		own.currentTime = 31;
 		expect(player.maybeSync(5000)).toBe(false);

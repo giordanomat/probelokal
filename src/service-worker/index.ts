@@ -1,5 +1,6 @@
 // Service Worker für das App-Gerüst: Build-Dateien und statische Dateien offline verfügbar.
-// Audio und Noten kommen in M1 dazu (eigener Cache pro Titel, siehe docs/05-roadmap.md).
+// Audio und Noten eines Titels speichert die Seite selbst (src/lib/offline/title-cache.ts) und
+// spielt sie offline als blob:-Adresse; der Service Worker muss so keine Range-Anfragen beantworten.
 // Seiten selbst: zuerst Netz, bei Ausfall die zuletzt geladene Fassung.
 // Ungeprüft auf iPhone/iPad (Safari räumt Speicher von Home-Bildschirm-Apps eigenmächtig auf).
 import { self } from '$app/service-worker';

@@ -46,6 +46,7 @@
 		type BarStats
 	} from '#lib/practice/baustellen.ts';
 	import ScoreView from '#lib/score/ScoreView.svelte';
+	import { cachedFile, storeFile, titleCacheName } from '#lib/offline/title-cache.ts';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
 	import { TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
@@ -396,8 +397,18 @@
 	async function loadScore() {
 		if (scoreStatus === 'loading' || scoreStatus === 'ok') return;
 		scoreStatus = 'loading';
+		const path = audioUrl(title.slug, title.version, 'score.musicxml');
+		// Gespeichert oder jetzt speichern (einmal laden), sonst direkt laden, um den Grund zu erfahren
+		if (await storeFile(cacheStorage(), offlineCache, path)) {
+			const blob = await cachedFile(cacheStorage(), offlineCache, path);
+			if (blob) {
+				scoreXml = await blob.text();
+				scoreStatus = 'ok';
+				return;
+			}
+		}
 		try {
-			const res = await fetch(audioUrl(title.slug, title.version, 'score.musicxml'));
+			const res = await fetch(path);
 			if (!res.ok) {
 				scoreStatus = audioStatusOf(res);
 				return;
@@ -438,11 +449,61 @@
 		time = t;
 	}
 
+	// Offline (M1 Punkt 6): gespeicherte Dateien dieses Titels, siehe #lib/offline/title-cache.ts
+	const offlineCache = titleCacheName(title.slug, title.version);
+	const cacheStorage = () => (typeof caches === 'undefined' ? undefined : caches);
+	/** blob:-Adressen der gespeicherten Spuren, die gerade spielen (freigeben beim Wechsel) */
+	let blobUrls: string[] = [];
+	/** Die Spuren der gewählten Stimme sind gespeichert und laufen ohne Netz */
+	let saved = $state(false);
+	/** Messwerte für die Abnahme (docs/testprotokolle), sichtbar mit ?diag */
+	let diag = $state(false);
+	let driftMs = $state(0);
+	let resyncs = $state(0);
+	let outputMs = $state(0);
+
+	/** Gespeicherte Spuren einer Stimme als blob:-Adressen, oder null. */
+	async function localStems(id: string): Promise<{ band: string; own: string } | null> {
+		const urls = stemUrls(title, id);
+		const [band, own] = await Promise.all([
+			cachedFile(cacheStorage(), offlineCache, urls.band),
+			cachedFile(cacheStorage(), offlineCache, urls.own)
+		]);
+		if (!band || !own) return null;
+		return { band: URL.createObjectURL(band), own: URL.createObjectURL(own) };
+	}
+
+	/** Spuren laden; die vorherigen blob:-Adressen erst danach freigeben. */
+	function loadStems(player: StemPlayer, urls: { band: string; own: string }, at?: number) {
+		const old = blobUrls;
+		player.load(urls, at);
+		blobUrls = [urls.band, urls.own].filter((u) => u.startsWith('blob:'));
+		old.forEach((u) => URL.revokeObjectURL(u));
+	}
+
+	/** Spuren einer Stimme im Hintergrund speichern (einmal ganz laden, zusätzlich zum Abspielen). */
+	async function saveStems(id: string) {
+		const urls = stemUrls(title, id);
+		const ok = (
+			await Promise.all([
+				storeFile(cacheStorage(), offlineCache, urls.band),
+				storeFile(cacheStorage(), offlineCache, urls.own)
+			])
+		).every(Boolean);
+		if (id === voice.id) saved = ok;
+		// Bitte, den Speicher nicht aufzuräumen (Safari tut es sonst eigenmächtig); ungeprüft, ob iOS zusagt
+		if (ok) void navigator.storage?.persist?.().catch(() => {});
+	}
+
 	async function startAudio() {
-		const status = await probeAudio(stemUrls(title, voice.id).band);
-		if (status !== 'ok') {
-			audio = status;
-			return;
+		const id = voice.id;
+		const local = await localStems(id);
+		if (!local) {
+			const status = await probeAudio(stemUrls(title, id).band);
+			if (status !== 'ok') {
+				audio = status;
+				return;
+			}
 		}
 		const player = new StemPlayer(bandEl, ownEl);
 		player.ownGain = session.ownVolume(prefs.own);
@@ -454,10 +515,13 @@
 			player.destroy();
 		};
 		// Stimme neu lesen: Sie kann während der Vorabprüfung gewechselt haben.
-		player.load(stemUrls(title, voice.id), clock.time());
+		const current = voice.id === id ? local : null;
+		loadStems(player, current ?? stemUrls(title, voice.id), clock.time());
 		useClock(player);
 		stems = player;
 		audio = 'ok';
+		saved = current !== null;
+		if (!current) void saveStems(voice.id);
 	}
 
 	function chooseVoice(id: string) {
@@ -465,8 +529,20 @@
 		session.setNotes(track.notes);
 		loadBaustellen();
 		listener?.setInstrument(voice.instrument);
-		stems?.load(stemUrls(title, id));
 		sync();
+		saved = false;
+		if (stems) void switchStems(stems, id);
+	}
+
+	async function switchStems(player: StemPlayer, id: string) {
+		const local = await localStems(id);
+		if (stems !== player || voice.id !== id) {
+			if (local) [local.band, local.own].forEach((u) => URL.revokeObjectURL(u));
+			return;
+		}
+		loadStems(player, local ?? stemUrls(title, id));
+		saved = local !== null;
+		if (!local) void saveStems(id);
 	}
 
 	function chooseOwn(level: number) {
@@ -491,6 +567,11 @@
 
 	function tick() {
 		stems?.maybeSync(performance.now());
+		if (diag && stems) {
+			driftMs = Math.round(stems.maxDriftSec * 1000);
+			resyncs = stems.resyncs;
+			outputMs = Math.round(stems.latency() * 1000);
+		}
 		time = clock.time();
 		if (clock.playing) {
 			const step = session.advance(frameInfo(), tempo);
@@ -550,6 +631,7 @@
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
 		measured = loadLatency(localStorage);
+		diag = new URLSearchParams(location.search).has('diag');
 		session.setNotes(track.notes);
 		loadBaustellen();
 		jumpTo(title.sections[1].from);
@@ -561,6 +643,7 @@
 	onDestroy(() => {
 		stopListening(true);
 		stems?.destroy();
+		blobUrls.forEach((u) => URL.revokeObjectURL(u));
 		void spareCtx?.close();
 	});
 </script>
@@ -578,6 +661,17 @@
 		Fassung {title.version} · ♩ {title.bpm}. Du hörst die Band ohne deine Stimme. Deine Stimme
 		kannst du laut, leise oder gar nicht dazunehmen.
 	</p>
+	{#if diag}
+		<p class="hint diag" data-testid="diag">
+			Messung: eigene Spur max. {driftMs} ms neben der Band ({resyncs} × nachgeführt) · Ausgabe-Latenz
+			{outputMs} ms · Verzögerung Mithören {Math.round(roundTrip * 1000)} ms{measured === null
+				? ' (geschätzt)'
+				: ''}
+		</p>
+	{/if}
+	{#if saved}
+		<p class="hint" data-testid="offline">Diese Stimme ist gespeichert und läuft auch ohne Netz.</p>
+	{/if}
 	{#if audio !== 'ok' && audio !== 'loading'}
 		<p class="notice" role="status" data-testid="ton-hinweis">
 			{AUDIO_NOTICE[audio]}
@@ -920,6 +1014,9 @@
 		color: var(--muted);
 		font-size: 14px;
 		max-width: 62ch;
+	}
+	.diag {
+		font: 500 12px var(--font-mono);
 	}
 	.scoremsg {
 		padding: 16px;

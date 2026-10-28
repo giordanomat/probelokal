@@ -107,3 +107,15 @@ test('Spur lässt sich nicht laden: zurück auf die eigene Uhr', async ({ page }
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 	await expect.poll(() => canvasBeat(page)).toBeGreaterThan(1);
 });
+
+test('Messanzeige für die Abnahme mit ?diag: Abweichung der eigenen Spur', async ({ page }) => {
+	await fakeAudio(page);
+	await page.goto('/ueben?diag');
+	const diag = page.getByTestId('diag');
+	await expect(diag).toContainText('Verzögerung Mithören 100 ms (geschätzt)');
+	await page.getByRole('button', { name: 'Abspielen' }).click();
+	await page.waitForTimeout(1500);
+	const ms = Number(/max\. (\d+) ms/.exec((await diag.textContent()) ?? '')?.[1]);
+	expect(ms).toBeLessThan(100);
+	await page.getByRole('button', { name: 'Anhalten' }).click();
+});
