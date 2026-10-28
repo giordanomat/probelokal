@@ -6,6 +6,7 @@
 
 import { sectionsFromStarts } from '#lib/music/timing.ts';
 import type { NotesFile, Title } from '#lib/music/types.ts';
+import { BAD_TOUCH_VOICES } from './bad-touch-voices.ts';
 // Ausgabe von `npm run notes` (tools/extract_notes.py --fill-missing). Nicht von Hand ändern;
 // Quelle ist prototype/v7/badtouch.xml. Kommt ab M1-Abschluss aus Supabase Storage.
 import notes from './bad-touch.notes.json';
@@ -23,69 +24,7 @@ export const BAD_TOUCH: Title = {
 	bpm: 115,
 	bars: BARS,
 	sections: sectionsFromStarts(STARTS, BARS),
-	// Alle Stimmen im Violinschlüssel in B: Klang = notiert + shift (gemessen, siehe docs/04).
-	voices: [
-		{
-			id: 'trp1',
-			short: 'Trp 1',
-			name: 'Trompete 1',
-			part: 'P1',
-			kind: 'valve',
-			instrument: 'trumpet',
-			shift: -2,
-			register: 'trp'
-		},
-		{
-			id: 'trp2',
-			short: 'Trp 2',
-			name: 'Trompete 2',
-			part: 'P2',
-			kind: 'valve',
-			instrument: 'trumpet',
-			shift: -2,
-			register: 'trp'
-		},
-		{
-			id: 'pos1',
-			short: 'Pos 1',
-			name: 'Posaune 1',
-			part: 'P3',
-			kind: 'slide',
-			instrument: 'trombone',
-			shift: -14,
-			register: 'pos'
-		},
-		{
-			id: 'pos2',
-			short: 'Pos 2',
-			name: 'Posaune 2',
-			part: 'P4',
-			kind: 'slide',
-			instrument: 'trombone',
-			shift: -14,
-			register: 'pos'
-		},
-		{
-			id: 'euph',
-			short: 'Euph',
-			name: 'Euphonium',
-			part: 'P5',
-			kind: 'valve',
-			instrument: 'euphonium',
-			shift: -14,
-			register: 'tief'
-		},
-		{
-			id: 'sous',
-			short: 'Sous',
-			name: 'Sousaphon',
-			part: 'P6',
-			kind: 'valve',
-			instrument: 'sousaphone',
-			shift: -26,
-			register: 'tief'
-		}
-	],
+	voices: BAD_TOUCH_VOICES,
 	// Einzelspuren beginnen genau 3 Takte vor Takt 0 (am ersten Einsatz gemessen, docs/04).
 	// Die früheren 6,237 s kamen vom MP3-Vorlauf des Tutti-Bounce.
 	stem_offset_sec: (3 * 4 * 60) / 115

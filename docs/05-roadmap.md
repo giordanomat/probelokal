@@ -111,8 +111,15 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - `register_overview` zählt Personen ohne Ergebnis mit Etappe 0.
    - RLS-Tests pro Rolle mit PGlite (`supabase/tests/`), laufen mit `npm run test:unit` und in CI. Sie decken die Abnahme unten ab, ausser den Edge Functions.
    - Ablauf »Supabase-Migrationen« in GitHub Actions. **Matthias:** Secrets anlegen und den Ablauf starten (docs/03 »Anwenden«). **Ungeprüft**, bis er gelaufen ist.
-2. **Anmelden per E-Mail-Link** (nächster Schritt). **Matthias:** Unter Supabase → Authentication → URL Configuration die Site URL `https://probelokal.ch` und die Redirect-URL `https://probelokal.ch/**` eintragen. Der eingebaute Mailversand von Supabase ist stark begrenzt (nur wenige Mails pro Stunde, Stand der Doku 2026 prüfen). Für den Pilot reicht das vielleicht, für mehr braucht es einen eigenen SMTP-Zugang.
-3. Guugge anlegen, Einladungslink teilen, Stimme wählen (Oberfläche).
+2. ~~**Anmelden**~~ erledigt am 28.10.2026, mit Code aus der E-Mail statt nur per Link. Grund: Auf dem iPhone öffnet ein Link aus Mail die Seite in Safari, nicht in der App auf dem Home-Bildschirm. Einzelheiten in docs/02 »Anmelden«. **Matthias:** URL-Einstellungen, Mailvorlagen und Mailversand in Supabase, siehe dort.
+3. ~~Guugge anlegen, Einladungslink teilen, Stimme wählen~~ erledigt am 28.10.2026:
+   - `/guugge`: Name, eigene Guuggen, neue Guugge anlegen, abmelden.
+   - `/guugge/[id]`: Stimme, Rangliste mitmachen. Für die Leitung zusätzlich einladen (Link mit Rolle, kopieren, teilen, zurückziehen), Rollen, entfernen, Rangliste ein/aus. Austreten.
+   - `/einladung#<schlüssel>`: beitreten, auch über das Anmelden hinweg.
+   - Dazu die Migration `20261028170000_m2_konto_funktionen.sql` (`my_account`, `set_my_name`, `set_rangliste_enabled`).
+   - Getestet mit Vitest und Playwright: ganzer Ablauf mit zwei Geräten gegen einen Supabase-Nachbau (`e2e/fake-supabase.ts`, echte Migrationen in PGlite).
+   - **Ungeprüft:** gegen das echte Supabase. Geht erst, wenn die Migrationen angewendet und die Einstellungen gesetzt sind.
+   - Die Stimmen sind vorerst die von Bad Touch. Wie `/ueben` die gewählte Stimme übernimmt, kommt mit den Plänen.
 4. Hinweise der Leitung, Gesamtplan, Mein Plan, Etappenprüfungen, Edge Functions, Ränge, Rangliste.
 
 **Abnahme:**

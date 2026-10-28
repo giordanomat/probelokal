@@ -524,3 +524,60 @@ describe('Hinweise, Pläne, Lizenzen', () => {
 		expect(await f.db.as(f.fremd, `select * from title_assets`)).toEqual([]);
 	});
 });
+
+describe('Konto-Funktionen für die Oberfläche', () => {
+	let f: Fixture;
+	beforeAll(async () => {
+		f = await fixture();
+	});
+
+	it('my_account: eigener Name und eigene Guuggen, keine fremden', async () => {
+		const [{ my_account: acc }] = await f.db.as<{ my_account: unknown }>(
+			f.trp[1],
+			`select my_account()`
+		);
+		expect(acc).toEqual({
+			display_name: 'Tina',
+			guuggen: [
+				{
+					id: f.guugge,
+					name: 'Schuegu',
+					role: 'mitglied',
+					voice: 'trp2',
+					register: 'trp',
+					rangliste_opt_in: false,
+					rangliste_enabled: false
+				}
+			]
+		});
+		const [{ my_account: other }] = await f.db.as<{ my_account: { guuggen: { name: string }[] } }>(
+			f.fremd,
+			`select my_account()`
+		);
+		expect(other.guuggen.map((g) => g.name)).toEqual(['Andere Guugge']);
+	});
+
+	it('set_my_name ändert nur den eigenen Namen, höchstens 40 Zeichen', async () => {
+		await f.db.as(f.trp[1], `select set_my_name('  Tina B.  ')`);
+		expect(
+			await f.db.owner(`select display_name from profiles where id = $1`, [f.trp[1].id])
+		).toEqual([{ display_name: 'Tina B.' }]);
+		await expect(
+			f.db.as(f.trp[1], `select set_my_name($1)`, ['x'.repeat(41)])
+		).rejects.toThrow(/profiles_display_name_len/);
+	});
+
+	it('Rangliste ein- und ausschalten nur durch die Leitung', async () => {
+		await expect(
+			f.db.as(f.chef, `select set_rangliste_enabled($1, true)`, [f.guugge])
+		).rejects.toThrow('Nur die Leitung');
+		await f.db.as(f.leitung, `select set_rangliste_enabled($1, true)`, [f.guugge]);
+		expect(
+			await f.db.owner(`select rangliste_enabled from guuggen where id = $1`, [f.guugge])
+		).toEqual([{ rangliste_enabled: true }]);
+	});
+
+	it('nicht angemeldet: keine Konto-Funktionen', async () => {
+		await expect(f.db.as('anon', `select my_account()`)).rejects.toThrow(DENIED);
+	});
+});

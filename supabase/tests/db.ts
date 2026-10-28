@@ -38,20 +38,28 @@ export async function createTestDb(): Promise<TestDb> {
 		}
 	}
 
-	const owner = async <T>(sql: string, params: unknown[] = []) =>
-		(await pg.query<T>(sql, params)).rows;
+	// Eine Verbindung für alle: Anfragen der Reihe nach, jede als eigene Transaktion mit Rolle und
+	// Person nur für diese Transaktion (gleichzeitige Anfragen im Playwright-Nachbau, e2e/fake-supabase.ts).
+	let queue: Promise<unknown> = Promise.resolve();
+	const locked = <T>(fn: () => Promise<T>): Promise<T> => {
+		const run = queue.then(fn);
+		queue = run.catch(() => undefined);
+		return run;
+	};
 
-	const as = async <T>(actor: Actor, sql: string, params: unknown[] = []) => {
+	const owner = <T>(sql: string, params: unknown[] = []) =>
+		locked(async () => (await pg.query<T>(sql, params)).rows);
+
+	const as = <T>(actor: Actor, sql: string, params: unknown[] = []) => {
 		const role = actor === 'anon' ? 'anon' : actor === 'service' ? 'service_role' : 'authenticated';
 		const sub = typeof actor === 'object' ? actor.id : '';
-		await pg.query(`select set_config('request.jwt.claim.sub', $1, false)`, [sub]);
-		await pg.exec(`set role ${role}`);
-		try {
-			return (await pg.query<T>(sql, params)).rows;
-		} finally {
-			await pg.exec('reset role');
-			await pg.query(`select set_config('request.jwt.claim.sub', '', false)`);
-		}
+		return locked(() =>
+			pg.transaction(async (tx) => {
+				await tx.query(`select set_config('request.jwt.claim.sub', $1, true)`, [sub]);
+				await tx.exec(`set local role ${role}`);
+				return (await tx.query<T>(sql, params)).rows;
+			})
+		);
 	};
 
 	const user = async (email: string, name = '') => {

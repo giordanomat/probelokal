@@ -33,6 +33,8 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 
 ## Anwenden
 
+**Vorher klären (Stand 28.10.2026):** Die GitHub-Anbindung von Supabase ist mit dem Repository verbunden. An PR #4 erscheint der Check »Supabase Preview« (übersprungen). Ist in Supabase unter Project Settings → Integrations → GitHub »Deploy to production« eingeschaltet, wendet Supabase beim Merge auf `main` die Migrationen selbst an. Ohne nachgetragenen Verlauf würde es dabei `20261025140000` ein zweites Mal ausführen, und das schlägt fehl (Tabelle `signups` gibt es schon). Entweder »Deploy to production« ausschalten und den Ablauf unten benutzen, oder zuerst den Verlauf nachtragen (Schritt 2 unten) und dann die Anbindung anwenden lassen. Bis das entschieden ist, keine Migrationen auf `main` mergen.
+
 Über den Ablauf `.github/workflows/supabase-migrationen.yml`, von Hand gestartet unter GitHub → Actions → »Supabase-Migrationen«. Der Claude-Connector wird dafür nicht benutzt (docs/02).
 
 **Matthias, einmalig:**
