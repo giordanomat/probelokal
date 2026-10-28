@@ -16,4 +16,6 @@ bun.lockb
 /supabase/
 *.md
 /worker-configuration.d.ts
+# Ausgabe von tools/extract_notes.py (npm run notes)
+*.notes.json
 /src/lib/sites/arrangements.html

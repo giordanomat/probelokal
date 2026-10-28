@@ -3,7 +3,8 @@
 
 Summiert die Einzelspuren und sucht an mehreren Stellen den Versatz zum Tutti.
 Positiver Wert = die Einzelspuren beginnen so viele Sekunden VOR dem Tutti.
-Bei Bad Touch 2.0 (Fassung Schuegu27): 6,237 s an allen Messstellen.
+Bei Bad Touch 2.0 (Fassung Schuegu27): 6,237 s gegen den MP3-Bounce – davon ~25 ms MP3-Vorlauf;
+der echte Versatz ist 6,261 s (3 Takte). Darum gegen einen WAV-Bounce messen (docs/04).
 
 Aufruf: python3 tools/measure_offset.py tutti.wav stems/*.wav [--bpm 115]
 Braucht: ffmpeg, numpy.

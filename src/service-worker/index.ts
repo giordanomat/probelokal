@@ -41,6 +41,9 @@ self.addEventListener('fetch', (event) => {
 	if (req.method !== 'GET') return;
 	const url = new URL(req.url);
 	if (url.origin !== self.location.origin) return;
+	// Audio (Weiterleitung auf signierte Storage-Adressen, Range-Anfragen) und Testzugang nie
+	// über den Service Worker: Das Gerüst-Cache ist dafür nicht gedacht, Safari ist bei Range heikel.
+	if (url.pathname.startsWith('/audio/') || url.pathname === '/zugang') return;
 
 	if (ASSETS.includes(url.pathname)) {
 		event.respondWith(caches.match(url.pathname).then((hit) => hit ?? fetch(req)));
