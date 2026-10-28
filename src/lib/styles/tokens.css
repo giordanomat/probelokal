@@ -18,6 +18,7 @@
 	--blk: #f2efe9;
 	--blk-fg: #141619;
 	--past: #4c5057;
+	--ghost: #7d7a74;
 	--chip-on-bg: #f2efe9;
 	--chip-on-fg: #141619;
 	--disc-ring: rgba(242, 239, 233, 0.18);
@@ -39,6 +40,7 @@
 	--blk: #141619;
 	--blk-fg: #f2efe9;
 	--past: #b9b3a8;
+	--ghost: #8b867d;
 	--chip-on-bg: #141619;
 	--chip-on-fg: #f2efe9;
 	--disc-ring: transparent;

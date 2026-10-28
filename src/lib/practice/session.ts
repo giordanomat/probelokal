@@ -238,7 +238,8 @@ export class PracticeSession {
 				const sinceStart = (b - n.b) / bps;
 				const untilEnd = (n.b + n.d - b) / bps;
 				inWindow = inJudgingWindow(sinceStart, untilEnd, n.d / bps);
-				if (active && this.passFrom !== null && n.b >= this.passFrom - EPS && inWindow) {
+				// Vorgespielte Töne (Einblasen) werden nicht bewertet
+				if (active && !n.call && this.passFrom !== null && n.b >= this.passFrom - EPS && inWindow) {
 					this.tallies.set(i, addToTally(this.tallies.get(i) ?? emptyTally(), info));
 				}
 			}
@@ -259,7 +260,7 @@ export class PracticeSession {
 				const n = this.notes[k];
 				if (n.b < this.passFrom - EPS) continue;
 				if (n.b + n.d > b) break;
-				if (this.judged.has(k)) continue;
+				if (this.judged.has(k) || n.call) continue;
 				this.judged.set(k, noteVerdict(this.tallies.get(k)));
 				changed = true;
 			}
@@ -336,16 +337,17 @@ export class PracticeSession {
 	}
 
 	/**
-	 * Beim Mithören am Ende eines Bereichs alle angefangenen Töne aus ihren Messpunkten bewerten.
+	 * Beim Mithören am Ende eines Bereichs (oder einer Übung) alle angefangenen Töne aus ihren
+	 * Messpunkten bewerten.
 	 * Die Meldungen hinken um die Verzögerung hinter der Band her; ohne das bliebe der letzte Ton
 	 * vor dem Rücksprung offen (so war es im Prototyp).
 	 */
-	private closeHeard(endBeat: number) {
+	closeHeard(endBeat: number) {
 		if (this.listening === 'off' || this.mode === 'rhythm' || this.passFrom === null) return;
 		for (let k = 0; k < this.notes.length; k++) {
 			const n = this.notes[k];
 			if (n.b >= endBeat - EPS) break;
-			if (n.b < this.passFrom - EPS || this.judged.has(k)) continue;
+			if (n.b < this.passFrom - EPS || this.judged.has(k) || n.call) continue;
 			this.judged.set(k, noteVerdict(this.tallies.get(k)));
 		}
 	}

@@ -7,6 +7,7 @@ import { buildTrack, noteIndicesInBars } from '../music/track';
 import type { RawNote } from '../music/types';
 import { TAP_EXTRA_LATENCY_SEC } from './rhythm';
 import { PracticeSession, type FrameInfo } from './session';
+import { buildExercise, EXERCISES } from '../warmup/exercises';
 
 const spb = secondsPerBeat(BAD_TOUCH);
 const LAT = 0.03;
@@ -313,5 +314,26 @@ describe('Übe-Ablauf: Mithören', () => {
 		s.setListening('off');
 		expect(s.hear(70, frame(5), 0)).toBe(false);
 		expect(s.trace).toHaveLength(0);
+	});
+});
+
+describe('Übe-Ablauf: Einblasen', () => {
+	it('bewertet nur, was du nachspielst, nicht was der Dirigent vorspielt', () => {
+		const ex = EXERCISES.find((e) => e.id === 'lang')!;
+		const { notes, total } = buildExercise(ex, 0, 'valve');
+		const track = buildTrack(notes, 'valve').notes;
+		const spb72 = 60 / 72;
+		const s = new PracticeSession(track, spb72, { from: 0, to: total / 4 - 1 });
+		s.setListening('mic');
+		for (let beat = 0; beat < total; beat += 0.02 / spb72) {
+			const n = track.find((x) => beat >= x.b && beat < x.b + x.d);
+			// Mikrofon hört Vorspielen und Nachspielen gleich sauber
+			s.hear(n ? n.m : null, frame(beat), 0);
+		}
+		s.closeHeard(total);
+		const judgedIdx = [...s.judged.keys()];
+		expect(judgedIdx).toHaveLength(8);
+		expect(judgedIdx.every((i) => !track[i].call)).toBe(true);
+		expect(s.finish(true, 100)?.headline).toBe('Durchgang 1: 8 von 8 Tönen getroffen (100 %)');
 	});
 });

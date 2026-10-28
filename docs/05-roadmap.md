@@ -18,7 +18,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 ## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test  ← in Arbeit
 
 - `tools/extract_notes.py` und `tools/make_mixes.sh` für Bad Touch laufen lassen; Audio und Noten-JSON in Supabase Storage, **hinter einem Testzugang** (Entscheid Matthias, 26.10.2026; siehe docs/02-architektur.md).
-- Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen – aus `prototype/v7` portiert, mit Tests.
+- Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen, Einblasen (für »Lange Töne« in der Abnahme) – aus `prototype/v7` portiert, mit Tests.
 - Mithören als AudioWorklet; Latenz-Abgleich pro Gerät; Vorführung mit eigener Spur.
 - Dunkel/Hell, Vollbild, Offline-Cache für diesen einen Titel.
 
@@ -77,8 +77,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Getestet mit Playwright im Flugmodus von Chromium: Stimme und Noten laufen, eine nicht gespeicherte Stimme meldet »nicht erreichbar«.
      - **Ungeprüft:** ob Safari auf iPhone/iPad den Speicher behält (`navigator.storage.persist()` wird angefragt).
   7. ~~Testprotokoll für die Abnahme~~ Vorlage am 28.10.2026: `docs/testprotokolle/m1-abnahme.md`. Dazu die Messanzeige `/ueben?diag` (grösste Abweichung der eigenen Spur, Latenzen).
-     - **Lücke:** Die Abnahme verlangt »Lange Töne«, die Einblas-Übung gibt es aber noch nicht. Ersatz im Protokoll ist Teil H. Entscheid offen: Einblasen noch in M1 bauen oder bei Teil H bleiben.
-- **Stand 28.10.2026:** PR #1 ist gemergt (Punkte 2–5). Punkte 6 und 7 liegen in einem neuen PR. Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
+  8. ~~**Einblasen**~~ (Entscheid Matthias, 28.10.2026: gehört in M1, weil die Abnahme »Lange Töne« verlangt) erledigt am 28.10.2026 unter `/einblasen`:
+     - Übungen Lange Töne, Lippenbindungen, Zungenstoss und Tonleiter-Häppchen aus dem Prototyp, je in den Stufen Einstieg und Weiter (`src/lib/warmup/exercises.ts`).
+     - Der Dirigent spielt einen Takt vor (gestrichelt, synthetischer Ton), du spielst ihn nach. Klick und Vorspielton werden in Web Audio vorausgeplant (`src/lib/warmup/player.ts`).
+     - Mithören bewertet nur das Nachspielen (`PracticeSession`, vorgespielte Töne tragen `call`).
+     - Noch nicht dabei: Schränz-Groove (im Prototyp ab Level 3, Levels kommen mit M2), Tagesvorschlag, Fragen an den Dirigenten (KI).
+     - **Ungeprüft:** wie der synthetische Vorspielton auf Handy-Lautsprecher und Kopfhörer klingt; echte Aufnahmen pro Instrument sind geplant (docs/02).
+- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) liegt in einem neuen PR. Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
   - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.

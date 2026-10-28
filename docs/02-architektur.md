@@ -31,7 +31,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
   - Ohne Abgleich gilt wie im Prototyp 80 ms + Ausgabe-Latenz. Ab 150 ms erscheint der Hinweis auf Bluetooth; erkennen lässt sich Bluetooth im Browser nicht.
   - Der Tipp-Abgleich für Rhythmus fehlt noch.
   - **Ungeprüft auf echten Geräten:** ob der Abgleich über Lautsprecher klappt und ob der Wert für Kopfhörer mit Kabel passt (der Lautsprecher-Weg kann anders sein).
-- **Klick und Vorspielton** beim Einblasen: Web Audio, vorausgeplant (25-ms-Takt, 0,5 s Vorlauf). Vorspielton ist im Prototyp synthetisch; im Produkt echte Aufnahmen pro Instrument.
+- **Klick und Vorspielton** beim Einblasen: Web Audio, vorausgeplant (25-ms-Takt, 0,5 s Vorlauf). Vorspielton ist im Prototyp synthetisch; im Produkt echte Aufnahmen pro Instrument. Umgesetzt in M1 (`src/lib/warmup/player.ts`) noch mit dem synthetischen Ton des Prototyps; die Uhr der Übung ist der AudioContext.
 
 ## Sicherheit und Datenschutz
 

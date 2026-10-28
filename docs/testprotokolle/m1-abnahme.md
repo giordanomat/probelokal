@@ -53,20 +53,21 @@ Vorher einmal »Verzögerung abgleichen« (Kopfhörer ab, Lautsprecher laut), da
 |---|---|---|---|
 | Mikrofon-Freigabe in Safari | Abfrage erscheint, danach »Ich höre zu« | | |
 | Gemessene Verzögerung | Wert notieren (ms); Hinweis bei > 150 ms | | |
-| **Lange Töne:** Teil H (T. 37–44) bei 80 %, sauber gespielt | Treffer ≥ 90 % (Ergebnis nach dem Durchgang in der Schleife) | | |
+| **Lange Töne:** unter »Einblasen« die Übung Lange Töne, Stufe Einstieg, Mithören an, sauber nachgespielt | Treffer ≥ 90 % (»Geschafft: … von 8 Tönen getroffen«) | | |
+| Lange Töne, Stufe Weiter (15 Töne, auch Halbtöne) | Treffer ≥ 90 % | | |
 | **Teil A** (T. 1–8) bei 80 %, sauber gespielt | Treffer ≥ 80 % | | |
 | Absichtlich falscher Griff | Ton rot, Rückmeldung »Anderer Ton. Griff: …« | | |
 | Richtiger Griff, Naturton daneben (höher bzw. tiefer angeblasen) | Ton gelb, »Richtiger Griff, aber eine Stufe zu hoch/tief …« | | |
 | Band setzt beim Mithören aus? | nein (Rechenzeit der Tonerkennung, docs/02) | | |
 | Echo mit Mithören | »Hör zu« ohne Bewertung, »Jetzt du« bewertet | | |
 
-**Lange Töne:** Die Einblas-Übung »Lange Töne« gibt es noch nicht (docs/01, Einblasen). Bis dahin dient Teil H als Ersatz: Er hat bei Trompete 1 die längsten Töne (im Schnitt 1,5 Schläge, acht Töne von mindestens zwei Schlägen).
+**Lange Töne:** unter `/einblasen` (Entscheid Matthias, 28.10.2026: Einblasen gehört in M1). Der Dirigent spielt jeden Ton einen Takt lang vor; bewertet wird nur dein Nachspielen. Der Vorspielton ist synthetisch; ob er auf dem Handy-Lautsprecher bzw. im Kopfhörer brauchbar klingt, hier notieren.
 
 ## 4 · Posaune und Sousaphon
 
 Wie Abschnitt 3 mit der Stimme Pos 1 bzw. Sous, sobald jemand verfügbar ist. Für die Posaune zusätzlich: falsche Zugposition statt falscher Griff.
 
-| Instrument | Teil H bzw. lange Töne | Teil A | Falscher Griff/Zug | Naturton | OK? |
+| Instrument | Lange Töne (Einblasen) | Teil A | Falscher Griff/Zug | Naturton | OK? |
 |---|---|---|---|---|---|
 | Posaune | | | | | |
 | Sousaphon | | | | | |

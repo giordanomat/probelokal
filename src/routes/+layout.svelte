@@ -4,6 +4,7 @@
 	import '@fontsource/figtree/latin-700.css';
 	import '@fontsource/ibm-plex-mono/latin-500.css';
 	import '#lib/styles/tokens.css';
+	import '#lib/styles/controls.css';
 	import Lockup from '#lib/brand/Lockup.svelte';
 	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
 	import type { LayoutProps } from './$types';

@@ -30,6 +30,7 @@ export interface LaneColors {
 	blk: string;
 	blkFg: string;
 	past: string;
+	ghost: string;
 }
 
 const VARS: Record<keyof LaneColors, string> = {
@@ -45,7 +46,8 @@ const VARS: Record<keyof LaneColors, string> = {
 	akzent: '--akzent',
 	blk: '--blk',
 	blkFg: '--blk-fg',
-	past: '--past'
+	past: '--past',
+	ghost: '--ghost'
 };
 
 /** Farben aus den CSS-Variablen lesen (nach jedem Wechsel Dunkel/Hell neu). */
@@ -116,6 +118,8 @@ function lookColors(look: NoteLook, c: LaneColors) {
 			return { fill: c.blau, fg: '#141619', stroke: null };
 		case 'past':
 			return { fill: c.past, fg: c.blkFg, stroke: null };
+		case 'ghost':
+			return { fill: null, fg: c.muted, stroke: c.ghost };
 		default:
 			return { fill: c.blk, fg: c.blkFg, stroke: null };
 	}
@@ -225,7 +229,9 @@ export function drawLane(
 			if (col.stroke) {
 				cx.strokeStyle = col.stroke;
 				cx.lineWidth = 1.5;
+				if (look === 'ghost') cx.setLineDash([4, 3]);
 				cx.stroke();
+				cx.setLineDash([]);
 			}
 			if (look === 'active') {
 				cx.strokeStyle = c.ink;
@@ -246,9 +252,14 @@ export function drawLane(
 				}
 			}
 			if (showGrip) {
-				const gf = col.fill ?? c.past;
-				// ergänzte Griffe (aus der Standardtabelle) etwas blasser
-				cx.globalAlpha = n.fing_auto && look === 'upcoming' ? 0.6 : 1;
+				const gf = col.fill ?? (look === 'ghost' ? c.ghost : c.past);
+				// ergänzte Griffe (aus der Standardtabelle) und vorgespielte Töne etwas blasser
+				cx.globalAlpha =
+					(n.fing_auto && look === 'upcoming') || look === 'ghost'
+						? look === 'ghost'
+							? 0.55
+							: 0.6
+						: 1;
 				if (s.kind === 'slide') {
 					const p = Number(n.fing);
 					if (p >= 1 && p <= 7) {
