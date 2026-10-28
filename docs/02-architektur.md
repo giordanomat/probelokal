@@ -37,7 +37,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
 
 - **Grundsatz »keine Vollüberwachung«** technisch durchsetzen, nicht nur in der Oberfläche:
   - Einzelwerte (Etappen, Punkte, Übungstage) liest nur die Person selbst – RLS.
-  - Leitung bekommt Aggregate über `SECURITY DEFINER`-Funktionen, die nur Durchschnitte pro Register liefern und bei weniger als drei Personen pro Register nichts zurückgeben (sonst wären Einzelwerte ablesbar). **Mindestgruppe 3 ist ein Vorschlag.**
+  - Leitung bekommt Aggregate über `SECURITY DEFINER`-Funktionen, die nur Durchschnitte pro Register liefern und bei weniger als drei Personen pro Register nichts zurückgeben (sonst wären Einzelwerte ablesbar). **Mindestgruppe 3 ist ein Vorschlag.** Personen ohne Ergebnis zählen mit Etappe 0 (sonst wäre bei einem Ergebnis unter dreien der Einzelwert ablesbar). **Grenze:** Eine Leitung, die eigene Zweitkonten einlädt, kann ein Register auf drei bringen und Einzelwerte zurückrechnen. Datenbankregeln verhindern das nicht; abschwächen liesse es sich nur über Hürden beim Beitritt (z. B. Bestätigung durch Registerchef). Für den Pilot in Kauf genommen, beim Ausrollen neu entscheiden.
   - Rangliste liest nur Zeilen von Personen mit `rangliste_opt_in = true` in Guuggen mit eingeschalteter Rangliste.
 - **Punkte nur serverseitig:** Der Browser meldet ein Prüfungs- oder Durchgangsergebnis an eine Edge Function. Diese prüft Plausibilität (Dauer seit Start ≥ Dauer des Teils beim gewählten Tempo, Anzahl bewerteter Töne = Töne des Teils, Tageslimits, Reihenfolge der Etappen) und schreibt Ergebnis und Punkte. Clients haben keine Schreibrechte auf `points_ledger` und `exam_results`.
   - **Ehrlich:** Weil die Tonerkennung im Browser läuft, lässt sich Betrug nicht ausschliessen, nur erschweren. Für eine freiwillige Rangliste unter Bekannten reicht das; keine Geldpreise an Ranglisten koppeln.
@@ -77,6 +77,7 @@ prototype/v7/     Referenz
 
 ## Tests
 
+- Vitest für die Datenbankregeln: `supabase/tests/rls.spec.ts` mit PGlite und nachgebautem Supabase-Rahmen, siehe docs/03 »Tests«.
 - Vitest für: Noten-Parser (gegen `prototype/v7/badtouch.xml`: Notenanzahl je Stimme, Übergebundenes zusammengeführt), Transposition, Griff-Äquivalenz (`3` = `12`), Naturton-Erkennung, Planerzeugung (Fälligkeiten, Phasen), Quiz-Generator, Bewertung, Punkte-Regeln.
 - Playwright für: Bahn-Darstellung auf Handy/Tablet/Desktop in hell/dunkel (Screenshots), Rhythmus-Prüfung mit simuliertem Tippen, Tonerkennung mit synthetischen Tönen (OscillatorNode in den Analyser) und mit der eigenen Spur als »Spieler« (Vorführung).
 - Echte Geräte: Testprotokoll in `docs/` für iPhone und iPad (siehe Roadmap M1).

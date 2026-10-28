@@ -45,7 +45,7 @@ Stand M0 (SvelteKit 3, Svelte 5, Vite 8, Cloudflare Workers mit statischen Asset
 - `npm run build` – Build für Cloudflare nach `.svelte-kit/cloudflare` (Worker `_worker.js` + Assets)
 - `npm run icons` – App-Symbole aus dem Zeichen neu erzeugen (`tools/make_icons.mjs`)
 - Deploy: automatisch durch Cloudflare Workers Builds bei jedem Push auf `main` (Build `npm run build`, Deploy `npx wrangler deploy`). Kein Deploy aus CI. Prüfen ohne Hochladen: `npx wrangler deploy --dry-run`.
-- Supabase-Migrationen: noch nicht eingerichtet (M2). Geplant: Supabase CLI in GitHub Actions mit Secrets, nicht über den Claude-Connector.
+- Supabase-Migrationen: neue Datei `supabase/migrations/<JJJJMMTThhmmss>_<name>.sql`, nie eine angewendete ändern. Regeln testen in `supabase/tests/rls.spec.ts` (PGlite, läuft mit `npm run test:unit`). Anwenden nur über den Ablauf »Supabase-Migrationen« in GitHub Actions (von Hand gestartet, Schritte in `docs/03-datenmodell.md` »Anwenden«), nicht über den Claude-Connector.
 
 SvelteKit-3-Eigenheiten: Alias `#lib/…` statt `$lib`, immer mit Dateiendung (`#lib/music/timing.ts`, sonst findet TypeScript das Modul nicht); Umgebungsvariablen in `src/env.ts` definieren und über `$app/env/public` lesen; Service Worker in `src/service-worker/` mit eigenem `tsconfig.json`.
 

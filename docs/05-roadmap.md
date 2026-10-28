@@ -83,10 +83,10 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Mithören bewertet nur das Nachspielen (`PracticeSession`, vorgespielte Töne tragen `call`).
      - Noch nicht dabei: Schränz-Groove (im Prototyp ab Level 3, Levels kommen mit M2), Tagesvorschlag, Fragen an den Dirigenten (KI).
      - **Ungeprüft:** wie der synthetische Vorspielton auf Handy-Lautsprecher und Kopfhörer klingt; echte Aufnahmen pro Instrument sind geplant (docs/02).
-- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) liegt in einem neuen PR. Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
+- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) ist mit PR #3 gemergt und live (`/einblasen`, geprüft 28.10.2026). Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
-  - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.
+  - Cloudflare-Builds für Branches schlugen fehl (Ursache ungeprüft). Matthias hat die Preview-Builds am 28.10.2026 abgeschaltet; Branches prüft nur noch GitHub Actions.
 
 **Abnahme (Testprotokoll in `docs/testprotokolle/`):**
 - iPhone und iPad, Safari: Bahn läuft flüssig; Band und eigene Spur bleiben über das ganze Stück innerhalb 50 ms.
@@ -102,6 +102,18 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 - Hinweise der Leitung (inkl. Realtime), Gesamtplan, Mein Plan, Etappenprüfungen 1–5.
 - Edge Functions `exam-result` und `pass-result`: Plausibilitätsprüfung, Punkte, Übetage; Tageslimits.
 - Ränge und Belohnungen (Anzeige), Rangliste mit Opt-in, Register-Übersicht über Aggregatfunktion.
+
+**Stand 28.10.2026 (begonnen, Branch `claude/dreamy-franklin-mle6hm`):**
+
+1. ~~**Datenbank: Konten, Guuggen, Einladungen, Rollen**~~ erledigt am 28.10.2026, Migration `20261028150000_m2_konten_guuggen.sql`, Einzelheiten in docs/03:
+   - Schliesst eine Lücke aus 0001: Ein Mitglied konnte sich selbst zur Leitung machen, die Leitung das Opt-in anderer setzen. Im echten Projekt besteht die Lücke, bis die Migration angewendet ist.
+   - Mitgliedschaften und Einladungen nur über prüfende Funktionen. Einladungs-Schlüssel nur als Hash gespeichert. Profile automatisch beim ersten Anmelden.
+   - `register_overview` zählt Personen ohne Ergebnis mit Etappe 0.
+   - RLS-Tests pro Rolle mit PGlite (`supabase/tests/`), laufen mit `npm run test:unit` und in CI. Sie decken die Abnahme unten ab, ausser den Edge Functions.
+   - Ablauf »Supabase-Migrationen« in GitHub Actions. **Matthias:** Secrets anlegen und den Ablauf starten (docs/03 »Anwenden«). **Ungeprüft**, bis er gelaufen ist.
+2. **Anmelden per E-Mail-Link** (nächster Schritt). **Matthias:** Unter Supabase → Authentication → URL Configuration die Site URL `https://probelokal.ch` und die Redirect-URL `https://probelokal.ch/**` eintragen. Der eingebaute Mailversand von Supabase ist stark begrenzt (nur wenige Mails pro Stunde, Stand der Doku 2026 prüfen). Für den Pilot reicht das vielleicht, für mehr braucht es einen eigenen SMTP-Zugang.
+3. Guugge anlegen, Einladungslink teilen, Stimme wählen (Oberfläche).
+4. Hinweise der Leitung, Gesamtplan, Mein Plan, Etappenprüfungen, Edge Functions, Ränge, Rangliste.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.
