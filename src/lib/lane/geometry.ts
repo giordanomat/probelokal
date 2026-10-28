@@ -118,10 +118,19 @@ export function zoomStep(current: number, dir: 1 | -1): number {
 }
 
 /** Aussehen eines Tonbalkens: Bewertung geht vor, dann »jetzt«, dann »vorbei«. */
-export type NoteLook = 'upcoming' | 'past' | 'active' | 'hit' | 'half' | 'wrong' | 'missed';
+export type NoteLook =
+	| 'upcoming'
+	| 'past'
+	| 'active'
+	| 'hit'
+	| 'half'
+	| 'wrong'
+	| 'missed'
+	/** vom Dirigenten vorgespielt (Einblasen): gestrichelt */
+	| 'ghost';
 
 export function noteLook(
-	note: { b: number; d: number },
+	note: { b: number; d: number; call?: boolean },
 	now: number,
 	verdict: NoteVerdict | undefined
 ): NoteLook {
@@ -130,6 +139,7 @@ export function noteLook(
 	if (verdict === 'wrong') return 'wrong';
 	if (verdict === 'none') return 'missed';
 	if (now >= note.b && now < note.b + note.d) return 'active';
+	if (note.call) return 'ghost';
 	if (note.b + note.d <= now) return 'past';
 	return 'upcoming';
 }

@@ -46,6 +46,7 @@
 		type BarStats
 	} from '#lib/practice/baustellen.ts';
 	import ScoreView from '#lib/score/ScoreView.svelte';
+	import PracticeNav from '#lib/nav/PracticeNav.svelte';
 	import { cachedFile, storeFile, titleCacheName } from '#lib/offline/title-cache.ts';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
@@ -654,6 +655,8 @@
 
 <svelte:window onkeydown={onKey} bind:innerHeight />
 
+<PracticeNav />
+
 <section class="head">
 	<p class="label">Stück üben</p>
 	<h1>{title.name}</h1>
@@ -1009,12 +1012,6 @@
 		letter-spacing: -0.02em;
 		line-height: 1.15;
 	}
-	.hint {
-		margin: 0;
-		color: var(--muted);
-		font-size: 14px;
-		max-width: 62ch;
-	}
 	.diag {
 		font: 500 12px var(--font-mono);
 	}
@@ -1069,6 +1066,7 @@
 	}
 	/* Vollbild: nur Bahn (mit Griff-Anzeige) und Wiedergabe */
 	:global(html.fokus .topbar),
+	:global(html.fokus nav),
 	:global(html.fokus) .head,
 	:global(html.fokus) .row,
 	:global(html.fokus) .result,
@@ -1079,80 +1077,6 @@
 		:global(html.fokus) .side {
 			display: none;
 		}
-	}
-	.notice {
-		margin: 8px 0 0;
-		font-size: 14px;
-		font-weight: 600;
-		max-width: 62ch;
-	}
-	.notice a {
-		color: inherit;
-		margin-left: 4px;
-	}
-	.seg button:disabled {
-		opacity: 0.45;
-		cursor: default;
-	}
-	.row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px 14px;
-		align-items: center;
-	}
-	.seg {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-	}
-	.seg button,
-	.mini {
-		appearance: none;
-		border: 1px solid var(--line);
-		background: var(--surface);
-		color: var(--ink);
-		font: 600 14px var(--font-body);
-		border-radius: 999px;
-		min-height: 40px;
-		padding: 6px 14px;
-		cursor: pointer;
-	}
-	.seg button[aria-pressed='true'] {
-		background: var(--chip-on-bg);
-		color: var(--chip-on-fg);
-		border-color: var(--chip-on-bg);
-	}
-	.mini {
-		min-height: 36px;
-		min-width: 36px;
-		padding: 4px 10px;
-	}
-	.mini[aria-pressed='true'] {
-		border-color: var(--rot);
-		color: var(--rot);
-	}
-	.toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 14px;
-		font-weight: 600;
-	}
-	select {
-		font: 600 14px var(--font-body);
-		color: var(--ink);
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		min-height: 40px;
-		padding: 0 12px;
-		max-width: 100%;
-	}
-	.side {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		min-width: 0;
 	}
 	.tapbox {
 		display: flex;
@@ -1182,150 +1106,6 @@
 		border-color: var(--blau);
 		color: #141619;
 	}
-	.micbtn {
-		appearance: none;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		border: 2px solid var(--ink);
-		background: var(--surface);
-		color: var(--ink);
-		font: 700 15px var(--font-body);
-		border-radius: 999px;
-		min-height: 44px;
-		padding: 6px 16px;
-		cursor: pointer;
-	}
-	.micbtn svg {
-		width: 20px;
-		height: 20px;
-		fill: currentColor;
-	}
-	.micbtn[aria-pressed='true'] {
-		background: var(--rot);
-		border-color: var(--rot);
-		color: #fff;
-	}
-	.micbtn:disabled,
-	.mini:disabled {
-		opacity: 0.45;
-		cursor: default;
-	}
-	.feedback {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-	.feedback .label {
-		margin: 0;
-	}
-	.tuner {
-		position: relative;
-		height: 28px;
-		border-radius: 14px;
-		background: var(--surface);
-		border: 1px solid var(--line);
-		font: 500 11px var(--font-mono);
-		color: var(--muted);
-	}
-	.tuner .lo,
-	.tuner .hi {
-		position: absolute;
-		top: 6px;
-	}
-	.tuner .lo {
-		left: 10px;
-	}
-	.tuner .hi {
-		right: 10px;
-	}
-	.tuner .zero {
-		position: absolute;
-		left: 50%;
-		top: 4px;
-		bottom: 4px;
-		width: 2px;
-		background: var(--gruen);
-	}
-	.tuner .needle {
-		position: absolute;
-		top: 2px;
-		bottom: 2px;
-		width: 6px;
-		margin-left: -3px;
-		border-radius: 3px;
-		background: var(--blau);
-	}
-	.say {
-		margin: 0;
-		font-size: 14px;
-		font-weight: 600;
-		min-height: 1.4em;
-	}
-	.say[data-tone='ok'] {
-		color: var(--gruen);
-	}
-	.say[data-tone='warn'] {
-		color: var(--akzent);
-	}
-	.say[data-tone='bad'] {
-		color: var(--rot);
-	}
-	.result {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 6px 14px;
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 14px;
-		padding: 12px 14px;
-		font-size: 14px;
-	}
-	.result .detail {
-		color: var(--muted);
-	}
-	.stage {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 272px;
-		gap: 14px;
-	}
-	@media (max-width: 760px) {
-		.stage {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-	.transport {
-		position: sticky;
-		bottom: 0;
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 10px 14px;
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 14px;
-		padding: 10px 12px;
-	}
-	.play {
-		appearance: none;
-		width: 52px;
-		height: 52px;
-		border-radius: 50%;
-		border: 0;
-		background: var(--ink);
-		color: var(--bg);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex: none;
-	}
-	.play svg {
-		width: 24px;
-		height: 24px;
-		fill: currentColor;
-	}
 	.pos {
 		display: flex;
 		flex-direction: column;
@@ -1336,29 +1116,5 @@
 	.pos b {
 		color: var(--ink);
 		font-size: 15px;
-	}
-	.tempo {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-		font-weight: 600;
-		flex: 1 1 220px;
-	}
-	.tempo input {
-		flex: 1;
-		accent-color: var(--rot);
-	}
-	.tempo output {
-		font: 500 12px var(--font-mono);
-		color: var(--muted);
-		white-space: nowrap;
-	}
-	.sr {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
 	}
 </style>
