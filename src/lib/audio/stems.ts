@@ -89,6 +89,10 @@ export class StemPlayer implements PracticeClock {
 	private _rate = 1;
 	private _ownGain = 1;
 	private lastSync = -Infinity;
+	/** Grösste gemessene Abweichung der eigenen Spur seit dem Laden (s), für die Abnahme (?diag) */
+	maxDriftSec = 0;
+	/** Wie oft die eigene Spur nachgeführt wurde */
+	resyncs = 0;
 
 	constructor(
 		private readonly band: MediaLike,
@@ -107,6 +111,8 @@ export class StemPlayer implements PracticeClock {
 	load(urls: { band: string; own: string }, at = this.time()) {
 		const was = this.playing;
 		this.pause();
+		this.maxDriftSec = 0;
+		this.resyncs = 0;
 		for (const [el, url] of [
 			[this.band, urls.band],
 			[this.own, urls.own]
@@ -204,8 +210,12 @@ export class StemPlayer implements PracticeClock {
 	maybeSync(nowMs: number): boolean {
 		if (!this.playing || nowMs - this.lastSync < SYNC_INTERVAL_MS) return false;
 		this.lastSync = nowMs;
-		if (!this.loaded() || !needsResync(this.band.currentTime, this.own.currentTime)) return false;
+		if (!this.loaded()) return false;
+		const drift = Math.abs(this.own.currentTime - this.band.currentTime);
+		this.maxDriftSec = Math.max(this.maxDriftSec, drift);
+		if (!needsResync(this.band.currentTime, this.own.currentTime)) return false;
 		this.own.currentTime = this.band.currentTime;
+		this.resyncs++;
 		return true;
 	}
 

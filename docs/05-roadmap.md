@@ -26,7 +26,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 
 **Stand 27.10.2026 (Übergabe an den nächsten Chat):**
 
-- **Wo der Code liegt:** Branch `claude/ecstatic-rubin-6t8xzh`, PR https://github.com/giordanomat/probelokal/pull/1. CI ist grün, es gibt keinen Konflikt mit `main`. Matthias muss ihn noch mergen. Bis dahin auf diesem Branch weiterarbeiten oder von ihm abzweigen. Erst nach dem Merge ist er live, weil nur `main` deployt wird.
+- **Wo der Code liegt:** PR https://github.com/giordanomat/probelokal/pull/1 ist am 28.10.2026 gemergt. Weiter auf dem Branch `claude/dreamy-franklin-mle6hm` (neuer PR). Live ist nur, was auf `main` liegt.
 - **Fertig und getestet:**
   - Logik: `src/lib/music/`, `src/lib/pitch/`, `src/lib/practice/`.
   - Bahn: `src/lib/lane/` und `/ueben`.
@@ -69,8 +69,16 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - **Baustellen-Liste:** die drei wackligsten Takte pro Stimme, »Üben bei 70 %« (zwei Takte in der Schleife), »Baustellen zurücksetzen«.
      - Getestet mit Vitest (Takt-Kästen, Mitscrollen) und Playwright (Noten mit der MusicXML aus dem Prototyp, Takt läuft mit, Antippen, ohne Testzugang, Vollbild, Baustellen).
      - **Ungeprüft:** Abruf der MusicXML über die Weiterleitung (CORS bei Supabase, wie beim Audio), Ladezeit und Speicher der 1,9-MB-MusicXML auf iPhone/iPad.
-  6. **Offline-Cache für Bad Touch.** Ungeprüft und offen: `/audio/` leitet auf wechselnde signierte Adressen weiter. Der Service Worker müsste deshalb unter dem `/audio/`-Pfad speichern, nicht unter der signierten Adresse. Auf iOS im Flugmodus prüfen.
-  7. Testprotokoll für die Abnahme in `docs/testprotokolle/`.
+  6. ~~**Offline-Cache für Bad Touch**~~ erledigt am 28.10.2026 (`src/lib/offline/title-cache.ts`):
+     - Die Seite speichert, was sie lädt (Band und eigene Stimme der gewählten Stimme, dazu die MusicXML), in einem Cache pro Titel und Fassung unter dem `/audio/…`-Pfad. Offline spielt sie daraus als `blob:`-Adresse.
+     - Der Service Worker beantwortet also keine Range-Anfragen (in Safari heikel); er legt wie bisher nur Gerüst und Seiten ab.
+     - Beim ersten Laden wird jede Spur einmal zusätzlich ganz geladen.
+     - Ersetzte Dateien unter derselben Fassung sieht ein Gerät erst, wenn sein Speicher leer ist. Neue Mischungen deshalb als neue Fassung ablegen.
+     - Getestet mit Playwright im Flugmodus von Chromium: Stimme und Noten laufen, eine nicht gespeicherte Stimme meldet »nicht erreichbar«.
+     - **Ungeprüft:** ob Safari auf iPhone/iPad den Speicher behält (`navigator.storage.persist()` wird angefragt).
+  7. ~~Testprotokoll für die Abnahme~~ Vorlage am 28.10.2026: `docs/testprotokolle/m1-abnahme.md`. Dazu die Messanzeige `/ueben?diag` (grösste Abweichung der eigenen Spur, Latenzen).
+     - **Lücke:** Die Abnahme verlangt »Lange Töne«, die Einblas-Übung gibt es aber noch nicht. Ersatz im Protokoll ist Teil H. Entscheid offen: Einblasen noch in M1 bauen oder bei Teil H bleiben.
+- **Stand 28.10.2026:** PR #1 ist gemergt (Punkte 2–5). Punkte 6 und 7 liegen in einem neuen PR. Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
   - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.
