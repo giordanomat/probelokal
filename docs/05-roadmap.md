@@ -170,7 +170,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - **Neu (Vorschlag, docs/01):** Ein Übetag zählt erst ab einem getroffenen Ton, sonst brächte ein Durchgang ohne Spielen das Wochenziel. Gilt auch für Prüfungen.
     - Migration `20261029180000_m2_durchgaenge.sql`. Die Punkteregel in SQL und TypeScript stimmt für alle 1111 Kombinationen überein.
     - Getestet mit Playwright: Ein Durchgang wird angemeldet, abgeschlossen und neu gestartet; 0 % gibt keine Punkte und keinen Übetag.
-    - **Noch nicht:** Punkte fürs Einblasen (5 pro Übung, höchstens 6 pro Tag, docs/01).
+    - Punkte fürs Einblasen kamen am 29.10.2026 dazu (Punkt 12).
 11. ~~Belohnungen der Ränge~~ erledigt am 29.10.2026:
     - Bahn-Look »Fasnacht« (ab Level 2, eigene Farbe je Griff bzw. Zugposition) und »Gold« (ab Level 4) in »Stück üben« unter »Bahn-Look«, gilt auch beim Einblasen. Gefärbt werden nur die kommenden Töne; gespielt, aktuell und bewertet bleiben wie immer.
     - Bonusübung »Schränz-Groove« beim Einblasen ab Level 3, vorher mit »ab Level 3« gesperrt.
@@ -178,7 +178,14 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Looks und Groove gelten mit dem höchsten Rang aus allen eigenen Guuggen, auf dem Gerät gemerkt bis zum Abmelden (Vorschlag, docs/01). Migration `20261029200000_m2_belohnungen.sql` mit `my_best_points`.
     - Getestet mit Vitest (Farben, Freischaltung, Groove-Runden, Höchstwert über Guuggen) und Playwright (ohne Konto gesperrt; mit Punkten Look wählen, Groove üben, Abzeichen; nach dem Abmelden wieder Standard).
     - **Ungeprüft:** wie die Farben beim Spielen wirken. »Fasnacht« nutzt wie im Prototyp auch Rot, Gelb und Blau, die sonst »falsch«, »knapp« und den aktuellen Ton bedeuten. Bewertete Töne stehen links der Spiellinie, gefärbte rechts; ob das reicht, zeigt der Pilot.
-12. Offen in M2: Punkte fürs Einblasen; Hinweise in der Notenansicht und ohne Neuladen. Danach Abnahme M2 (Testprotokoll).
+12. ~~Punkte fürs Einblasen~~ erledigt am 29.10.2026:
+    - Mit »Mithören« meldet »Einblasen« jede Übung beim Server an (`start_exercise`) und schickt am Ende das Ergebnis (`finish_exercise`). 5 Punkte ab 50 % getroffen, höchstens 6 Übungen mit Punkten pro Tag und Guugge. Ohne Mithören gibt es keine Punkte.
+    - **Neu (Vorschlag, docs/01):** Im Prototyp gab es die Punkte fürs Durchspielen; das wären Punkte für Zeit.
+    - Der Server prüft Übung, Stufe, Tempo und Mindestdauer und nimmt den Schränz-Groove erst ab Level 3 an. Migration `20261029210000_m2_einblasen.sql`.
+    - Die Liste, wofür es Punkte gibt, steht jetzt an einem Ort (`POINTS_RULE` in `src/lib/game/points.ts`) und nennt das Einblasen.
+    - Getestet mit Vitest (Länge und Namen der Übungen wie in der App, Regel SQL = TypeScript, Dauer, Tageslimit, Groove-Sperre) und Playwright (Übung mit Mithören wird an- und abgemeldet, 0 % gibt keine Punkte).
+    - **Ungeprüft:** eine Übung mit echtem Instrument über 50 %; das künstliche Mikrofon hört nur ein A. Gehört in den Gerätetest.
+13. Offen in M2: Hinweise in der Notenansicht und ohne Neuladen. Danach Abnahme M2 (Testprotokoll).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

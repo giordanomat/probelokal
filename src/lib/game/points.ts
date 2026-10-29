@@ -61,6 +61,10 @@ export const POINTS = {
 	weekGoal: 25
 } as const;
 
+/** Wofür es Punkte gibt, für die Oberfläche (ein Ort für alle Seiten). */
+export const POINTS_RULE =
+	'Punkte gibt es für bestandene Etappen, bewertete Durchgänge, Einblasen mit Mithören und das Wochenziel (an 3 Tagen geübt), nicht für Zeit.';
+
 /** Höchstens so viele Punkte-Vergaben pro Tag (Übungen 6, bewertete Durchgänge 15). */
 export const DAILY_CAP = { exercise: 6, pass: 15 } as const;
 
@@ -139,6 +143,15 @@ export function examAward(e: {
 export function passAward(pct: number, tempo: number): number {
 	if (pct < 50) return 0;
 	return Math.round(Math.min(10, Math.round(pct / 10)) * (tempo >= 100 ? 1.5 : 1));
+}
+
+/**
+ * Übung beim Einblasen: 5 Punkte, wenn mit Mithören mindestens die Hälfte der nachgespielten Töne
+ * getroffen ist (Vorschlag, docs/01; im Prototyp gab es sie fürs Durchspielen). Unter 3 bewerteten
+ * Tönen nichts.
+ */
+export function exerciseAward(pct: number, judged: number): number {
+	return judged >= 3 && pct >= 50 ? POINTS.exercise : 0;
 }
 
 /** ISO-Woche wie im Prototyp, z. B. '2026-44' (Woche beginnt Montag). */

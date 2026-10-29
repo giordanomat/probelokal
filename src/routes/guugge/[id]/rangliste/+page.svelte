@@ -24,7 +24,7 @@
 		type PointsEntry,
 		type Register
 	} from '#lib/account/api.ts';
-	import { badgesOf, LEVELS, levelOf, nextLevel } from '#lib/game/points.ts';
+	import { badgesOf, LEVELS, levelOf, nextLevel, POINTS_RULE } from '#lib/game/points.ts';
 	import { BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
 
 	const sb = getSupabase();
@@ -172,8 +172,7 @@
 					: 'Höchster Rang erreicht.'}
 			</p>
 			<p class="hint">
-				Punkte gibt es für bestandene Etappen, bewertete Durchgänge und das Wochenziel (an 3 Tagen
-				geübt), nicht für Zeit. Wer eine Woche nicht übt, verliert nichts.
+				{POINTS_RULE} Wer eine Woche nicht übt, verliert nichts.
 			</p>
 		</section>
 

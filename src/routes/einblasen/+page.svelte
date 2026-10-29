@@ -4,7 +4,9 @@
 	// Mit Mithören wird jeder nachgespielte Ton bewertet (Abnahme M1: Lange Töne ≥ 90 %).
 	// Der Schränz-Groove ist ab Level 3 freigeschaltet (höchster Rang über alle Guuggen, auf dem
 	// Gerät gemerkt, #lib/game/unlocks.ts); der Bahn-Look aus »Stück üben« gilt auch hier.
-	// Noch nicht hier: Punkte fürs Einblasen, Tagesvorschlag, Fragen an den Dirigenten (KI).
+	// Punkte: Mit Mithören meldet der Start die Übung beim Server an (start_exercise), das Ende
+	// schickt das Ergebnis (finish_exercise); 5 Punkte ab 50 % getroffen, höchstens 6 pro Tag.
+	// Noch nicht hier: Tagesvorschlag, Fragen an den Dirigenten (KI).
 	import { onDestroy, onMount } from 'svelte';
 	import { defaultRoundTrip, loadLatency } from '#lib/audio/latency.ts';
 	import { Listener, micErrorText } from '#lib/audio/listen.ts';
@@ -28,7 +30,8 @@
 	} from '#lib/warmup/exercises.ts';
 	import { WarmupPlayer } from '#lib/warmup/player.ts';
 	import { accountLoader, maybeSignedIn } from '#lib/account/lazy.ts';
-	import { hasUnlock, unlockLevel } from '#lib/game/points.ts';
+	import { hasUnlock, POINTS, DAILY_CAP, unlockLevel } from '#lib/game/points.ts';
+	import { summarizePass } from '#lib/practice/pass.ts';
 	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
 	import { activeLook } from '#lib/lane/looks.ts';
 
@@ -56,6 +59,11 @@
 	/** Höchster Rang über alle Guuggen, für Schränz-Groove und Bahn-Look */
 	let bestPoints = $state(0);
 	let lockNote = $state('');
+	/** Angemeldet: dann gibt es mit Mithören Punkte */
+	let signedIn = $state(false);
+	let exPoints = $state('');
+	let attempt: Promise<string | null> | null = null;
+	const loadAccountApi = accountLoader();
 
 	let ctx: AudioContext | null = null;
 	let player: WarmupPlayer | null = null;
@@ -134,6 +142,8 @@
 		playing = false;
 		done = false;
 		report = null;
+		attempt = null;
+		exPoints = '';
 		session = new PracticeSession(track.notes, 60 / bpm, { from: 0, to: built.total / 4 - 1 });
 		session.setListening(listening ? 'mic' : 'off');
 		judged = new Map();
@@ -146,7 +156,7 @@
 		const e = EXERCISES.find((x) => x.id === patch.ex);
 		if (e?.unlock && locked(e)) {
 			const l = unlockLevel(e.unlock);
-			lockNote = `${e.name} wird mit Level ${l.n} (${l.name}) freigeschaltet. Punkte sammelst du in deiner Guugge mit Etappen und bewerteten Durchgängen.`;
+			lockNote = `${e.name} wird mit Level ${l.n} (${l.name}) freigeschaltet. Punkte sammelst du in deiner Guugge, z. B. mit Etappen und beim Einblasen mit Mithören.`;
 			return;
 		}
 		if (patch.ex) exId = patch.ex;
@@ -177,6 +187,39 @@
 		player.start();
 		playing = true;
 		done = false;
+		if (!attempt && listening && signedIn) beginAttempt();
+	}
+
+	/** Übung beim Server anmelden; Punkte sind eine Zugabe, Fehler bleiben still. */
+	function beginAttempt() {
+		const [ex, lvl, tempo] = [exId, level, bpm];
+		attempt = loadAccountApi()
+			.then((a) => (a ? a.api.startExercise(a.sb, ex, lvl, tempo) : null))
+			.catch(() => null);
+	}
+
+	async function finishAttempt(r: PassReport) {
+		const pending = attempt;
+		const run = session;
+		attempt = null;
+		const summary = summarizePass(r.judged.map(([, v]) => v));
+		const id = await pending;
+		const a = await loadAccountApi().catch(() => null);
+		if (!id || !a || !summary) return;
+		try {
+			const res = await a.api.finishExercise(a.sb, id, summary.pct, summary.total);
+			// Schon die nächste Übung gestartet: die Antwort gehört nicht mehr dazu
+			if (session !== run) return;
+			exPoints = res.points
+				? `+${res.points} Punkte${res.week_goal ? ` · +${res.week_goal} Wochenziel` : ''}`
+				: res.capped
+					? 'Heute gibt es fürs Einblasen keine Punkte mehr.'
+					: summary.pct < 50
+						? 'Punkte gibt es ab 50 % getroffen.'
+						: '';
+		} catch {
+			exPoints = '';
+		}
 	}
 
 	function finish() {
@@ -188,6 +231,7 @@
 			session.closeHeard(built.total);
 			judged = new Map(session.judged);
 			report = session.finish(true, 100);
+			if (attempt && report) void finishAttempt(report);
 		}
 	}
 
@@ -274,8 +318,11 @@
 		bestPoints = loadBestPoints(localStorage);
 		reset();
 		if (maybeSignedIn())
-			void accountLoader()()
-				.then((a) => (a ? refreshBestPoints(a, localStorage) : bestPoints))
+			void loadAccountApi()
+				.then((a) => {
+					signedIn = !!a;
+					return a ? refreshBestPoints(a, localStorage) : bestPoints;
+				})
 				.then((p) => (bestPoints = p))
 				.catch(() => {});
 	});
@@ -355,7 +402,9 @@
 	{:else}
 		<span class="hint"
 			>Mit Kopfhörer, sonst hört das Mikrofon den Dirigenten mit. Die Verzögerung gleichst du unter
-			»Stück üben« ab.</span
+			»Stück üben« ab.{signedIn
+				? ` Mit Mithören gibt es ${POINTS.exercise} Punkte pro Übung ab 50 % getroffen, höchstens ${DAILY_CAP.exercise} Übungen pro Tag.`
+				: ''}</span
 		>
 	{/if}
 </section>
@@ -389,6 +438,7 @@
 	<section class="result" role="status" data-testid="ergebnis">
 		<b>{report.headline.replace(/^Durchgang \d+: /, 'Geschafft: ')}</b>
 		{#if report.detail}<span class="detail">{report.detail}</span>{/if}
+		{#if exPoints}<span class="detail" data-testid="einblasen-punkte">{exPoints}</span>{/if}
 	</section>
 {/if}
 

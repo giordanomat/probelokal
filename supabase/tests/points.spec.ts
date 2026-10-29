@@ -1,10 +1,12 @@
-// Etappenprüfungen und Punkte auf dem Server (Migration 20261029120000): Regeln gleich wie in
-// src/lib/game/points.ts und src/lib/exams/exams.ts, Ablauf start_exam → finish_exam mit Prüfung
-// von Reihenfolge, Dauer und Wertebereich.
+// Punkte auf dem Server: Etappenprüfungen (20261029120000), Durchgänge (20261029180000),
+// höchster Rang (20261029200000) und Einblasen (20261029210000). Regeln gleich wie in
+// src/lib/game/points.ts, src/lib/exams/exams.ts und src/lib/warmup/exercises.ts; Abläufe start → finish
+// mit Prüfung von Reihenfolge, Dauer und Wertebereich.
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { examAward, passAward } from '../../src/lib/game/points';
+import { examAward, exerciseAward, passAward, unlockLevel } from '../../src/lib/game/points';
 import { passMark } from '../../src/lib/exams/exams';
+import { buildExercise, EXERCISES } from '../../src/lib/warmup/exercises';
 import { createTestDb } from './db';
 import { DENIED, fixture, type Fixture } from './fixture';
 
@@ -308,5 +310,98 @@ describe('Höchster Rang über alle Guuggen (Bahn-Looks, Schränz-Groove)', () =
 		await f.db.as(f.fremd, `select remove_member($1, $2)`, [f.guugge, f.fremd.id]);
 		expect(await best(f.fremd)).toBe(120);
 		await expect(best('anon')).rejects.toThrow(DENIED);
+	});
+});
+
+describe('Punkte fürs Einblasen', () => {
+	let f: Fixture;
+	const start = (who: { id: string }, ex: string, level: number, bpm: number) =>
+		f.db
+			.as<{ id: string }>(who, `select start_exercise($1, $2, $3) as id`, [ex, level, bpm])
+			.then((r) => r[0].id);
+	const finish = (who: { id: string }, a: string, pct: number, judged: number) =>
+		f.db
+			.as<{ r: Record<string, unknown> }>(who, `select finish_exercise($1, $2, $3) as r`, [
+				a,
+				pct,
+				judged
+			])
+			.then((r) => r[0].r);
+	const age = (a: string, s: number) =>
+		f.db.owner(
+			`update exercise_attempts set started_at = now() - make_interval(secs => $2) where id = $1`,
+			[a, s]
+		);
+	beforeAll(async () => {
+		f = await fixture();
+	});
+
+	it('Länge und Namen der Übungen wie in der App, Punkteregel SQL = TypeScript', async () => {
+		for (const e of EXERCISES) {
+			for (const lvl of [0, 1] as const) {
+				const [{ beats, name }] = await f.db.owner<{ beats: number; name: string }>(
+					`select exercise_beats($1, $2) as beats, exercise_name($1) as name`,
+					[e.id, lvl]
+				);
+				expect(beats, `${e.id} ${lvl}`).toBe(buildExercise(e, lvl, 'valve').total);
+				expect(name).toBe(e.name);
+			}
+		}
+		expect(unlockLevel('groove').min).toBe(250);
+		const rows = await f.db.owner<{ pct: number; judged: number; p: number }>(
+			`select pct, judged, exercise_points(pct, judged) as p
+			 from generate_series(0, 100) pct, generate_series(0, 5) judged`
+		);
+		for (const r of rows) expect(r.p, `${r.pct} % bei ${r.judged}`).toBe(exerciseAward(r.pct, r.judged));
+	});
+
+	it('Übung, Tempo, Dauer und Ergebnis werden geprüft', async () => {
+		const p = f.trp[0];
+		await expect(start(p, 'tanz', 0, 70)).rejects.toThrow('Diese Übung gibt es nicht.');
+		await expect(start(p, 'lang', 2, 70)).rejects.toThrow('Diese Übung gibt es nicht.');
+		await expect(start(p, 'lang', 0, 130)).rejects.toThrow('Tempo 50 bis 120.');
+		// Lange Töne Einstieg: 68 Schläge, bei 120 BPM 34 s; nötig sind 90 %
+		const a = await start(p, 'lang', 0, 120);
+		await age(a, 25);
+		await expect(finish(p, a, 90, 8)).rejects.toThrow('Das ging schneller');
+		await age(a, 35);
+		await expect(finish(p, a, -1, 8)).rejects.toThrow('Ungültiges Ergebnis.');
+		expect(await finish(p, a, 90, 8)).toEqual({ points: 5, capped: false, week_goal: 0 });
+		await expect(finish(p, a, 90, 8)).rejects.toThrow('schon abgeschlossen');
+		expect(
+			await f.db.owner(`select points, reason from points_ledger where ref = $1`, [a])
+		).toEqual([{ points: 5, reason: 'Einblasen: Lange Töne' }]);
+		await expect(finish(f.trp[1], a, 90, 8)).rejects.toThrow('Diese Übung gibt es nicht.');
+	});
+
+	it('unter 50 % keine Punkte, nichts getroffen kein Übetag; höchstens 6 pro Tag', async () => {
+		const p = f.trp[1];
+		const run = async (pct: number, judged = 8) => {
+			const a = await start(p, 'zunge', 0, 120);
+			await age(a, 60);
+			return finish(p, a, pct, judged);
+		};
+		const days = () =>
+			f.db.owner(`select count(*)::int as n from practice_days where user_id = $1`, [p.id]);
+		expect(await run(0)).toMatchObject({ points: 0 });
+		expect(await days()).toEqual([{ n: 0 }]);
+		expect(await run(100, 2)).toMatchObject({ points: 0 });
+		expect(await run(49)).toMatchObject({ points: 0, capped: false });
+		expect(await days()).toEqual([{ n: 1 }]);
+		for (let i = 0; i < 6; i++) expect(await run(80)).toMatchObject({ points: 5 });
+		expect(await run(80)).toMatchObject({ points: 0, capped: true });
+	});
+
+	it('Schränz-Groove erst ab Level 3; Versuche liest kein Client', async () => {
+		const p = f.pos[0];
+		await expect(start(p, 'groove', 0, 70)).rejects.toThrow('Der Schränz-Groove kommt mit Level 3.');
+		await f.db.as(
+			'service',
+			`insert into points_ledger (user_id, guugge_id, points, reason) values ($1, $2, 250, 'test')`,
+			[p.id, f.guugge]
+		);
+		expect(await start(p, 'groove', 1, 70)).toMatch(/^[0-9a-f-]{36}$/);
+		await expect(f.db.as(p, `select * from exercise_attempts`)).rejects.toThrow(DENIED);
+		await expect(f.db.as('anon', `select start_exercise('lang', 0, 70)`)).rejects.toThrow(DENIED);
 	});
 });

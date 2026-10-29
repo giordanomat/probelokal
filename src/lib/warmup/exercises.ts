@@ -5,6 +5,10 @@
 //
 // Der »Schränz-Groove« ist eine Belohnung ab Level 3 (#lib/game/points.ts); gesperrt zeigt
 // »Einblasen« ihn mit »ab Level 3«.
+//
+// Für die Punkte kennt auch die Datenbank Länge und Namen jeder Übung (exercise_beats,
+// exercise_name, Migration 20261029210000); supabase/tests/points.spec.ts prüft, dass beide passen.
+// Eine neue oder geänderte Übung braucht deshalb eine Migration.
 
 import { standardFingering, VALVE_BY_LOWERING } from '../music/fingering';
 import { spell } from '../music/notation';

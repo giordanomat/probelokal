@@ -30,7 +30,7 @@
 		WEEKDAYS
 	} from '#lib/plan/dates.ts';
 	import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
-	import { levelOf, nextLevel } from '#lib/game/points.ts';
+	import { levelOf, nextLevel, POINTS_RULE } from '#lib/game/points.ts';
 	import {
 		nextExams,
 		pauseSections,
@@ -267,7 +267,8 @@
 							An {Math.min(points.days_this_week, 3)} von 3 Tagen geübt diese Woche{points.days_this_week >=
 							3
 								? ' – Wochenziel erreicht.'
-								: '.'} Punkte gibt es nur für bestandene Etappen und das Wochenziel, nicht für Zeit.
+								: '.'}
+							{POINTS_RULE}
 						</p>
 					</section>
 				{/if}
