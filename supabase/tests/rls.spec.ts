@@ -58,7 +58,7 @@ async function fixture(): Promise<Fixture> {
 
 	const [{ id: title }] = await db.owner<{ id: string }>(
 		`insert into titles (slug, name, version, bpm, bars, sections, voices, published)
-		 values ('bad-touch-2-0', 'Bad Touch', 'Schuegu27', 115, 96,
+		 values ('test-titel', 'Testtitel', 'Test', 115, 96,
 		   '[{"from":1,"to":8,"name":"A"},{"from":9,"to":16,"name":"B"},{"from":17,"to":24,"name":"C"}]', '[]', true)
 		 returning id`
 	);
@@ -579,5 +579,98 @@ describe('Konto-Funktionen für die Oberfläche', () => {
 
 	it('nicht angemeldet: keine Konto-Funktionen', async () => {
 		await expect(f.db.as('anon', `select my_account()`)).rejects.toThrow(DENIED);
+	});
+});
+
+describe('Gesamtplan und eigener Stand', () => {
+	let f: Fixture;
+	const plan = (who: { id: string }, start: string, perf: string, gp = 3, rp: number | null = 1) =>
+		f.db.as(who, `select set_plan($1, 'test-titel', $2, $3, $4, $5, 60)`, [
+			f.guugge,
+			start,
+			perf,
+			gp,
+			rp
+		]);
+	beforeAll(async () => {
+		f = await fixture();
+	});
+
+	it('nur die Leitung schreibt den Plan, alle Mitglieder lesen ihn', async () => {
+		expect(
+			await f.db.as<{ get_plan: unknown }>(f.trp[1], `select get_plan($1, 'test-titel')`, [
+				f.guugge
+			])
+		).toEqual([{ get_plan: null }]);
+		await expect(plan(f.chef, '2026-11-02', '2027-02-20')).rejects.toThrow(
+			'Nur die Leitung kann den Plan ändern.'
+		);
+		await plan(f.leitung, '2026-11-02', '2027-02-20');
+		await plan(f.leitung, '2026-11-02', '2027-02-27', 4, null);
+		const [{ get_plan: p }] = await f.db.as<{ get_plan: Record<string, unknown> }>(
+			f.pos[0],
+			`select get_plan($1, 'test-titel')`,
+			[f.guugge]
+		);
+		expect(p).toMatchObject({
+			start: '2026-11-02',
+			perf: '2027-02-27',
+			gp_weekday: 4,
+			rp_weekday: null,
+			minutes_per_week: 60
+		});
+		await expect(
+			f.db.as(f.fremd, `select get_plan($1, 'test-titel')`, [f.guugge])
+		).rejects.toThrow('Du bist nicht in dieser Guugge.');
+	});
+
+	it('unsinnige Pläne werden abgewiesen', async () => {
+		await expect(plan(f.leitung, '2026-11-02', '2026-11-02')).rejects.toThrow(
+			'Der Auftritt muss nach dem Start liegen.'
+		);
+		await expect(plan(f.leitung, '2026-11-02', '2028-01-01')).rejects.toThrow(
+			'höchstens ein Jahr'
+		);
+		await expect(plan(f.leitung, '2026-11-02', '2027-01-01', 7)).rejects.toThrow(
+			'Unbekannter Wochentag.'
+		);
+		await expect(
+			f.db.as(f.leitung, `select set_plan($1, 'gibts-nicht', '2026-11-02', '2027-01-01', 3, null, 0)`, [
+				f.guugge
+			])
+		).rejects.toThrow('Diesen Titel gibt es nicht.');
+	});
+
+	it('eigener Stand: höchste bestandene Etappe, »ohne Mikrofon« markiert, nur die eigenen', async () => {
+		const exam = (user: string, section: number, stage: number, via: string, ok = true) =>
+			f.db.as(
+				'service',
+				`insert into exam_results (user_id, guugge_id, title_id, voice, section, stage, score, via, passed)
+				 values ($1, $2, $3, 'trp1', $4, $5, 0.9, $6, $7)`,
+				[user, f.guugge, f.title, section, stage, via, ok]
+			);
+		await exam(f.trp[0].id, 1, 1, 'quiz');
+		await exam(f.trp[0].id, 1, 2, 'grip');
+		await exam(f.trp[0].id, 1, 3, 'rhythm');
+		await exam(f.trp[0].id, 1, 4, 'rhythm');
+		await exam(f.trp[0].id, 1, 5, 'mic', false);
+		await exam(f.trp[0].id, 2, 1, 'quiz');
+		await exam(f.trp[1].id, 1, 1, 'quiz');
+		const rows = await f.db.as(
+			f.trp[0],
+			`select voice, section, stage, rhythm_only from my_stages($1, 'test-titel') order by section`,
+			[f.guugge]
+		);
+		expect(rows).toEqual([
+			{ voice: 'trp1', section: 1, stage: 4, rhythm_only: [4] },
+			{ voice: 'trp1', section: 2, stage: 1, rhythm_only: [] }
+		]);
+		await exam(f.trp[0].id, 1, 4, 'mic');
+		const again = await f.db.as<{ rhythm_only: number[] }>(
+			f.trp[0],
+			`select rhythm_only from my_stages($1, 'test-titel') where section = 1`,
+			[f.guugge]
+		);
+		expect(again).toEqual([{ rhythm_only: [] }]);
 	});
 });

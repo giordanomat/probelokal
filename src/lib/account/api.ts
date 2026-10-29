@@ -112,3 +112,41 @@ export const setMemberRole = (sb: SupabaseClient, guugge: string, user: string, 
 
 export const removeMember = (sb: SupabaseClient, guugge: string, user: string) =>
 	call<void>(sb, 'remove_member', { p_guugge: guugge, p_user: user });
+
+export interface StoredPlan {
+	start: string;
+	perf: string;
+	gp_weekday: number;
+	rp_weekday: number | null;
+	minutes_per_week: number;
+	updated_at: string;
+}
+
+export interface StageRow {
+	voice: string;
+	section: number;
+	stage: number;
+	rhythm_only: number[];
+}
+
+export const getPlan = (sb: SupabaseClient, guugge: string, slug: string) =>
+	call<StoredPlan | null>(sb, 'get_plan', { p_guugge: guugge, p_slug: slug });
+
+export const setPlan = (
+	sb: SupabaseClient,
+	guugge: string,
+	slug: string,
+	p: Omit<StoredPlan, 'updated_at'>
+) =>
+	call<void>(sb, 'set_plan', {
+		p_guugge: guugge,
+		p_slug: slug,
+		p_start: p.start,
+		p_perf: p.perf,
+		p_gp_weekday: p.gp_weekday,
+		p_rp_weekday: p.rp_weekday,
+		p_minutes: p.minutes_per_week
+	});
+
+export const myStages = (sb: SupabaseClient, guugge: string, slug: string) =>
+	call<StageRow[]>(sb, 'my_stages', { p_guugge: guugge, p_slug: slug });

@@ -8,7 +8,7 @@
 // Nachgebaut ist nur, was die App braucht; Antworten und Fehler sind dem echten Verhalten
 // nachempfunden, nicht gegen Supabase geprüft.
 
-import type { BrowserContext, Page, Route } from '@playwright/test';
+import { expect, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { randomBytes, randomInt } from 'node:crypto';
 import { createTestDb, type TestDb } from '../supabase/tests/db';
@@ -62,6 +62,22 @@ export class FakeSupabase {
 		const m = this.mails.filter((x) => x.email === email).at(-1);
 		if (!m) throw new Error(`Keine Mail an ${email}`);
 		return m;
+	}
+
+	/** Konto-ID zu einer Adresse (legt das Konto an, wenn es fehlt). */
+	idOf(email: string): Promise<string> {
+		return this.userFor(email.toLowerCase());
+	}
+
+	/** Anmelden über die Oberfläche mit dem Code aus der »Mail«. */
+	async signIn(page: Page, email: string) {
+		await page.goto('/anmelden');
+		await page.getByLabel('E-Mail').fill(email);
+		await page.getByRole('button', { name: 'Code schicken' }).click();
+		await expect(page.getByRole('heading', { name: 'Schau in deine Mails.' })).toBeVisible();
+		await page.getByLabel('Code').fill(this.lastMail(email.toLowerCase()).code);
+		await page.getByRole('button', { name: 'Anmelden' }).click();
+		await expect(page).not.toHaveURL(/\/anmelden/);
 	}
 
 	/** Abfangen für eine Seite oder einen ganzen Browser-Kontext. */

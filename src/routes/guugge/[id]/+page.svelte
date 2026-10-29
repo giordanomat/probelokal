@@ -163,6 +163,12 @@
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
 
 		<section class="card">
+			<h2>Bad Touch 2.0</h2>
+			<p class="hint">Gesamtplan der Leitung und dein Stand pro Teil.</p>
+			<p><a class="go" href={resolve('/guugge/[id]/plan', { id })}>Plan ansehen →</a></p>
+		</section>
+
+		<section class="card">
 			<h2>Deine Stimme</h2>
 			<div class="seg" role="group" aria-label="Deine Stimme">
 				{#each BAD_TOUCH_VOICES as v (v.id)}

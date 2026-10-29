@@ -42,3 +42,19 @@ export function shortDate(day: Day): string {
 	const [, m, d] = day.split('-').map(Number);
 	return `${d}.${m}.`;
 }
+
+/** Mit Jahr: »20.2.2027« */
+export function longDate(day: Day): string {
+	return `${shortDate(day)}${day.slice(0, 4)}`;
+}
+
+/** Index wie `weekdayOf` (0 = Sonntag) */
+export const WEEKDAYS = [
+	'Sonntag',
+	'Montag',
+	'Dienstag',
+	'Mittwoch',
+	'Donnerstag',
+	'Freitag',
+	'Samstag'
+] as const;

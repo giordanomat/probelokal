@@ -14,6 +14,8 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 - **Einladung per Link:** Der Schlüssel (64 Hex-Zeichen) steht nur im Link, gespeichert ist sein SHA-256 (`invites.token_hash`). Ein Link gilt für mehrere Personen, 1–60 Tage (Standard 14), bis die Leitung alle zurückzieht. Wer schon Mitglied ist, behält beim Annehmen seine Rolle.
 - **Profile** entstehen beim ersten Anmelden (Trigger auf `auth.users`), Name höchstens 40 Zeichen.
 - **Teile** sind in `exam_results.section` als Index in `titles.sections` gezählt, ab 0.
+- **Pläne:** `plans.gp_weekday` und `rp_weekday` zählen wie JavaScript, 0 = Sonntag. Lesen und schreiben über `get_plan` und `set_plan` (seit `20261029100000`).
+- **Katalog:** Bad Touch steht per Migration in `titles`, damit Pläne, Hinweise und Ergebnisse darauf verweisen können. `supabase/tests/catalog.spec.ts` prüft, dass der Eintrag zu `src/lib/titles/bad-touch.ts` passt. Weitere Titel legt später die Produktionsstrecke an (docs/06).
 
 ## Offene Punkte
 

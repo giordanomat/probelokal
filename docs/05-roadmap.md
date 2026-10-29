@@ -125,7 +125,19 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - `src/lib/exams/`: Quiz, Griffprüfung, Bewertung auf der Bahn, Bestehensgrenzen.
    - `src/lib/game/points.ts`: Punkte, Ränge, Tageslimits, Wochenziel.
    - Gegen den Prototyp gerechnet: Gewichte, Lernwochen, Wochentexte, Fälligkeiten und Meilensteine stimmten in vier Fällen überein, auch über die Zeitumstellung. Die Sollwerte stehen in `plan.spec.ts`.
-5. Offen: Hinweise der Leitung, Plan und Prüfungen in der Oberfläche, Punkte serverseitig, Rangliste.
+5. ~~Gesamtplan und »Mein Plan« in der Oberfläche~~ erledigt am 29.10.2026, unter `/guugge/[id]/plan`:
+   - Die Leitung legt den Plan an und ändert ihn; alle Mitglieder sehen Wochen und Meilensteine.
+   - »Mein Plan« für die eigene Stimme: voraus/hinterher, Prozent bis auftrittsreif, als Nächstes mit Fälligkeit, Wochenziele, alle Teile mit Etappen. Pausen zählen als erledigt.
+   - Migration `20261029100000_m2_titel_plan.sql`: Bad Touch im Katalog (`catalog.spec.ts` prüft, dass er zu `bad-touch.ts` passt), `get_plan`, `set_plan` (nur Leitung, mit Plausibilitätsprüfung), `my_stages`.
+   - Getestet mit Vitest (Regeln) und Playwright (Plan anlegen, Mitglied sieht seinen Stand).
+   - Noch ohne Etappenprüfungen: Der Stand bleibt bei 0, bis Prüfungen Ergebnisse schreiben.
+6. Offen: Etappenprüfungen in der Oberfläche, Punkte serverseitig (Entscheid nötig, siehe unten), Hinweise der Leitung, Rangliste, Übersicht der Leitung.
+
+**Offene Entscheidung (Matthias): Wo rechnet der Server die Punkte?** docs/02 sieht Edge Functions vor (`exam-result`, `pass-result`). Vorschlag: stattdessen Datenbankfunktionen in SQL, zum Beispiel `start_exam` und `finish_exam`. Sie prüfen die Plausibilität (Dauer seit Start, Reihenfolge der Etappen, Tageslimits) und schreiben Ergebnis und Punkte.
+- Dafür spricht: Alle Regeln liegen dort, wo schon Rechte und Daten liegen. Sie laufen in denselben PGlite-Tests, und es braucht keinen zweiten Weg zum Ausrollen (Deno, Function-Deploy).
+- Dagegen spricht: Die Punkteregeln stehen doppelt, in TypeScript für die Anzeige und in SQL als Wahrheit. Ein Test müsste beide gleich halten.
+- Für die Fragen an den giordanomat-Dirigenten (Anthropic-Schlüssel, M3) braucht es trotzdem eine Edge Function.
+
 
 
 **Abnahme:**

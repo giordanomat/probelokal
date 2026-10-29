@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH, BAD_TOUCH_NOTES } from '../titles/bad-touch';
 import type { RawNote, Section } from '../music/types';
-import { addDays, mondayOf, shortDate, todayInZurich, weekdayOf } from './dates';
+import { addDays, longDate, mondayOf, shortDate, todayInZurich, weekdayOf } from './dates';
 import { buildPlan, dueOf, expectedStage, sectionWeights, type PlanParams } from './plan';
 import {
 	nextExams,
@@ -38,6 +38,7 @@ describe('Kalendertage', () => {
 		expect(mondayOf('2026-11-02')).toBe('2026-11-02');
 		expect(weekdayOf('2026-11-04')).toBe(3);
 		expect(shortDate('2027-01-04')).toBe('4.1.');
+		expect(longDate('2027-02-20')).toBe('20.2.2027');
 	});
 
 	it('heute gilt in der Schweiz, nicht in UTC', () => {
