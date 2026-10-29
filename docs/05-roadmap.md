@@ -164,7 +164,14 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Migration `20261029160000_m2_hinweise.sql`: `add_hint` (nur Leitung, prüft Takte, Ziel, Stärke, Text), `delete_hint`, `list_hints`, `mark_hints_read`.
    - Getestet mit Vitest (Rechte, Prüfungen, gelesen) und Playwright (eintragen, neu, Hinhören, Band je nach Stimme, löschen).
    - **Noch nicht:** Hinweise in der Notenansicht, Aktualisierung ohne Neuladen (Realtime, docs/02), Hinweise von Registerchefs (docs/03).
-10. Offen: bewertete Durchgänge mit Punkten.
+10. ~~Punkte für bewertete Durchgänge~~ erledigt am 29.10.2026:
+    - »Stück üben« meldet jeden Durchgang in der Schleife oder im Echo mit Bewertung beim Server an (`start_pass`) und ab (`finish_pass`). Ab 50 % ein Punkt pro 10 %, höchstens 10, im Originaltempo × 1,5. Höchstens 15 Durchgänge mit Punkten pro Tag und Guugge, wie im Prototyp.
+    - Die Punkte gehen an jede Guugge, in der die Person Mitglied ist (»Stück üben« gehört zu keiner Guugge).
+    - **Neu (Vorschlag, docs/01):** Ein Übetag zählt erst ab einem getroffenen Ton, sonst brächte ein Durchgang ohne Spielen das Wochenziel. Gilt auch für Prüfungen.
+    - Migration `20261029180000_m2_durchgaenge.sql`. Die Punkteregel in SQL und TypeScript stimmt für alle 1111 Kombinationen überein.
+    - Getestet mit Playwright: Ein Durchgang wird angemeldet, abgeschlossen und neu gestartet; 0 % gibt keine Punkte und keinen Übetag.
+    - **Noch nicht:** Punkte fürs Einblasen (5 pro Übung, höchstens 6 pro Tag, docs/01).
+11. Offen in M2: Punkte fürs Einblasen; Hinweise in der Notenansicht und ohne Neuladen; Belohnungen Bahn-Looks und Schränz-Groove. Danach Abnahme M2 (Testprotokoll).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

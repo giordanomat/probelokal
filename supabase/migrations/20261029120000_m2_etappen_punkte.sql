@@ -210,7 +210,8 @@ begin
     insert into public.points_ledger (user_id, guugge_id, points, reason, ref)
     values (me, a.guugge_id, pts, format('Etappe %s · Teil %s', a.stage, sec ->> 'name'), a.id);
   end if;
-  week := public.note_practice_day(me, a.guugge_id);
+  -- Übetag erst ab einem getroffenen Ton: Nichtstun bringt kein Wochenziel
+  week := case when p_score > 0 then public.note_practice_day(me, a.guugge_id) else 0 end;
 
   return jsonb_build_object(
     'passed', ok, 'score', p_score, 'stage', a.stage, 'section', a.section,

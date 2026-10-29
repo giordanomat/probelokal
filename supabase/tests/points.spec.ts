@@ -3,7 +3,7 @@
 // von Reihenfolge, Dauer und Wertebereich.
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { examAward } from '../../src/lib/game/points';
+import { examAward, passAward } from '../../src/lib/game/points';
 import { passMark } from '../../src/lib/exams/exams';
 import { createTestDb } from './db';
 import { DENIED, fixture, type Fixture } from './fixture';
@@ -178,5 +178,103 @@ describe('Prüfung starten und abschliessen', () => {
 		await expect(f.db.as('anon', `select start_exam($1, 'test-titel', 1, 1, 'quiz')`, [f.guugge])).rejects.toThrow(
 			DENIED
 		);
+	});
+});
+
+describe('Bewertete Durchgänge', () => {
+	let f: Fixture;
+	const startPass = (who: { id: string }, from: number, to: number, tempo: number) =>
+		f.db
+			.as<{ id: string }>(who, `select start_pass('test-titel', $1, $2, $3) as id`, [
+				from,
+				to,
+				tempo
+			])
+			.then((r) => r[0].id);
+	const finishPass = (who: { id: string }, a: string, pct: number, judged: number) =>
+		f.db
+			.as<{ r: Record<string, unknown> }>(who, `select finish_pass($1, $2, $3) as r`, [
+				a,
+				pct,
+				judged
+			])
+			.then((r) => r[0].r);
+	const age = (a: string, s: number) =>
+		f.db.owner(`update pass_attempts set started_at = now() - make_interval(secs => $2) where id = $1`, [
+			a,
+			s
+		]);
+	beforeAll(async () => {
+		f = await fixture();
+	});
+
+	it('Punkteregel: SQL = TypeScript für alle Prozente und Tempi', async () => {
+		const rows = await f.db.owner<{ pct: number; tempo: number; p: number }>(
+			`select pct, tempo, pass_points(pct, tempo) as p
+			 from generate_series(0, 100) pct, generate_series(50, 100, 5) tempo`
+		);
+		expect(rows).toHaveLength(101 * 11);
+		for (const r of rows) expect(r.p, `${r.pct} % bei ${r.tempo} %`).toBe(passAward(r.pct, r.tempo));
+	});
+
+	it('Takte und Tempo werden geprüft, zu schnell gilt nicht', async () => {
+		await expect(startPass(f.trp[0], 5, 4, 100)).rejects.toThrow('Diese Takte gibt es nicht.');
+		await expect(startPass(f.trp[0], 1, 96, 100)).rejects.toThrow('Diese Takte gibt es nicht.');
+		await expect(startPass(f.trp[0], 1, 8, 40)).rejects.toThrow('Tempo 50 bis 100');
+		// T. 1–8 bei 115 BPM dauern 16,7 s; nötig sind 90 % = 15 s
+		const a = await startPass(f.trp[0], 1, 8, 100);
+		await age(a, 10);
+		await expect(finishPass(f.trp[0], a, 90, 20)).rejects.toThrow('Das ging schneller');
+		await age(a, 20);
+		await expect(finishPass(f.trp[0], a, 101, 20)).rejects.toThrow('Ungültiges Ergebnis.');
+		expect(await finishPass(f.trp[0], a, 90, 20)).toEqual({
+			points: 14,
+			capped: false,
+			week_goal: 0
+		});
+		await expect(finishPass(f.trp[0], a, 90, 20)).rejects.toThrow('schon abgeschlossen');
+		const [{ my_points: p }] = await f.db.as<{ my_points: Record<string, number> }>(
+			f.trp[0],
+			`select my_points($1)`,
+			[f.guugge]
+		);
+		expect(p).toMatchObject({ points: 14, days_this_week: 1 });
+	});
+
+	it('unter 3 bewerteten Tönen keine Punkte; höchstens 15 Durchgänge pro Tag', async () => {
+		const p = f.trp[1];
+		const a = await startPass(p, 1, 8, 80);
+		await age(a, 30);
+		expect(await finishPass(p, a, 100, 2)).toMatchObject({ points: 0, capped: false });
+		// Nichts getroffen: kein Übetag (sonst gäbe Nichtstun das Wochenziel)
+		const z = await startPass(p, 1, 8, 80);
+		await age(z, 30);
+		await finishPass(p, z, 0, 12);
+		expect(
+			await f.db.owner(`select count(*)::int as n from practice_days where user_id = $1`, [p.id])
+		).toEqual([{ n: 0 }]);
+		for (let i = 0; i < 15; i++) {
+			await f.db.as(
+				'service',
+				`insert into points_ledger (user_id, guugge_id, points, reason) values ($1, $2, 5, 'Durchgang T. 1–8 · 50 %')`,
+				[p.id, f.guugge]
+			);
+		}
+		const b = await startPass(p, 1, 8, 80);
+		await age(b, 30);
+		expect(await finishPass(p, b, 100, 20)).toMatchObject({ points: 0, capped: true });
+	});
+
+	it('Punkte gehen an die eigene Guugge, Versuche liest kein Client', async () => {
+		const a = await startPass(f.fremd, 1, 8, 100);
+		await age(a, 20);
+		expect(await finishPass(f.fremd, a, 60, 10)).toMatchObject({ points: 9 });
+		expect(
+			await f.db.owner(`select guugge_id, points from points_ledger where user_id = $1`, [
+				f.fremd.id
+			])
+		).toEqual([{ guugge_id: f.fremdGuugge, points: 9 }]);
+		await expect(f.db.as(f.fremd, `select * from pass_attempts`)).rejects.toThrow(DENIED);
+		await expect(finishPass(f.trp[0], a, 60, 10)).rejects.toThrow('Diesen Durchgang gibt es nicht.');
 	});
 });

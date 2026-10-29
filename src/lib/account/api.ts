@@ -268,3 +268,21 @@ export const deleteHint = (sb: SupabaseClient, hint: string) =>
 
 export const markHintsRead = (sb: SupabaseClient, ids: string[]) =>
 	call<number>(sb, 'mark_hints_read', { p_ids: ids });
+
+export interface PassResult {
+	points: number;
+	/** Heute schon 15 Durchgänge mit Punkten */
+	capped: boolean;
+	week_goal: number;
+}
+
+export const startPass = (
+	sb: SupabaseClient,
+	slug: string,
+	from: number,
+	to: number,
+	tempo: number
+) => call<string>(sb, 'start_pass', { p_slug: slug, p_from: from, p_to: to, p_tempo: tempo });
+
+export const finishPass = (sb: SupabaseClient, attempt: string, pct: number, judged: number) =>
+	call<PassResult>(sb, 'finish_pass', { p_attempt: attempt, p_pct: pct, p_judged: judged });

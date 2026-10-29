@@ -51,7 +51,7 @@
 	import { cachedFile, storeFile, titleCacheName } from '#lib/offline/title-cache.ts';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
-	import { TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
+	import { summarizePass, TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
 	import {
 		DEFAULT_PREFS,
 		OWN_LEVELS,
@@ -180,6 +180,46 @@
 
 	// Hinweise der Leitung aus allen eigenen Guuggen, gefiltert nach der gewählten Stimme
 	let hints = $state<Hint[]>([]);
+	/** Mitglied mindestens einer Guugge: dann gibt es Punkte für bewertete Durchgänge */
+	let memberOfAny = false;
+
+	// Punkte für bewertete Durchgänge (Schleife oder Echo mit Mithören bzw. Rhythmus tippen):
+	// Versuch beim Beginn eines Durchgangs anmelden, am Ende das Ergebnis melden (start_pass,
+	// finish_pass). Punkte sind eine Zugabe; Fehler (z. B. Tempo mitten im Durchgang erhöht)
+	// bleiben still.
+	let passAttempt: Promise<string | null> | null = null;
+	let passPoints = $state('');
+
+	function beginPassAttempt() {
+		passAttempt = null;
+		const judging = mode === 'rhythm' || listening !== 'off';
+		if (exam || !memberOfAny || !judging || (!loop && mode !== 'echo')) return;
+		const r = session.range;
+		const t = tempo;
+		passAttempt = loadAccountApi()
+			.then((a) => (a ? a.api.startPass(a.sb, title.slug, r.from, r.to, t) : null))
+			.catch(() => null);
+	}
+
+	async function finishPassAttempt(r: PassReport) {
+		const attempt = passAttempt;
+		if (clock.playing) beginPassAttempt();
+		else passAttempt = null;
+		const summary = summarizePass(r.judged.map(([, v]) => v));
+		const id = await attempt;
+		const a = await loadAccountApi().catch(() => null);
+		if (!id || !a || !summary) return;
+		try {
+			const res = await a.api.finishPass(a.sb, id, summary.pct, summary.total);
+			passPoints = res.points
+				? `+${res.points} Punkte${res.week_goal ? ` · +${res.week_goal} Wochenziel` : ''}`
+				: res.capped
+					? 'Heute gibt es für Durchgänge keine Punkte mehr.'
+					: '';
+		} catch {
+			passPoints = '';
+		}
+	}
 
 	async function loadHints() {
 		const a = await loadAccountApi().catch(() => null);
@@ -190,6 +230,7 @@
 				acc.guuggen.map((g) => a.api.listHints(a.sb, g.id, title.slug))
 			);
 			hints = lists.flat();
+			memberOfAny = acc.guuggen.length > 0;
 		} catch {
 			// Hinweise sind eine Zugabe; ohne Netz oder Konto läuft die Bahn ohne sie
 		}
@@ -437,6 +478,8 @@
 
 	function showReport(r: PassReport) {
 		report = r;
+		passPoints = '';
+		if (r.final && !exam) void finishPassAttempt(r);
 		if (!r.final || !r.judged.length) return;
 		// Baustellen pro Titel und Stimme, nur auf dem Gerät (Liste kommt mit M1 Punkt 5)
 		const key = baustellenKey(title.slug, voice.id);
@@ -635,6 +678,7 @@
 	function togglePlay() {
 		if (clock.playing) {
 			clock.pause();
+			passAttempt = null;
 			const r = session.finish(false, tempo);
 			if (r) report = r;
 		} else {
@@ -647,6 +691,7 @@
 			if (echoFrom !== null) jumpTo(echoFrom);
 			sync();
 			clock.play();
+			beginPassAttempt();
 		}
 		playing = clock.playing;
 	}
@@ -1183,6 +1228,7 @@
 	<section class="result" role="status" data-testid="ergebnis">
 		<b>{report.headline}</b>
 		{#if report.detail}<span class="detail">{report.detail}</span>{/if}
+		{#if passPoints}<span class="detail" data-testid="durchgang-punkte">{passPoints}</span>{/if}
 		{#if report.advice?.kind === 'faster' || report.advice?.kind === 'slower'}
 			{@const next = report.advice.tempo}
 			<button
