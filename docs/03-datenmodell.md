@@ -53,7 +53,7 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 2. Den Ablauf in dieser Reihenfolge starten:
    1. `anzeigen` – zeigt den Migrationsverlauf.
    2. `verlauf-nachtragen` – trägt `20261025140000` und `20261025180000` als angewendet ein. Beide sind von Hand angewendet (siehe unten); ohne diesen Schritt würde die CLI sie ein zweites Mal ausführen.
-   3. `probelauf` – zeigt, was angewendet würde. Erwartet: nur `20261028150000`.
+   3. `probelauf` – zeigt, was angewendet würde. Erwartet: alle Migrationen ab `20261028150000`, Stand 29.10.2026 zehn (bis `20261029220000`).
    4. `anwenden` – nur vom Branch `main`.
 3. Danach die Supabase Advisors ansehen. Erwartet werden Warnungen für die neuen `SECURITY DEFINER`-Funktionen, die für angemeldete Personen aufrufbar sind. Das ist gewollt: Sie prüfen selbst, wer was darf.
 

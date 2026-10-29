@@ -198,7 +198,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Migration `20261029220000_m2_hinweise_live.sql`: `hints` in der Publikation `supabase_realtime`.
     - Getestet mit Vitest (Abo, Filter, Sammeln, fremde Löschungen, Aufhören) und Playwright gegen einen Nachbau des Realtime-Protokolls: Trompete sieht neuen und gelöschten Hinweis ohne Neuladen. Gegenprobe: Ohne Meldungen des Nachbaus schlägt der Test fehl.
     - **Ungeprüft:** gegen das echte Realtime, und wie zuverlässig die Verbindung auf dem iPhone im Hintergrund bleibt (dafür das Neuholen beim Zurückkehren).
-15. Offen in M2: Abnahme (Testprotokoll), nach dem Anwenden der Migrationen.
+15. Offen in M2: Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Vorher nötig: eigener Mailversand (SMTP) in Supabase, sonst gehen Codes nur an Adressen aus dem Team des Projekts (docs/02).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.
