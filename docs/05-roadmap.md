@@ -120,7 +120,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Getestet mit Vitest und Playwright: ganzer Ablauf mit zwei Geräten gegen einen Supabase-Nachbau (`e2e/fake-supabase.ts`, echte Migrationen in PGlite).
    - **Ungeprüft:** gegen das echte Supabase. Geht erst, wenn die Migrationen angewendet und die Einstellungen gesetzt sind.
    - Die Stimmen sind vorerst die von Bad Touch. Wie `/ueben` die gewählte Stimme übernimmt, kommt mit den Plänen.
-4. Hinweise der Leitung, Gesamtplan, Mein Plan, Etappenprüfungen, Edge Functions, Ränge, Rangliste.
+4. ~~Logik für Pläne, Etappen und Punkte~~ portiert am 29.10.2026, noch ohne Oberfläche:
+   - `src/lib/plan/`: Gesamtplan mit Gewichtung der Teile, Fälligkeit der Etappen, »Mein Plan« (Pausen, voraus/hinterher, als Nächstes, Wochenziele). Kalendertage ohne Zeitzone; »heute« gilt in der Schweiz.
+   - `src/lib/exams/`: Quiz, Griffprüfung, Bewertung auf der Bahn, Bestehensgrenzen.
+   - `src/lib/game/points.ts`: Punkte, Ränge, Tageslimits, Wochenziel.
+   - Gegen den Prototyp gerechnet: Gewichte, Lernwochen, Wochentexte, Fälligkeiten und Meilensteine stimmten in vier Fällen überein, auch über die Zeitumstellung. Die Sollwerte stehen in `plan.spec.ts`.
+5. Offen: Hinweise der Leitung, Plan und Prüfungen in der Oberfläche, Punkte serverseitig, Rangliste.
+
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.
