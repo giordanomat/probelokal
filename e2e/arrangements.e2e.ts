@@ -19,6 +19,9 @@ test('Startseite zeigt die Landingpage, nicht den früheren Platzhalter', async 
 	// Instagram-Kanal ist @probelokal.ch (seit 29.10.2026), nicht mehr @giordanomat.arrangements.
 	await expect(page.locator('a[href*="instagram.com/giordanomat"]')).toHaveCount(0);
 	await expect(page.locator('a[href="https://www.instagram.com/probelokal.ch/"]')).toHaveCount(3);
+	// Kontaktadresse ist hallo@probelokal.ch (seit 29.10.2026).
+	await expect(page.locator('a[href*="giordanomat.de"]')).toHaveCount(0);
+	await expect(page.locator('a[href="mailto:hallo@probelokal.ch"]').first()).toBeAttached();
 	await page.waitForTimeout(1500);
 	expect(errors).toEqual([]);
 });

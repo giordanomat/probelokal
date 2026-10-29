@@ -1,6 +1,6 @@
 # Probelokal – Projektgedächtnis für Claude Code
 
-Übe-Dienst für Guuggenmusigen und Hobby-Brass: Ein gekauftes Arrangement wird pro Stimme geübt (Notenbahn mit Griffspur, Mitspielen zur Band, Mithören per Mikrofon, Etappenprüfungen) und gemeinsam als Guugge geplant (Gesamtplan der Leitung, eigener Plan pro Person, Hinweise der Leitung, freiwillige Rangliste). Marke seit 27.10.2026: »Probelokal« (probelokal.ch) ist das Hauptprodukt, der Arrangement-Laden ist darin enthalten; giordanomat tritt zurück. Betrieben von Matthias Giordano und Hans Jancar. Instagram: @probelokal.ch.
+Übe-Dienst für Guuggenmusigen und Hobby-Brass: Ein gekauftes Arrangement wird pro Stimme geübt (Notenbahn mit Griffspur, Mitspielen zur Band, Mithören per Mikrofon, Etappenprüfungen) und gemeinsam als Guugge geplant (Gesamtplan der Leitung, eigener Plan pro Person, Hinweise der Leitung, freiwillige Rangliste). Marke seit 27.10.2026: »Probelokal« (probelokal.ch) ist das Hauptprodukt, der Arrangement-Laden ist darin enthalten; giordanomat tritt zurück. Betrieben von Matthias Giordano und Hans Jancar. Kontakt: hallo@probelokal.ch. Instagram: @probelokal.ch. YouTube heisst noch @GiordanomatArrangements; Umbenennung frühestens Mitte November 2026 möglich, dann Links auf der Landingpage nachziehen.
 
 Zuerst lesen, in dieser Reihenfolge:
 1. `docs/01-produkt.md` – was gebaut wird und welche Entscheidungen feststehen
