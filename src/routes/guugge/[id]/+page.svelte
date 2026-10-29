@@ -17,8 +17,6 @@
 		ROLE_LABELS,
 		setMemberRole,
 		setMyVoice,
-		setRanglisteEnabled,
-		setRanglisteOptIn,
 		type Member,
 		type MyGuugge,
 		type Role
@@ -78,12 +76,6 @@
 	}
 
 	const chooseVoice = (v: string) => run(() => setMyVoice(sb!, id, v), 'Stimme gespeichert.');
-	const optIn = (on: boolean) =>
-		run(
-			() => setRanglisteOptIn(sb!, id, on),
-			on ? 'Du erscheinst in der Rangliste.' : 'Du erscheinst nicht in der Rangliste.'
-		);
-	const enableRangliste = (on: boolean) => run(() => setRanglisteEnabled(sb!, id, on));
 	const changeRole = (user: string, role: Role) =>
 		run(() => setMemberRole(sb!, id, user, role), 'Rolle geändert.');
 
@@ -186,32 +178,14 @@
 		</section>
 
 		<section class="card">
-			<h2>Rangliste</h2>
-			<label class="toggle">
-				<input
-					type="checkbox"
-					checked={me.rangliste_opt_in}
-					disabled={busy}
-					onchange={(e) => optIn(e.currentTarget.checked)}
-				/>
-				Ich mache bei der Rangliste mit
-			</label>
+			<h2>Punkte und Rangliste</h2>
 			<p class="hint">
-				Freiwillig, Standard ist aus. Wer mitmacht, erscheint mit Namen und Punkten. Die Leitung
-				sieht sonst nur Durchschnitte pro Register, nie deine Einzelwerte.
-				{#if !me.rangliste_enabled}Die Leitung hat die Rangliste gerade ausgeschaltet.{/if}
+				Dein Rang, die Belohnungen und die freiwillige Rangliste (Standard: aus).
+				{#if leitung}Hier schaltest du die Rangliste ein und legst Belohnungen fest.{/if}
 			</p>
-			{#if leitung}
-				<label class="toggle">
-					<input
-						type="checkbox"
-						checked={me.rangliste_enabled}
-						disabled={busy}
-						onchange={(e) => enableRangliste(e.currentTarget.checked)}
-					/>
-					Rangliste für die Guugge einschalten
-				</label>
-			{/if}
+			<p>
+				<a class="go" href={resolve('/guugge/[id]/rangliste', { id })}>Punkte und Rangliste →</a>
+			</p>
 		</section>
 
 		{#if leitung}

@@ -9,6 +9,8 @@ export interface Level {
 	min: number;
 	reward?: string;
 	unlock?: 'fasnacht' | 'groove' | 'gold' | 'goldname';
+	/** Belohnung ist gebaut (sonst zeigt die Oberfläche »kommt bald«) */
+	ready?: boolean;
 }
 
 export const LEVELS: readonly Level[] = [
@@ -33,7 +35,8 @@ export const LEVELS: readonly Level[] = [
 		name: 'Bühnenfuchs',
 		min: 850,
 		reward: 'Goldener Name in der Rangliste',
-		unlock: 'goldname'
+		unlock: 'goldname',
+		ready: true
 	},
 	{ n: 6, name: 'Guuggen-Ass', min: 1300, reward: 'Abzeichen »Guuggen-Ass«' },
 	{ n: 7, name: 'Fasnachtslegende', min: 1900, reward: 'Abzeichen »Fasnachtslegende«' }
@@ -52,6 +55,12 @@ export const DAILY_CAP = { exercise: 6, pass: 15 } as const;
 
 /** Wochenziel: an so vielen verschiedenen Tagen einer Woche geübt. */
 export const WEEK_GOAL_DAYS = 3;
+
+/** Belohnung zum Anzeigen; was noch nicht gebaut ist, mit »(kommt bald)«. */
+export function rewardText(level: Level): string {
+	if (!level.reward) return '';
+	return level.ready ? level.reward : `${level.reward} (kommt bald)`;
+}
 
 export function levelOf(points: number): Level {
 	let level = LEVELS[0];

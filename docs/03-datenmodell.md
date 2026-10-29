@@ -16,6 +16,8 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 - **Teile** sind in `exam_results.section` als Index in `titles.sections` gezählt, ab 0.
 - **Etappenprüfungen** (seit `20261029120000`): `start_exam` legt einen Versuch in `exam_attempts` an (kein Client-Zugriff), `finish_exam` prüft und schreibt Ergebnis, Punkte (`points_ledger`, `ref` = Versuch) und Übetag. `my_points` liefert die eigenen Punkte gesamt und diese Woche. Die Punkteregeln (`exam_points`, `exam_pass_mark`) stehen auch in `src/lib/game/points.ts`; `supabase/tests/points.spec.ts` hält beide gleich.
 - **Pläne:** `plans.gp_weekday` und `rp_weekday` zählen wie JavaScript, 0 = Sonntag. Lesen und schreiben über `get_plan` und `set_plan` (seit `20261029100000`). `plans.due` hält die Fälligkeit jeder Etappe pro Teil. Sie wird vom Browser der Leitung berechnet, weil die Gewichtung der Teile die Noten braucht; der Server liest daraus nur den Bonus »rechtzeitig«.
+- **Pausen pro Stimme:** `titles.voices[].rests` listet die Teile ohne Ton. Sie sind aus den Noten abgeleitet, weil die Datenbank die Noten nicht kennt; `catalog.spec.ts` rechnet sie nach. `register_overview` zählt diese Teile als erledigt, wie »Mein Plan«.
+- **Belohnungen der Guugge:** `guuggen.level_rewards` ({"2": "…"} für Level 2–7, je höchstens 80 Zeichen) über `set_level_rewards` (Leitung) und `guugge_settings` (Mitglieder).
 - **Katalog:** Bad Touch steht per Migration in `titles`, damit Pläne, Hinweise und Ergebnisse darauf verweisen können. `supabase/tests/catalog.spec.ts` prüft, dass der Eintrag zu `src/lib/titles/bad-touch.ts` passt. Weitere Titel legt später die Produktionsstrecke an (docs/06).
 
 ## Offene Punkte

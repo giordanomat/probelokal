@@ -17,7 +17,7 @@ export interface Fixture {
 	fremdGuugge: string;
 }
 
-/** Guugge mit Leitung, drei Trompeten (davon ein Registerchef), zwei Posaunen; daneben eine fremde Guugge. */
+/** Testtitel: Vorzähler und Teile A–C; Trompete 1 hat in Teil C Pause. Guugge mit Leitung, drei Trompeten (davon ein Registerchef), zwei Posaunen; daneben eine fremde Guugge. */
 export async function fixture(): Promise<Fixture> {
 	const db = await createTestDb();
 	const leitung = { id: await db.user('leitung@test.ch', 'Lea Leitung') };
@@ -58,7 +58,8 @@ export async function fixture(): Promise<Fixture> {
 	const [{ id: title }] = await db.owner<{ id: string }>(
 		`insert into titles (slug, name, version, bpm, bars, sections, voices, published)
 		 values ('test-titel', 'Testtitel', 'Test', 115, 96,
-		   '[{"from":1,"to":8,"name":"A"},{"from":9,"to":16,"name":"B"},{"from":17,"to":24,"name":"C"}]', '[]', true)
+		   '[{"from":0,"to":0,"name":"Vorzähler"},{"from":1,"to":8,"name":"A"},{"from":9,"to":16,"name":"B"},{"from":17,"to":24,"name":"C"}]',
+		   '[{"id":"trp1","rests":[3]},{"id":"trp2","rests":[]},{"id":"pos1","rests":[]},{"id":"pos2","rests":[]}]', true)
 		 returning id`
 	);
 	return { db, guugge, title, leitung, trp, pos, chef, fremd, fremdGuugge };
@@ -69,7 +70,8 @@ export async function passed(f: Fixture, user: string, section: number, stage: n
 	await f.db.as(
 		'service',
 		`insert into exam_results (user_id, guugge_id, title_id, voice, section, stage, score, via, passed)
-		 values ($1, $2, $3, 'trp1', $4, $5, 0.9, 'mic', true)`,
+		 values ($1, $2, $3, coalesce((select voice from memberships where guugge_id = $2 and user_id = $1), 'trp1'),
+		         $4, $5, 0.9, 'mic', true)`,
 		[user, f.guugge, f.title, section, stage]
 	);
 	await f.db.as(

@@ -146,7 +146,18 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Ergebnis mit Punkten in »Stück üben«, mit Links »Weiter zu Etappe …«, »Nochmals« und »Zurück zum Plan«.
    - Getestet mit Playwright: Rhythmus tippen ohne Tipp ergibt 0 %, und der Server speichert das Ergebnis. Mit dem künstlichen Mikrofon geht das Ergebnis als »mic« an den Server.
    - **Ungeprüft:** ein bestandener Durchgang auf der Bahn im Browser-Test (Tippen müsste auf 70 ms genau sein, zu wackelig für CI) und mit echten Bläsern. Das gehört in den Gerätetest.
-8. Offen: bewertete Durchgänge mit Punkten, Hinweise der Leitung, Rangliste, Übersicht der Leitung.
+8. ~~Rangliste, Belohnungen, Übersicht der Leitung~~ erledigt am 29.10.2026:
+   - `/guugge/[id]/rangliste`:
+     - eigener Rang mit Fortschritt zum nächsten Level und letzten Punkten;
+     - Belohnungen pro Level, dazu die eigenen der Guugge;
+     - Rangliste nur eingeschaltet und nur mit Opt-in, sortiert gesamt oder nach dieser Woche, mit Register-Wertung aus den Teilnehmenden.
+   - Die Leitung schaltet die Rangliste ein und legt Belohnungen fest.
+   - Die Schalter zur Rangliste sind von der Guugge-Seite hierher umgezogen.
+   - Im Gesamtplan sieht die Leitung die Übersicht der Register: Karten mit Schnitt und »hat diese Woche geübt«, dazu eine Tabelle Register × Teil mit der Plan-Zeile. Nur Register mit mindestens drei Personen.
+   - Migration `20261029140000_m2_rangliste_uebersicht.sql`: `register_overview` zählt Pausen der Stimme als erledigt (`titles.voices[].rests`, wie »Mein Plan«); dazu `leitung_overview`, `guugge_settings`, `set_level_rewards`, `my_points_log`.
+   - **Noch nicht gebaut**, in der Oberfläche als »kommt bald« markiert: Bahn-Looks »Fasnacht« und »Gold«, Bonusübung »Schränz-Groove«, Abzeichen. Gebaut ist nur der goldene Name in der Rangliste.
+   - Getestet mit Vitest (Rechte, Belohnungen, Pausen in der Übersicht) und Playwright (Rangliste mit Opt-in, Übersicht nur für die Leitung).
+9. Offen: Hinweise der Leitung, bewertete Durchgänge mit Punkten.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

@@ -1,7 +1,8 @@
 // Der Testtitel in der Datenbank (Migration 20261029100000) muss zu src/lib/titles/bad-touch.ts passen.
 
 import { describe, expect, it } from 'vitest';
-import { BAD_TOUCH } from '../../src/lib/titles/bad-touch';
+import { BAD_TOUCH, BAD_TOUCH_NOTES } from '../../src/lib/titles/bad-touch';
+import { pauseSections } from '../../src/lib/plan/stand';
 import { createTestDb } from './db';
 
 describe('Katalog', () => {
@@ -19,7 +20,16 @@ describe('Katalog', () => {
 			bpm: BAD_TOUCH.bpm,
 			bars: BAD_TOUCH.bars,
 			sections: BAD_TOUCH.sections,
-			voices: BAD_TOUCH.voices,
+			// Pausen pro Stimme aus den Noten, wie »Mein Plan« sie zeigt
+			voices: BAD_TOUCH.voices.map((v) => ({
+				...v,
+				rests: [
+					...pauseSections(
+						BAD_TOUCH.sections,
+						BAD_TOUCH_NOTES.parts.find((p) => p.id === v.part)!.notes
+					)
+				]
+			})),
 			stem_offset_sec: BAD_TOUCH.stem_offset_sec,
 			published: true
 		});

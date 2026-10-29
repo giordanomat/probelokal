@@ -65,7 +65,7 @@ test('Leitung legt eine Guugge an und lädt ein, ein Mitglied tritt per Link bei
 	await expect(p2.locator('.card .label').first()).toHaveText('Mitglied');
 	await expect(p2.getByRole('button', { name: 'Einladungslink erstellen' })).toHaveCount(0);
 
-	// Stimme und Rangliste
+	// Stimme
 	await expect(p2.getByText('Wähl deine Stimme')).toBeVisible();
 	await p2.getByRole('button', { name: 'Trompete 2' }).click();
 	await expect(p2.getByRole('status')).toHaveText('Stimme gespeichert.');
@@ -73,10 +73,7 @@ test('Leitung legt eine Guugge an und lädt ein, ein Mitglied tritt per Link bei
 		'aria-pressed',
 		'true'
 	);
-	const optIn = p2.getByLabel('Ich mache bei der Rangliste mit');
-	await expect(optIn).not.toBeChecked();
-	await optIn.check();
-	await expect(p2.getByRole('status')).toHaveText('Du erscheinst in der Rangliste.');
+	await expect(p2.getByRole('link', { name: 'Punkte und Rangliste →' })).toBeVisible();
 
 	// Leitung sieht das neue Mitglied mit Stimme und macht es zum Registerchef
 	await page.reload();

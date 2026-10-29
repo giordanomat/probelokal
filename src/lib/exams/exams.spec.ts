@@ -19,6 +19,8 @@ import {
 import {
 	examAward,
 	hasUnlock,
+	LEVELS,
+	rewardText,
 	isoWeek,
 	levelOf,
 	nextLevel,
@@ -155,6 +157,8 @@ describe('Punkte', () => {
 		expect(hasUnlock(249, 'groove')).toBe(false);
 		expect(hasUnlock(250, 'groove')).toBe(true);
 		expect(hasUnlock(900, 'fasnacht')).toBe(true);
+		expect(rewardText(LEVELS[1])).toMatch(/\(kommt bald\)$/);
+		expect(rewardText(LEVELS[4])).toBe('Goldener Name in der Rangliste');
 	});
 
 	it('Wochenziel: am dritten Übetag einer Woche, einmal', () => {

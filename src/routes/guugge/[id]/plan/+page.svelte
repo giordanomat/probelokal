@@ -8,12 +8,15 @@
 	import { auth, watchAuth } from '#lib/account/auth.svelte.ts';
 	import {
 		getPlan,
+		leitungOverview,
 		myAccount,
 		myPoints,
 		myStages,
 		setPlan,
 		type MyGuugge,
 		type MyPoints,
+		type RegisterRow,
+		REGISTER_LABELS,
 		type StageRow,
 		type StoredPlan
 	} from '#lib/account/api.ts';
@@ -53,6 +56,8 @@
 	let stored = $state<StoredPlan | null>(null);
 	let rows = $state<StageRow[]>([]);
 	let points = $state<MyPoints | null>(null);
+	/** Übersicht der Leitung: nur Register-Durchschnitte, erst ab drei Personen pro Register */
+	let overview = $state<RegisterRow[] | null>(null);
 	let view = $state<'mine' | 'all'>('mine');
 	let showAll = $state(false);
 	let busy = $state(false);
@@ -106,6 +111,8 @@
 	);
 
 	const sectionName = (i: number) => title.sections[i].name;
+	/** Teile ohne Vorzähler */
+	const sectionNos = [...title.sections.keys()].slice(1);
 
 	onMount(() => watchAuth(sb));
 
@@ -125,6 +132,7 @@
 				myStages(sb, id, title.slug),
 				myPoints(sb, id)
 			]);
+			overview = me.role === 'leitung' ? await leitungOverview(sb, id, title.slug) : null;
 			if (stored) {
 				fStart = stored.start;
 				fPerf = stored.perf;
@@ -390,6 +398,73 @@
 				</section>
 			{/if}
 
+			{#if leitung && overview}
+				<section class="card">
+					<h2>Übersicht der Register</h2>
+					<p class="hint">
+						Nur Durchschnitte pro Register und erst ab drei Personen mit gewählter Stimme.
+						Einzelwerte siehst du nicht. Pausen zählen als erledigt.
+					</p>
+					{#if overview.length}
+						<div class="regs">
+							{#each overview as r (r.register)}
+								{@const vals = Object.values(r.avg_stage_by_section ?? {})}
+								{@const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0}
+								<div class="reg">
+									<strong>{REGISTER_LABELS[r.register]}</strong>
+									<div class="bar" aria-hidden="true">
+										<i style:width="{Math.round((avg / 5) * 100)}%"></i>
+									</div>
+									<span class="hint"
+										>{Math.round((avg / 5) * 100)} % im Schnitt · {r.practiced_this_week} von {r.persons}
+										haben diese Woche geübt</span
+									>
+								</div>
+							{/each}
+						</div>
+						<div class="heatwrap">
+							<table class="heat">
+								<thead>
+									<tr>
+										<th></th>
+										{#each title.sections as s, i (i)}{#if i > 0}<th>{s.name}</th>{/if}{/each}
+									</tr>
+								</thead>
+								<tbody>
+									{#if plan}
+										<tr>
+											<th class="hint">Plan</th>
+											{#each sectionNos as i (i)}<td class="exp">{expectedStage(plan, i, today)}</td
+												>{/each}
+										</tr>
+									{/if}
+									{#each overview as r (r.register)}
+										<tr>
+											<th>{REGISTER_LABELS[r.register]}</th>
+											{#each sectionNos as i (i)}
+												{@const v = r.avg_stage_by_section?.[String(i)]}
+												<td
+													style:background={v === undefined
+														? 'var(--surface2)'
+														: `color-mix(in srgb, var(--gruen) ${Math.round((v / 5) * 85 + 10)}%, var(--surface))`}
+													>{v === undefined ? '–' : String(v).replace('.', ',')}</td
+												>
+											{/each}
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+						<p class="hint">Zahl = durchschnittlich erreichte Etappe (0–5) pro Teil.</p>
+					{:else}
+						<p class="hint">
+							Noch kein Register hat drei Personen mit gewählter Stimme. So bleiben Einzelwerte
+							verborgen.
+						</p>
+					{/if}
+				</section>
+			{/if}
+
 			{#if leitung}
 				<section class="card">
 					<h2>{stored ? 'Plan ändern' : 'Plan anlegen'}</h2>
@@ -564,6 +639,43 @@
 	.week ul {
 		margin: 4px 0 0;
 		padding-left: 18px;
+	}
+	.regs {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 8px;
+	}
+	.reg {
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		padding: 10px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.heatwrap {
+		overflow-x: auto;
+	}
+	.heat {
+		border-collapse: separate;
+		border-spacing: 3px;
+		font-size: 13px;
+	}
+	.heat th {
+		text-align: left;
+		font-weight: 600;
+		padding: 2px 6px;
+		white-space: nowrap;
+	}
+	.heat td {
+		min-width: 28px;
+		text-align: center;
+		border-radius: 6px;
+		padding: 3px 2px;
+		font-variant-numeric: tabular-nums;
+	}
+	.heat td.exp {
+		color: var(--muted);
 	}
 	.planform {
 		display: grid;

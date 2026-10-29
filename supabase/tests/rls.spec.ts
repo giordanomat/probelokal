@@ -259,8 +259,8 @@ describe('Fortschritt: Einzelwerte nur für die Person selbst', () => {
 	let f: Fixture;
 	beforeAll(async () => {
 		f = await fixture();
-		await passed(f, f.trp[0].id, 0, 2);
-		await passed(f, f.trp[1].id, 0, 1);
+		await passed(f, f.trp[0].id, 1, 2);
+		await passed(f, f.trp[1].id, 1, 1);
 		await f.db.as('service', `insert into practice_days (user_id, day) values ($1, current_date)`, [
 			f.trp[0].id
 		]);
@@ -307,10 +307,10 @@ describe('Übersicht der Leitung: nur Aggregate, ab 3 Personen pro Register', ()
 	beforeAll(async () => {
 		f = await fixture();
 		// Teil A: Trompeten 2, 4 und nichts; Posaunen 5 und 5 (Register zu klein)
-		await passed(f, f.trp[0].id, 0, 2);
-		await passed(f, f.trp[1].id, 0, 4);
-		await passed(f, f.pos[0].id, 0, 5);
-		await passed(f, f.pos[1].id, 0, 5);
+		await passed(f, f.trp[0].id, 1, 2);
+		await passed(f, f.trp[1].id, 1, 4);
+		await passed(f, f.pos[0].id, 1, 5);
+		await passed(f, f.pos[1].id, 1, 5);
 		await f.db.as('service', `insert into practice_days (user_id, day) values ($1, current_date)`, [
 			f.trp[1].id
 		]);
@@ -323,7 +323,7 @@ describe('Übersicht der Leitung: nur Aggregate, ab 3 Personen pro Register', ()
 		practiced_this_week: number;
 	};
 
-	it('Trompeten mit Schnitt über alle drei (auch ohne Ergebnis), Posaunen gar nicht', async () => {
+	it('Trompeten mit Schnitt über alle drei (auch ohne Ergebnis, Pause = 5), Posaunen gar nicht', async () => {
 		const rows = await f.db.as<Row>(f.leitung, `select * from register_overview($1, $2)`, [
 			f.guugge,
 			f.title
@@ -332,7 +332,8 @@ describe('Übersicht der Leitung: nur Aggregate, ab 3 Personen pro Register', ()
 			{
 				register: 'trp',
 				persons: 3,
-				avg_stage_by_section: { '0': 2, '1': 0, '2': 0 },
+				// Teil C: Trompete 1 (zwei Personen) hat Pause und zählt wie erledigt
+				avg_stage_by_section: { '1': 2, '2': 0, '3': 3.3 },
 				practiced_this_week: 1
 			}
 		]);
@@ -351,8 +352,8 @@ describe('Rangliste: nur eingeschaltet und nur mit Opt-in', () => {
 	let f: Fixture;
 	beforeAll(async () => {
 		f = await fixture();
-		await passed(f, f.trp[0].id, 0, 1);
-		await passed(f, f.trp[1].id, 0, 1);
+		await passed(f, f.trp[0].id, 1, 1);
+		await passed(f, f.trp[1].id, 1, 1);
 		await f.db.as(f.trp[1], `select set_rangliste_opt_in($1, true)`, [f.guugge]);
 	});
 
@@ -596,5 +597,57 @@ describe('Gesamtplan und eigener Stand', () => {
 			[f.guugge]
 		);
 		expect(again).toEqual([{ rhythm_only: [] }]);
+	});
+});
+
+describe('Belohnungen, Punkteliste, Übersicht über den Kurznamen', () => {
+	let f: Fixture;
+	beforeAll(async () => {
+		f = await fixture();
+		await passed(f, f.trp[0].id, 1, 1);
+	});
+
+	it('Belohnungen legt nur die Leitung fest, alle Mitglieder sehen sie', async () => {
+		const rewards = { '2': 'Getränk nach der Probe', '5': 'Solo am Umzug' };
+		await expect(
+			f.db.as(f.chef, `select set_level_rewards($1, $2)`, [f.guugge, JSON.stringify(rewards)])
+		).rejects.toThrow('Nur die Leitung');
+		await f.db.as(f.leitung, `select set_level_rewards($1, $2)`, [
+			f.guugge,
+			JSON.stringify(rewards)
+		]);
+		const [{ guugge_settings: s }] = await f.db.as<{ guugge_settings: unknown }>(
+			f.pos[1],
+			`select guugge_settings($1)`,
+			[f.guugge]
+		);
+		expect(s).toEqual({ rangliste_enabled: false, level_rewards: rewards });
+		expect(
+			await f.db.as(f.fremd, `select guugge_settings($1) as s`, [f.guugge])
+		).toEqual([{ s: null }]);
+		for (const bad of [{ '1': 'x' }, { '3': 'x'.repeat(81) }, { '4': 5 }]) {
+			await expect(
+				f.db.as(f.leitung, `select set_level_rewards($1, $2)`, [f.guugge, JSON.stringify(bad)])
+			).rejects.toThrow('Level 2 bis 7');
+		}
+	});
+
+	it('Punkteliste nur mit den eigenen Einträgen', async () => {
+		expect(
+			await f.db.as(f.trp[0], `select points, reason from my_points_log($1)`, [f.guugge])
+		).toEqual([{ points: 40, reason: 'etappe' }]);
+		expect(await f.db.as(f.trp[1], `select * from my_points_log($1)`, [f.guugge])).toEqual([]);
+	});
+
+	it('Übersicht über den Kurznamen, nur für die Leitung', async () => {
+		const rows = await f.db.as<{ register: string }>(
+			f.leitung,
+			`select register from leitung_overview($1, 'test-titel')`,
+			[f.guugge]
+		);
+		expect(rows).toEqual([{ register: 'trp' }]);
+		expect(
+			await f.db.as(f.chef, `select * from leitung_overview($1, 'test-titel')`, [f.guugge])
+		).toEqual([]);
 	});
 });

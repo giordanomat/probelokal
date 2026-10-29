@@ -77,7 +77,7 @@ describe('Prüfung starten und abschliessen', () => {
 		await expect(start(toni(), 1, 1, 'mic')).rejects.toThrow('passt nicht zur Etappe');
 		await expect(start(toni(), 1, 3, 'quiz')).rejects.toThrow('passt nicht zur Etappe');
 		await expect(start(toni(), 0, 1, 'quiz')).rejects.toThrow('Diesen Teil gibt es nicht.');
-		await expect(start(toni(), 3, 1, 'quiz')).rejects.toThrow('Diesen Teil gibt es nicht.');
+		await expect(start(toni(), 4, 1, 'quiz')).rejects.toThrow('Diesen Teil gibt es nicht.');
 	});
 
 	it('zu schnell abgegeben gilt nicht; danach zählt das Ergebnis mit Punkten und Übetag', async () => {

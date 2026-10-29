@@ -192,3 +192,55 @@ export const finishExam = (sb: SupabaseClient, attempt: string, score: number) =
 
 export const myPoints = (sb: SupabaseClient, guugge: string) =>
 	call<MyPoints>(sb, 'my_points', { p_guugge: guugge });
+
+export const REGISTER_LABELS: Record<Register, string> = {
+	trp: 'Trompeten',
+	pos: 'Posaunen',
+	tief: 'Tiefes Blech',
+	perc: 'Perkussion'
+};
+
+export interface BoardRow {
+	user_id: string;
+	display_name: string;
+	voice: string | null;
+	points: number;
+	week_points: number;
+}
+
+export interface RegisterRow {
+	register: Register;
+	persons: number;
+	/** Durchschnittlich erreichte Etappe pro Teil (Index in sections, ab 1) */
+	avg_stage_by_section: Record<string, number> | null;
+	practiced_this_week: number;
+}
+
+export interface GuuggeSettings {
+	rangliste_enabled: boolean;
+	level_rewards: Record<string, string>;
+}
+
+export interface PointsEntry {
+	points: number;
+	reason: string;
+	created_at: string;
+}
+
+export const leaderboard = (sb: SupabaseClient, guugge: string) =>
+	call<BoardRow[]>(sb, 'leaderboard', { g: guugge });
+
+export const leitungOverview = (sb: SupabaseClient, guugge: string, slug: string) =>
+	call<RegisterRow[]>(sb, 'leitung_overview', { p_guugge: guugge, p_slug: slug });
+
+export const guuggeSettings = (sb: SupabaseClient, guugge: string) =>
+	call<GuuggeSettings | null>(sb, 'guugge_settings', { p_guugge: guugge });
+
+export const setLevelRewards = (
+	sb: SupabaseClient,
+	guugge: string,
+	rewards: Record<string, string>
+) => call<void>(sb, 'set_level_rewards', { p_guugge: guugge, p_rewards: rewards });
+
+export const myPointsLog = (sb: SupabaseClient, guugge: string) =>
+	call<PointsEntry[]>(sb, 'my_points_log', { p_guugge: guugge });

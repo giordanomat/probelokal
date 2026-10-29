@@ -3,13 +3,15 @@
 -- bis die Migration angewendet ist (docs/03 »Anwenden«).
 
 -- Bad Touch 2.0, Fassung Schuegu27. Teile und Stimmen wie src/lib/titles/bad-touch.ts;
--- supabase/tests/catalog.spec.ts prüft, dass beide gleich sind. Später legt die
+-- supabase/tests/catalog.spec.ts prüft, dass beide gleich sind. `rests` pro Stimme: Teile ohne
+-- Ton (»Pause für dich«), aus den Noten abgeleitet; die Datenbank kennt die Noten nicht und
+-- braucht die Pausen für die Übersicht der Leitung (register_overview). Später legt die
 -- Produktionsstrecke Titel an (docs/06), nicht eine Migration.
 insert into public.titles (slug, name, version, bpm, bars, sections, voices, stem_offset_sec, published)
 values (
   'bad-touch-2-0', 'Bad Touch 2.0', 'Schuegu27', 115, 93,
   '[{"from":0,"to":0,"name":"Vorzähler"},{"from":1,"to":8,"name":"A"},{"from":9,"to":12,"name":"B"},{"from":13,"to":16,"name":"C"},{"from":17,"to":20,"name":"D"},{"from":21,"to":24,"name":"E"},{"from":25,"to":28,"name":"F"},{"from":29,"to":36,"name":"G"},{"from":37,"to":44,"name":"H"},{"from":45,"to":52,"name":"I"},{"from":53,"to":54,"name":"J"},{"from":55,"to":58,"name":"K"},{"from":59,"to":62,"name":"L"},{"from":63,"to":66,"name":"M"},{"from":67,"to":70,"name":"N"},{"from":71,"to":74,"name":"O"},{"from":75,"to":87,"name":"P"},{"from":88,"to":92,"name":"Q"}]',
-  '[{"id":"trp1","short":"Trp 1","name":"Trompete 1","part":"P1","kind":"valve","instrument":"trumpet","shift":-2,"register":"trp"},{"id":"trp2","short":"Trp 2","name":"Trompete 2","part":"P2","kind":"valve","instrument":"trumpet","shift":-2,"register":"trp"},{"id":"pos1","short":"Pos 1","name":"Posaune 1","part":"P3","kind":"slide","instrument":"trombone","shift":-14,"register":"pos"},{"id":"pos2","short":"Pos 2","name":"Posaune 2","part":"P4","kind":"slide","instrument":"trombone","shift":-14,"register":"pos"},{"id":"euph","short":"Euph","name":"Euphonium","part":"P5","kind":"valve","instrument":"euphonium","shift":-14,"register":"tief"},{"id":"sous","short":"Sous","name":"Sousaphon","part":"P6","kind":"valve","instrument":"sousaphone","shift":-26,"register":"tief"}]',
+  '[{"id":"trp1","short":"Trp 1","name":"Trompete 1","part":"P1","kind":"valve","instrument":"trumpet","shift":-2,"register":"trp","rests":[10,11,12,13]},{"id":"trp2","short":"Trp 2","name":"Trompete 2","part":"P2","kind":"valve","instrument":"trumpet","shift":-2,"register":"trp","rests":[10,11,12,13,14]},{"id":"pos1","short":"Pos 1","name":"Posaune 1","part":"P3","kind":"slide","instrument":"trombone","shift":-14,"register":"pos","rests":[10,11]},{"id":"pos2","short":"Pos 2","name":"Posaune 2","part":"P4","kind":"slide","instrument":"trombone","shift":-14,"register":"pos","rests":[10,11,12,13]},{"id":"euph","short":"Euph","name":"Euphonium","part":"P5","kind":"valve","instrument":"euphonium","shift":-14,"register":"tief","rests":[10,11,12]},{"id":"sous","short":"Sous","name":"Sousaphon","part":"P6","kind":"valve","instrument":"sousaphone","shift":-26,"register":"tief","rests":[10]}]',
   6.260869565217392, true
 )
 on conflict (slug) do nothing;
