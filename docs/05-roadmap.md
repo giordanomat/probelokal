@@ -100,7 +100,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 
 - Auth per E-Mail-Link, Guugge anlegen, Einladung per Link mit Rolle, Stimme wählen.
 - Hinweise der Leitung (inkl. Realtime), Gesamtplan, Mein Plan, Etappenprüfungen 1–5.
-- Edge Functions `exam-result` und `pass-result`: Plausibilitätsprüfung, Punkte, Übetage; Tageslimits.
+- Punkte auf dem Server (Datenbankfunktionen, Entscheid 29.10.2026): Plausibilitätsprüfung, Punkte, Übetage; Tageslimits.
 - Ränge und Belohnungen (Anzeige), Rangliste mit Opt-in, Register-Übersicht über Aggregatfunktion.
 
 **Stand 28.10.2026 (begonnen, Branch `claude/dreamy-franklin-mle6hm`):**
@@ -109,7 +109,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Schliesst eine Lücke aus 0001: Ein Mitglied konnte sich selbst zur Leitung machen, die Leitung das Opt-in anderer setzen. Im echten Projekt besteht die Lücke, bis die Migration angewendet ist.
    - Mitgliedschaften und Einladungen nur über prüfende Funktionen. Einladungs-Schlüssel nur als Hash gespeichert. Profile automatisch beim ersten Anmelden.
    - `register_overview` zählt Personen ohne Ergebnis mit Etappe 0.
-   - RLS-Tests pro Rolle mit PGlite (`supabase/tests/`), laufen mit `npm run test:unit` und in CI. Sie decken die Abnahme unten ab, ausser den Edge Functions.
+   - RLS-Tests pro Rolle mit PGlite (`supabase/tests/`), laufen mit `npm run test:unit` und in CI. Sie decken die Abnahme unten ab.
    - Ablauf »Supabase-Migrationen« in GitHub Actions. **Matthias:** Secrets anlegen und den Ablauf starten (docs/03 »Anwenden«). **Ungeprüft**, bis er gelaufen ist.
 2. ~~**Anmelden**~~ erledigt am 28.10.2026, mit Code aus der E-Mail statt nur per Link. Grund: Auf dem iPhone öffnet ein Link aus Mail die Seite in Safari, nicht in der App auf dem Home-Bildschirm. Einzelheiten in docs/02 »Anmelden«. **Matthias:** URL-Einstellungen, Mailvorlagen und Mailversand in Supabase, siehe dort.
 3. ~~Guugge anlegen, Einladungslink teilen, Stimme wählen~~ erledigt am 28.10.2026:
@@ -131,14 +131,14 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Migration `20261029100000_m2_titel_plan.sql`: Bad Touch im Katalog (`catalog.spec.ts` prüft, dass er zu `bad-touch.ts` passt), `get_plan`, `set_plan` (nur Leitung, mit Plausibilitätsprüfung), `my_stages`.
    - Getestet mit Vitest (Regeln) und Playwright (Plan anlegen, Mitglied sieht seinen Stand).
    - Noch ohne Etappenprüfungen: Der Stand bleibt bei 0, bis Prüfungen Ergebnisse schreiben.
-6. Offen: Etappenprüfungen in der Oberfläche, Punkte serverseitig (Entscheid nötig, siehe unten), Hinweise der Leitung, Rangliste, Übersicht der Leitung.
-
-**Offene Entscheidung (Matthias): Wo rechnet der Server die Punkte?** docs/02 sieht Edge Functions vor (`exam-result`, `pass-result`). Vorschlag: stattdessen Datenbankfunktionen in SQL, zum Beispiel `start_exam` und `finish_exam`. Sie prüfen die Plausibilität (Dauer seit Start, Reihenfolge der Etappen, Tageslimits) und schreiben Ergebnis und Punkte.
-- Dafür spricht: Alle Regeln liegen dort, wo schon Rechte und Daten liegen. Sie laufen in denselben PGlite-Tests, und es braucht keinen zweiten Weg zum Ausrollen (Deno, Function-Deploy).
-- Dagegen spricht: Die Punkteregeln stehen doppelt, in TypeScript für die Anzeige und in SQL als Wahrheit. Ein Test müsste beide gleich halten.
-- Für die Fragen an den giordanomat-Dirigenten (Anthropic-Schlüssel, M3) braucht es trotzdem eine Edge Function.
-
-
+6. ~~Etappen 1 und 2 mit Punkten auf dem Server~~ erledigt am 29.10.2026:
+   - **Entscheid Matthias (29.10.2026):** Punkte rechnen Datenbankfunktionen, nicht Edge Functions (docs/02 »Sicherheit«).
+   - Migration `20261029120000_m2_etappen_punkte.sql`: `start_exam`, `finish_exam`, `my_points`, Wochenziel am dritten Übetag. `plans.due` für den Bonus »rechtzeitig«.
+   - `supabase/tests/points.spec.ts`: Die Punkteregeln in SQL und TypeScript stimmen in allen 1920 Kombinationen überein. Dazu Reihenfolge, Mindestdauer, fremde und abgelaufene Versuche.
+   - Seite `/guugge/[id]/pruefung?teil=…&etappe=…` mit Quiz (Etappe 1) und Griffprüfung (Etappe 2), Ergebnis mit Punkten. Im Plan stehen die Punkte, der Rang und bei »Als Nächstes« ein Link »Prüfung«.
+   - Getestet mit Playwright: Quiz und Griffe bestanden, ein falscher Griff wird erkannt, Rang steigt auf Lehrling.
+   - **Ungeprüft:** ob 4 s und 3 s Mindestdauer im Alltag passen.
+7. Offen: Etappen 3–5 auf der Bahn (`/ueben` mit Mithören oder Rhythmus tippen), bewertete Durchgänge mit Punkten, Hinweise der Leitung, Rangliste, Übersicht der Leitung.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

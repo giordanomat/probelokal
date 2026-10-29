@@ -39,7 +39,12 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
   - Einzelwerte (Etappen, Punkte, Übungstage) liest nur die Person selbst – RLS.
   - Leitung bekommt Aggregate über `SECURITY DEFINER`-Funktionen, die nur Durchschnitte pro Register liefern und bei weniger als drei Personen pro Register nichts zurückgeben (sonst wären Einzelwerte ablesbar). **Mindestgruppe 3 ist ein Vorschlag.** Personen ohne Ergebnis zählen mit Etappe 0 (sonst wäre bei einem Ergebnis unter dreien der Einzelwert ablesbar). **Grenze:** Eine Leitung, die eigene Zweitkonten einlädt, kann ein Register auf drei bringen und Einzelwerte zurückrechnen. Datenbankregeln verhindern das nicht; abschwächen liesse es sich nur über Hürden beim Beitritt (z. B. Bestätigung durch Registerchef). Für den Pilot in Kauf genommen, beim Ausrollen neu entscheiden.
   - Rangliste liest nur Zeilen von Personen mit `rangliste_opt_in = true` in Guuggen mit eingeschalteter Rangliste.
-- **Punkte nur serverseitig:** Der Browser meldet ein Prüfungs- oder Durchgangsergebnis an eine Edge Function. Diese prüft Plausibilität (Dauer seit Start ≥ Dauer des Teils beim gewählten Tempo, Anzahl bewerteter Töne = Töne des Teils, Tageslimits, Reihenfolge der Etappen) und schreibt Ergebnis und Punkte. Clients haben keine Schreibrechte auf `points_ledger` und `exam_results`.
+- **Punkte nur serverseitig**, in **Datenbankfunktionen** statt Edge Functions (Entscheid Matthias, 29.10.2026): Alle Regeln liegen dort, wo Rechte und Daten liegen, und laufen in denselben PGlite-Tests.
+  - Der Browser startet eine Prüfung (`start_exam`: Mitglied, Stimme gewählt, Etappe in der Reihenfolge, Art passt zur Etappe) und meldet das Ergebnis (`finish_exam`).
+  - `finish_exam` prüft die Dauer seit dem Start, den Wertebereich, ob der Versuch schon abgeschlossen ist und ob er abgelaufen ist (2 Stunden). Dann schreibt es Ergebnis, Punkte und Übetag. Die Mindestdauer ist ein Vorschlag: Quiz 4 s, Griffe 3 s, auf der Bahn 90 % der Spieldauer des Teils.
+  - Nicht geprüft: die Anzahl bewerteter Töne. Die Noten liegen nicht in der Datenbank.
+  - Clients haben keine Schreibrechte auf `points_ledger`, `exam_results`, `practice_days` und keinen Zugriff auf `exam_attempts`.
+  - Bewertete Durchgänge ausserhalb von Prüfungen (bis 15 Punkte pro Tag) kommen später mit demselben Muster.
   - **Ehrlich:** Weil die Tonerkennung im Browser läuft, lässt sich Betrug nicht ausschliessen, nur erschweren. Für eine freiwillige Rangliste unter Bekannten reicht das; keine Geldpreise an Ranglisten koppeln.
 - Kein Audio verlässt das Gerät. Keine Aufnahmen speichern.
 - Zugangsdaten: Im Browser nur Projekt-URL und publishable key – eingetragen in `wrangler.jsonc` (`vars`, gilt für den Cloudflare-Worker) und lokal in `.env` (Vorlage `.env.example`). Projekt: `qieunfhizsxsyzmrrvci`, Zürich. Beide sind absichtlich öffentlich – sie stehen in jedem Browser, der die App lädt. Schutz der Daten allein über RLS: **jede Tabelle im Schema `public` mit RLS**, sonst ist sie mit dem publishable key für alle les- und schreibbar. Prüfen mit den Supabase Advisors nach jeder Migration. Secret key, Datenbank-Passwort und Zugangstoken nie im Repository, nie im Chat; für Migrationen aus GitHub Actions als Repository-Secrets (setzt Matthias). Der Claude-Supabase-Connector hängt an der Organisation »Skim« und wird für Probelokal nicht benutzt.
@@ -88,7 +93,7 @@ src/
 e2e/              Playwright-Abläufe
 supabase/
   migrations/     SQL
-  functions/      Edge Functions (exam-result, pass-result, dirigent-ask, stripe-webhook)
+  functions/      Edge Functions (dirigent-ask, stripe-webhook); Punkte rechnen Datenbankfunktionen
 tools/            Produktionsstrecke (Python/ffmpeg)
 prototype/v7/     Referenz
 ```

@@ -17,6 +17,12 @@ on conflict (slug) do nothing;
 comment on column public.plans.gp_weekday is 'Wochentag der Gesamtprobe, 0 = Sonntag … 6 = Samstag (wie JavaScript getDay)';
 comment on column public.plans.rp_weekday is 'Wochentag der Registerprobe oder null, 0 = Sonntag … 6 = Samstag';
 
+-- Fälligkeit jeder Etappe pro Teil, {"1": ["2026-11-08", …5 Tage], …}. Berechnet der Browser der
+-- Leitung beim Speichern (src/lib/plan/plan.ts, dueTable): Die Gewichtung der Teile braucht die
+-- Noten aller Stimmen, und die liegen nicht in der Datenbank. Der Server liest daraus nur den Bonus
+-- »rechtzeitig« (finish_exam). Die Leitung bestimmt den Plan ohnehin; neue Rechte entstehen so nicht.
+alter table public.plans add column due jsonb;
+
 create function public.title_by_slug(p_slug text) returns uuid
 language sql stable set search_path = '' as $$
   select id from public.titles where slug = p_slug and published
@@ -45,7 +51,7 @@ $$;
 -- Gesamtplan anlegen oder ändern (nur Leitung).
 create function public.set_plan(
   p_guugge uuid, p_slug text, p_start date, p_perf date,
-  p_gp_weekday int, p_rp_weekday int, p_minutes int
+  p_gp_weekday int, p_rp_weekday int, p_minutes int, p_due jsonb default null
 ) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -71,12 +77,15 @@ begin
   if p_minutes is null or p_minutes not between 0 and 600 then
     raise exception 'Übezeit pro Woche: 0 bis 600 Minuten.' using errcode = '22023';
   end if;
-  insert into public.plans (guugge_id, title_id, start_date, perf_date, gp_weekday, rp_weekday, minutes_per_week, updated_at)
-  values (p_guugge, t, p_start, p_perf, p_gp_weekday, p_rp_weekday, p_minutes, now())
+  if p_due is not null and (jsonb_typeof(p_due) <> 'object' or length(p_due::text) > 20000) then
+    raise exception 'Fälligkeiten im falschen Format.' using errcode = '22023';
+  end if;
+  insert into public.plans (guugge_id, title_id, start_date, perf_date, gp_weekday, rp_weekday, minutes_per_week, due, updated_at)
+  values (p_guugge, t, p_start, p_perf, p_gp_weekday, p_rp_weekday, p_minutes, p_due, now())
   on conflict (guugge_id, title_id) do update set
     start_date = excluded.start_date, perf_date = excluded.perf_date,
     gp_weekday = excluded.gp_weekday, rp_weekday = excluded.rp_weekday,
-    minutes_per_week = excluded.minutes_per_week, updated_at = now();
+    minutes_per_week = excluded.minutes_per_week, due = excluded.due, updated_at = now();
 end
 $$;
 
@@ -100,9 +109,9 @@ $$;
 
 revoke all on function
   public.title_by_slug(text), public.get_plan(uuid, text),
-  public.set_plan(uuid, text, date, date, int, int, int), public.my_stages(uuid, text)
+  public.set_plan(uuid, text, date, date, int, int, int, jsonb), public.my_stages(uuid, text)
 from public, anon;
 grant execute on function
   public.title_by_slug(text), public.get_plan(uuid, text),
-  public.set_plan(uuid, text, date, date, int, int, int), public.my_stages(uuid, text)
+  public.set_plan(uuid, text, date, date, int, int, int, jsonb), public.my_stages(uuid, text)
 to authenticated;

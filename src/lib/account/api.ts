@@ -3,6 +3,7 @@
 // steht so an genau einem Ort, in der Datenbank. Fehler kommen als AccountError mit deutschem Text.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ExamVia } from '../exams/exams';
 
 export type Role = 'leitung' | 'registerchef' | 'mitglied';
 export type Register = 'trp' | 'pos' | 'tief' | 'perc';
@@ -136,7 +137,8 @@ export const setPlan = (
 	sb: SupabaseClient,
 	guugge: string,
 	slug: string,
-	p: Omit<StoredPlan, 'updated_at'>
+	p: Omit<StoredPlan, 'updated_at'>,
+	due: Record<string, string[]>
 ) =>
 	call<void>(sb, 'set_plan', {
 		p_guugge: guugge,
@@ -145,8 +147,48 @@ export const setPlan = (
 		p_perf: p.perf,
 		p_gp_weekday: p.gp_weekday,
 		p_rp_weekday: p.rp_weekday,
-		p_minutes: p.minutes_per_week
+		p_minutes: p.minutes_per_week,
+		p_due: due
 	});
 
 export const myStages = (sb: SupabaseClient, guugge: string, slug: string) =>
 	call<StageRow[]>(sb, 'my_stages', { p_guugge: guugge, p_slug: slug });
+
+export interface ExamResult {
+	passed: boolean;
+	score: number;
+	stage: number;
+	section: number;
+	points: number;
+	reasons: string[];
+	/** Punkte für das Wochenziel (0 oder 25) */
+	week_goal: number;
+}
+
+export interface MyPoints {
+	points: number;
+	week_points: number;
+	days_this_week: number;
+}
+
+export const startExam = (
+	sb: SupabaseClient,
+	guugge: string,
+	slug: string,
+	section: number,
+	stage: number,
+	via: ExamVia
+) =>
+	call<string>(sb, 'start_exam', {
+		p_guugge: guugge,
+		p_slug: slug,
+		p_section: section,
+		p_stage: stage,
+		p_via: via
+	});
+
+export const finishExam = (sb: SupabaseClient, attempt: string, score: number) =>
+	call<ExamResult>(sb, 'finish_exam', { p_attempt: attempt, p_score: score });
+
+export const myPoints = (sb: SupabaseClient, guugge: string) =>
+	call<MyPoints>(sb, 'my_points', { p_guugge: guugge });

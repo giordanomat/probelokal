@@ -9,9 +9,11 @@
 	import {
 		getPlan,
 		myAccount,
+		myPoints,
 		myStages,
 		setPlan,
 		type MyGuugge,
+		type MyPoints,
 		type StageRow,
 		type StoredPlan
 	} from '#lib/account/api.ts';
@@ -24,7 +26,8 @@
 		todayInZurich,
 		WEEKDAYS
 	} from '#lib/plan/dates.ts';
-	import { buildPlan, dueOf, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
+	import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
+	import { levelOf, nextLevel } from '#lib/game/points.ts';
 	import {
 		nextExams,
 		pauseSections,
@@ -49,6 +52,7 @@
 	let missing = $state(false);
 	let stored = $state<StoredPlan | null>(null);
 	let rows = $state<StageRow[]>([]);
+	let points = $state<MyPoints | null>(null);
 	let view = $state<'mine' | 'all'>('mine');
 	let showAll = $state(false);
 	let busy = $state(false);
@@ -116,9 +120,10 @@
 			me = acc.guuggen.find((g) => g.id === id) ?? null;
 			missing = !me;
 			if (!me) return;
-			[stored, rows] = await Promise.all([
+			[stored, rows, points] = await Promise.all([
 				getPlan(sb, id, title.slug),
-				myStages(sb, id, title.slug)
+				myStages(sb, id, title.slug),
+				myPoints(sb, id)
 			]);
 			if (stored) {
 				fStart = stored.start;
@@ -139,13 +144,31 @@
 		error = '';
 		notice = '';
 		try {
-			await setPlan(sb, id, title.slug, {
+			const params = {
 				start: fStart,
 				perf: fPerf,
-				gp_weekday: Number(fGp),
-				rp_weekday: fRp === null ? null : Number(fRp),
-				minutes_per_week: Number(fMin)
-			});
+				gpWeekday: Number(fGp),
+				rpWeekday: fRp === null ? null : Number(fRp),
+				minutesPerWeek: Number(fMin)
+			};
+			// Fälligkeiten für den Bonus »rechtzeitig« (der Server prüft die Daten selbst)
+			const due =
+				fPerf > fStart
+					? dueTable(buildPlan(params, title.sections, weights), title.sections.length)
+					: {};
+			await setPlan(
+				sb,
+				id,
+				title.slug,
+				{
+					start: params.start,
+					perf: params.perf,
+					gp_weekday: params.gpWeekday,
+					rp_weekday: params.rpWeekday,
+					minutes_per_week: params.minutesPerWeek
+				},
+				due
+			);
 			await load();
 			notice = 'Gespeichert. Alle in der Guugge sehen den Plan.';
 		} catch (err) {
@@ -221,25 +244,53 @@
 					</p>
 				</section>
 
+				{#if points}
+					{@const lv = levelOf(points.points)}
+					{@const nx = nextLevel(points.points)}
+					<section class="card">
+						<p class="label">Punkte</p>
+						<h2>Level {lv.n} · {lv.name}</h2>
+						<p>
+							{points.points} Punkte · diese Woche {points.week_points}{nx
+								? ` · noch ${nx.min - points.points} bis ${nx.name}`
+								: ''}
+						</p>
+						<p class="hint">
+							An {Math.min(points.days_this_week, 3)} von 3 Tagen geübt diese Woche{points.days_this_week >=
+							3
+								? ' – Wochenziel erreicht.'
+								: '.'} Punkte gibt es nur für bestandene Etappen und das Wochenziel, nicht für Zeit.
+						</p>
+					</section>
+				{/if}
+
 				<section class="card">
 					<h2>Als Nächstes</h2>
 					{#if next.length}
 						<ul class="list">
 							{#each next as x (x.section)}
-								<li>
-									<strong
-										>Teil {sectionName(x.section)} · Etappe {x.stage}: {STAGES[x.stage - 1]
-											.name}</strong
-									>
-									<span class:over={x.due && x.due < today}>
-										{#if !x.due}ohne Termin{:else if x.due < today}überfällig seit {shortDate(
-												x.due
-											)}{:else}fällig bis {shortDate(x.due)}{/if}
+								<li class="next">
+									<span class="what">
+										<strong
+											>Teil {sectionName(x.section)} · Etappe {x.stage}: {STAGES[x.stage - 1]
+												.name}</strong
+										>
+										<span class:over={x.due && x.due < today}>
+											{#if !x.due}ohne Termin{:else if x.due < today}überfällig seit {shortDate(
+													x.due
+												)}{:else}fällig bis {shortDate(x.due)}{/if}
+										</span>
 									</span>
+									<a
+										class="btn ghost small"
+										href="{resolve('/guugge/[id]/pruefung', {
+											id
+										})}?teil={x.section}&etappe={x.stage}"
+										aria-label="Prüfung Teil {sectionName(x.section)}, Etappe {x.stage}">Prüfung</a
+									>
 								</li>
 							{/each}
 						</ul>
-						<p class="hint">Die Etappenprüfungen kommen als Nächstes ins Probelokal.</p>
 					{:else}
 						<p><strong>Alles geschafft.</strong> Auftrittsreif – jetzt nur noch Spass.</p>
 					{/if}
@@ -427,6 +478,24 @@
 	}
 	.list.plain li {
 		display: list-item;
+	}
+	.list li.next {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+	.what {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.small {
+		min-height: 36px;
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+		font-size: 14px;
 	}
 	.list .over {
 		color: var(--rot);

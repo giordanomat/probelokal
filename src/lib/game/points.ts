@@ -1,6 +1,6 @@
 // Punkte und Ränge, portiert aus prototype/v7 (LEVELS, PTS, finishExam, passPoints, capOk,
 // noteActivity). Punkte nur für nachgewiesene Leistung, nicht für Zeit, keine täglichen Serien
-// (docs/01). Im Produkt rechnet der Server mit diesen Regeln (Edge Functions, docs/02); im
+// (docs/01). Im Produkt rechnet der Server mit denselben Regeln (Datenbankfunktionen, docs/02); im
 // Browser dienen sie nur der Anzeige. Namen und Werte sind Vorschläge.
 
 export interface Level {

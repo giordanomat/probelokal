@@ -188,3 +188,13 @@ export function expectedStage(plan: Plan, section: number, today: Day): number {
 	for (let k = 1; k <= 5; k++) if (dueOf(plan, section, k) < today) e = k;
 	return e;
 }
+
+/**
+ * Fälligkeit aller Etappen pro Teil, so wie sie mit dem Plan gespeichert wird (`plans.due`).
+ * Der Server liest daraus den Bonus »rechtzeitig« (finish_exam).
+ */
+export function dueTable(plan: Plan, sectionCount: number): Record<string, Day[]> {
+	const out: Record<string, Day[]> = {};
+	for (let i = 1; i < sectionCount; i++) out[i] = [1, 2, 3, 4, 5].map((k) => dueOf(plan, i, k));
+	return out;
+}

@@ -9,7 +9,7 @@ import type { NotesFile, Title } from '#lib/music/types.ts';
 import { BAD_TOUCH_VOICES } from './bad-touch-voices.ts';
 // Ausgabe von `npm run notes` (tools/extract_notes.py --fill-missing). Nicht von Hand ändern;
 // Quelle ist prototype/v7/badtouch.xml. Kommt ab M1-Abschluss aus Supabase Storage.
-import notes from './bad-touch.notes.json';
+import notes from './bad-touch.notes.json' with { type: 'json' };
 
 export const BAD_TOUCH_NOTES = notes as NotesFile;
 

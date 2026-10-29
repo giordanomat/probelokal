@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH, BAD_TOUCH_NOTES } from '../titles/bad-touch';
 import type { RawNote, Section } from '../music/types';
 import { addDays, longDate, mondayOf, shortDate, todayInZurich, weekdayOf } from './dates';
-import { buildPlan, dueOf, expectedStage, sectionWeights, type PlanParams } from './plan';
+import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights, type PlanParams } from './plan';
 import {
 	nextExams,
 	pauseSections,
@@ -135,6 +135,13 @@ describe('Fälligkeit der Etappen', () => {
 			'2027-01-24',
 			'2027-02-07'
 		]);
+	});
+
+	it('Tabelle zum Speichern: alle Teile ausser Vorzähler, fünf Tage je Teil', () => {
+		const t = dueTable(PLAN, SECTIONS.length);
+		expect(Object.keys(t)).toHaveLength(17);
+		expect(t[0]).toBeUndefined();
+		expect(t[1]).toEqual([1, 2, 3, 4, 5].map((k) => dueOf(PLAN, 1, k)));
 	});
 
 	it('erwartet ist, was vor heute fällig war', () => {
