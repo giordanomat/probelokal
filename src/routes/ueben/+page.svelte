@@ -80,8 +80,11 @@
 	} from '#lib/exams/exams.ts';
 	import { STAGES } from '#lib/plan/stand.ts';
 	import { hintShort, hintsFor, type Hint } from '#lib/hints/hints.ts';
-	import type { SupabaseClient } from '@supabase/supabase-js';
 	import type { ExamResult } from '#lib/account/api.ts';
+	import { accountLoader, maybeSignedIn, type AccountApi } from '#lib/account/lazy.ts';
+	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
+	import { activeLook, LANE_LOOKS, lookUnlocked, type LaneLook } from '#lib/lane/looks.ts';
+	import { unlockLevel } from '#lib/game/points.ts';
 	import { replaceState } from '$app/navigation';
 
 	const title = BAD_TOUCH;
@@ -154,32 +157,13 @@
 	let examBusy = $state(false);
 	let examApi: AccountApi | null = null;
 
-	// Konto-Code und Supabase nur laden, wenn jemand angemeldet ist (Sitzung von supabase-js im
-	// Speicher des Browsers) oder eine Prüfung läuft; ohne Konto bleibt »Stück üben« schlank.
-	type AccountApi = { api: typeof import('#lib/account/api.ts'); sb: SupabaseClient };
-	let accountApi: Promise<AccountApi | null> | null = null;
-	function loadAccountApi(): Promise<AccountApi | null> {
-		accountApi ??= (async () => {
-			const [{ getSupabase }, api] = await Promise.all([
-				import('#lib/supabase/client.ts'),
-				import('#lib/account/api.ts')
-			]);
-			const sb = getSupabase();
-			if (!sb || !(await sb.auth.getSession()).data.session) return null;
-			return { api, sb };
-		})();
-		return accountApi;
-	}
-	const maybeSignedIn = () => {
-		try {
-			return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k));
-		} catch {
-			return false;
-		}
-	};
+	// Konto-Code und Supabase nur laden, wenn jemand angemeldet ist oder eine Prüfung läuft
+	const loadAccountApi = accountLoader();
 
 	// Hinweise der Leitung aus allen eigenen Guuggen, gefiltert nach der gewählten Stimme
 	let hints = $state<Hint[]>([]);
+	/** Höchster Rang über alle Guuggen, für die Bahn-Looks (auf dem Gerät gemerkt) */
+	let bestPoints = $state(0);
 	/** Mitglied mindestens einer Guugge: dann gibt es Punkte für bewertete Durchgänge */
 	let memberOfAny = false;
 
@@ -224,6 +208,7 @@
 	async function loadHints() {
 		const a = await loadAccountApi().catch(() => null);
 		if (!a) return;
+		void refreshBestPoints(a, localStorage).then((p) => (bestPoints = p));
 		try {
 			const acc = await a.api.myAccount(a.sb);
 			const lists = await Promise.all(
@@ -281,6 +266,7 @@
 		countIn: counting,
 		judged,
 		hints: laneHints,
+		look: activeLook(prefs.look, bestPoints),
 		trace: listening !== 'off' ? session.trace : null,
 		current: listening !== 'off' ? current : null,
 		overlay:
@@ -878,6 +864,7 @@
 
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
+		bestPoints = loadBestPoints(localStorage);
 		measured = loadLatency(localStorage);
 		diag = new URLSearchParams(location.search).has('diag');
 		session.setNotes(track.notes);
@@ -1122,6 +1109,21 @@
 				onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, 1) })}>+</button
 			>
 		</span>
+		<label class="toggle"
+			>Bahn-Look
+			<select
+				value={activeLook(prefs.look, bestPoints)}
+				onchange={(e) => setPrefs({ look: e.currentTarget.value as LaneLook })}
+			>
+				{#each LANE_LOOKS as l (l.id)}
+					<option value={l.id} disabled={!lookUnlocked(l.id, bestPoints)}
+						>{l.label}{l.id !== 'std' && !lookUnlocked(l.id, bestPoints)
+							? ` (ab Level ${unlockLevel(l.id).n})`
+							: ''}</option
+					>
+				{/each}
+			</select>
+		</label>
 		<button type="button" class="mini" aria-pressed={fokus} onclick={() => setFokus(!fokus)}
 			>Vollbild</button
 		>

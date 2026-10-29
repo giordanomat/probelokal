@@ -81,7 +81,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Übungen Lange Töne, Lippenbindungen, Zungenstoss und Tonleiter-Häppchen aus dem Prototyp, je in den Stufen Einstieg und Weiter (`src/lib/warmup/exercises.ts`).
      - Der Dirigent spielt einen Takt vor (gestrichelt, synthetischer Ton), du spielst ihn nach. Klick und Vorspielton werden in Web Audio vorausgeplant (`src/lib/warmup/player.ts`).
      - Mithören bewertet nur das Nachspielen (`PracticeSession`, vorgespielte Töne tragen `call`).
-     - Noch nicht dabei: Schränz-Groove (im Prototyp ab Level 3, Levels kommen mit M2), Tagesvorschlag, Fragen an den Dirigenten (KI).
+     - Noch nicht dabei: Tagesvorschlag, Fragen an den Dirigenten (KI). Der Schränz-Groove kam mit M2 (Punkt 11).
      - **Ungeprüft:** wie der synthetische Vorspielton auf Handy-Lautsprecher und Kopfhörer klingt; echte Aufnahmen pro Instrument sind geplant (docs/02).
 - **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) ist mit PR #3 gemergt und live (`/einblasen`, geprüft 28.10.2026). Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
@@ -155,7 +155,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Die Schalter zur Rangliste sind von der Guugge-Seite hierher umgezogen.
    - Im Gesamtplan sieht die Leitung die Übersicht der Register: Karten mit Schnitt und »hat diese Woche geübt«, dazu eine Tabelle Register × Teil mit der Plan-Zeile. Nur Register mit mindestens drei Personen.
    - Migration `20261029140000_m2_rangliste_uebersicht.sql`: `register_overview` zählt Pausen der Stimme als erledigt (`titles.voices[].rests`, wie »Mein Plan«); dazu `leitung_overview`, `guugge_settings`, `set_level_rewards`, `my_points_log`.
-   - **Noch nicht gebaut**, in der Oberfläche als »kommt bald« markiert: Bahn-Looks »Fasnacht« und »Gold«, Bonusübung »Schränz-Groove«, Abzeichen. Gebaut ist nur der goldene Name in der Rangliste.
+   - Bahn-Looks, Schränz-Groove und Abzeichen kamen am 29.10.2026 dazu (Punkt 11).
    - Getestet mit Vitest (Rechte, Belohnungen, Pausen in der Übersicht) und Playwright (Rangliste mit Opt-in, Übersicht nur für die Leitung).
 9. ~~Hinweise der Leitung~~ erledigt am 29.10.2026:
    - `/guugge/[id]/hinweise`: Die Leitung trägt Hinweise ein (Takte, für Alle, ein Register oder eine Stimme; Dynamik, Artikulation, Atmen oder freier Text) und löscht sie.
@@ -171,7 +171,14 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Migration `20261029180000_m2_durchgaenge.sql`. Die Punkteregel in SQL und TypeScript stimmt für alle 1111 Kombinationen überein.
     - Getestet mit Playwright: Ein Durchgang wird angemeldet, abgeschlossen und neu gestartet; 0 % gibt keine Punkte und keinen Übetag.
     - **Noch nicht:** Punkte fürs Einblasen (5 pro Übung, höchstens 6 pro Tag, docs/01).
-11. Offen in M2: Punkte fürs Einblasen; Hinweise in der Notenansicht und ohne Neuladen; Belohnungen Bahn-Looks und Schränz-Groove. Danach Abnahme M2 (Testprotokoll).
+11. ~~Belohnungen der Ränge~~ erledigt am 29.10.2026:
+    - Bahn-Look »Fasnacht« (ab Level 2, eigene Farbe je Griff bzw. Zugposition) und »Gold« (ab Level 4) in »Stück üben« unter »Bahn-Look«, gilt auch beim Einblasen. Gefärbt werden nur die kommenden Töne; gespielt, aktuell und bewertet bleiben wie immer.
+    - Bonusübung »Schränz-Groove« beim Einblasen ab Level 3, vorher mit »ab Level 3« gesperrt.
+    - Abzeichen »Guuggen-Ass« (Level 6) und »Fasnachtslegende« (Level 7) beim eigenen Rang und in der Rangliste.
+    - Looks und Groove gelten mit dem höchsten Rang aus allen eigenen Guuggen, auf dem Gerät gemerkt bis zum Abmelden (Vorschlag, docs/01). Migration `20261029200000_m2_belohnungen.sql` mit `my_best_points`.
+    - Getestet mit Vitest (Farben, Freischaltung, Groove-Runden, Höchstwert über Guuggen) und Playwright (ohne Konto gesperrt; mit Punkten Look wählen, Groove üben, Abzeichen; nach dem Abmelden wieder Standard).
+    - **Ungeprüft:** wie die Farben beim Spielen wirken. »Fasnacht« nutzt wie im Prototyp auch Rot, Gelb und Blau, die sonst »falsch«, »knapp« und den aktuellen Ton bedeuten. Bewertete Töne stehen links der Spiellinie, gefärbte rechts; ob das reicht, zeigt der Pilot.
+12. Offen in M2: Punkte fürs Einblasen; Hinweise in der Notenansicht und ohne Neuladen. Danach Abnahme M2 (Testprotokoll).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

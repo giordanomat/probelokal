@@ -1,5 +1,5 @@
-// Bahn zeichnen (Canvas 2D), portiert aus prototype/v7 (Lane.draw). Ohne Hinweise der Leitung,
-// Bahn-Looks und Dirigent-Vorspiel – die kommen mit M2/M3.
+// Bahn zeichnen (Canvas 2D), portiert aus prototype/v7 (Lane.draw), mit Hinweisen der Leitung und
+// Bahn-Looks (#lib/lane/looks.ts). Ohne Dirigent-Vorspiel, das kommt mit M3.
 
 import { pressedValves } from '../music/fingering';
 import type { InstrumentKind, Section, Track } from '../music/types';
@@ -15,6 +15,7 @@ import {
 	type LaneGeometry,
 	type NoteLook
 } from './geometry';
+import { LOOK_FG, lookFill, type LaneLook } from './looks';
 
 export interface LaneColors {
 	surface: string;
@@ -83,6 +84,8 @@ export interface LaneScene {
 	current?: number | null;
 	/** Hinweise der Leitung als Band über den Takten (wie im Prototyp) */
 	hints?: readonly LaneHint[] | null;
+	/** Bahn-Look (Belohnung); nur schon freigeschaltete übergeben */
+	look?: LaneLook;
 }
 
 export interface LaneHint {
@@ -116,7 +119,10 @@ function roundRect(
 	cx.closePath();
 }
 
-function lookColors(look: NoteLook, c: LaneColors) {
+function lookColors(
+	look: NoteLook,
+	c: LaneColors
+): { fill: string | null; fg: string; stroke: string | null } {
 	switch (look) {
 		case 'hit':
 			return { fill: c.gruen, fg: '#fff', stroke: null };
@@ -248,6 +254,11 @@ export function drawLane(
 			const y = (s.help === 'rhythm' ? midY : yOfDia(g, n.dia)) - ph / 2;
 			const look = noteLook(n, now, s.judged?.get(i));
 			const col = lookColors(look, c);
+			const special = look === 'upcoming' && s.look ? lookFill(s.look, n.fing, s.kind) : null;
+			if (special) {
+				col.fill = special;
+				col.fg = LOOK_FG;
+			}
 			roundRect(cx, x, y, w, ph, ph / 2);
 			if (col.fill) {
 				cx.fillStyle = col.fill;

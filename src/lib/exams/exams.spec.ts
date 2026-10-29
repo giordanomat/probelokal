@@ -20,7 +20,8 @@ import {
 	examAward,
 	hasUnlock,
 	LEVELS,
-	rewardText,
+	badgesOf,
+	unlockLevel,
 	isoWeek,
 	levelOf,
 	nextLevel,
@@ -157,8 +158,12 @@ describe('Punkte', () => {
 		expect(hasUnlock(249, 'groove')).toBe(false);
 		expect(hasUnlock(250, 'groove')).toBe(true);
 		expect(hasUnlock(900, 'fasnacht')).toBe(true);
-		expect(rewardText(LEVELS[1])).toMatch(/\(kommt bald\)$/);
-		expect(rewardText(LEVELS[4])).toBe('Goldener Name in der Rangliste');
+		expect(unlockLevel('gold').n).toBe(4);
+		expect(badgesOf(1299)).toEqual([]);
+		expect(badgesOf(1300)).toEqual(['Guuggen-Ass']);
+		expect(badgesOf(1900)).toEqual(['Fasnachtslegende', 'Guuggen-Ass']);
+		// Jede Belohnung ist gebaut: entweder freigeschaltet, Abzeichen oder Name in der Rangliste
+		for (const l of LEVELS.slice(1)) expect(l.unlock ?? l.badge, l.name).toBeTruthy();
 	});
 
 	it('Wochenziel: am dritten Übetag einer Woche, einmal', () => {

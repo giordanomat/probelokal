@@ -9,8 +9,8 @@ export interface Level {
 	min: number;
 	reward?: string;
 	unlock?: 'fasnacht' | 'groove' | 'gold' | 'goldname';
-	/** Belohnung ist gebaut (sonst zeigt die Oberfläche »kommt bald«) */
-	ready?: boolean;
+	/** Abzeichen in der Rangliste und beim eigenen Rang */
+	badge?: string;
 }
 
 export const LEVELS: readonly Level[] = [
@@ -35,11 +35,22 @@ export const LEVELS: readonly Level[] = [
 		name: 'Bühnenfuchs',
 		min: 850,
 		reward: 'Goldener Name in der Rangliste',
-		unlock: 'goldname',
-		ready: true
+		unlock: 'goldname'
 	},
-	{ n: 6, name: 'Guuggen-Ass', min: 1300, reward: 'Abzeichen »Guuggen-Ass«' },
-	{ n: 7, name: 'Fasnachtslegende', min: 1900, reward: 'Abzeichen »Fasnachtslegende«' }
+	{
+		n: 6,
+		name: 'Guuggen-Ass',
+		min: 1300,
+		reward: 'Abzeichen »Guuggen-Ass«',
+		badge: 'Guuggen-Ass'
+	},
+	{
+		n: 7,
+		name: 'Fasnachtslegende',
+		min: 1900,
+		reward: 'Abzeichen »Fasnachtslegende«',
+		badge: 'Fasnachtslegende'
+	}
 ];
 
 export const POINTS = {
@@ -56,12 +67,6 @@ export const DAILY_CAP = { exercise: 6, pass: 15 } as const;
 /** Wochenziel: an so vielen verschiedenen Tagen einer Woche geübt. */
 export const WEEK_GOAL_DAYS = 3;
 
-/** Belohnung zum Anzeigen; was noch nicht gebaut ist, mit »(kommt bald)«. */
-export function rewardText(level: Level): string {
-	if (!level.reward) return '';
-	return level.ready ? level.reward : `${level.reward} (kommt bald)`;
-}
-
 export function levelOf(points: number): Level {
 	let level = LEVELS[0];
 	for (const l of LEVELS) if (points >= l.min) level = l;
@@ -75,6 +80,19 @@ export function nextLevel(points: number): Level | null {
 export function hasUnlock(points: number, unlock: NonNullable<Level['unlock']>): boolean {
 	const n = levelOf(points).n;
 	return LEVELS.some((l) => l.unlock === unlock && l.n <= n);
+}
+
+/** Ab welchem Level eine Freischaltung gilt. */
+export function unlockLevel(unlock: NonNullable<Level['unlock']>): Level {
+	return LEVELS.find((l) => l.unlock === unlock)!;
+}
+
+/** Erreichte Abzeichen, das höchste zuerst. */
+export function badgesOf(points: number): string[] {
+	const n = levelOf(points).n;
+	return LEVELS.filter((l) => l.badge && l.n <= n)
+		.map((l) => l.badge!)
+		.reverse();
 }
 
 export interface ExamAward {

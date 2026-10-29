@@ -278,3 +278,35 @@ describe('Bewertete Durchgänge', () => {
 		await expect(finishPass(f.trp[0], a, 60, 10)).rejects.toThrow('Diesen Durchgang gibt es nicht.');
 	});
 });
+
+describe('Höchster Rang über alle Guuggen (Bahn-Looks, Schränz-Groove)', () => {
+	it('zählt die Guugge mit den meisten Punkten, nur eigene und nur als Mitglied', async () => {
+		const f = await fixture();
+		const best = (who: { id: string } | 'anon') =>
+			f.db.as<{ p: number }>(who, `select my_best_points() as p`).then((r) => r[0].p);
+		const give = (user: string, guugge: string, points: number) =>
+			f.db.as(
+				'service',
+				`insert into points_ledger (user_id, guugge_id, points, reason) values ($1, $2, $3, 'test')`,
+				[user, guugge, points]
+			);
+		expect(await best(f.fremd)).toBe(0);
+		// Fritz tritt zusätzlich der Schuegu bei
+		const [{ create_invite: token }] = await f.db.as<{ create_invite: string }>(
+			f.leitung,
+			`select create_invite($1)`,
+			[f.guugge]
+		);
+		await f.db.as(f.fremd, `select accept_invite($1)`, [token]);
+		await give(f.fremd.id, f.fremdGuugge, 120);
+		await give(f.fremd.id, f.guugge, 200);
+		await give(f.fremd.id, f.guugge, 60);
+		await give(f.trp[0].id, f.guugge, 900);
+		// Höchstwert, keine Summe (Durchgänge zählen in jeder Guugge)
+		expect(await best(f.fremd)).toBe(260);
+		// Nach dem Austritt zählt die Schuegu nicht mehr
+		await f.db.as(f.fremd, `select remove_member($1, $2)`, [f.guugge, f.fremd.id]);
+		expect(await best(f.fremd)).toBe(120);
+		await expect(best('anon')).rejects.toThrow(DENIED);
+	});
+});

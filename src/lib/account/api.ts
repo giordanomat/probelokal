@@ -194,6 +194,9 @@ export const finishExam = (sb: SupabaseClient, attempt: string, score: number) =
 export const myPoints = (sb: SupabaseClient, guugge: string) =>
 	call<MyPoints>(sb, 'my_points', { p_guugge: guugge });
 
+/** Punkte in der eigenen Guugge mit den meisten (für Bahn-Looks und Schränz-Groove) */
+export const myBestPoints = (sb: SupabaseClient) => call<number>(sb, 'my_best_points');
+
 export interface BoardRow {
 	user_id: string;
 	display_name: string;

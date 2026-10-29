@@ -3,11 +3,12 @@
 // (»Jetzt du«). Vorne ein Takt Einzählen. Alle Töne notiert im Violinschlüssel in B wie die
 // Stimmen von Bad Touch; klingend = notiert + shift der Stimme.
 //
-// Der »Schränz-Groove« des Prototyps fehlt bewusst: Er wird dort erst ab Level 3 freigeschaltet,
-// Levels kommen mit M2 (docs/05-roadmap.md).
+// Der »Schränz-Groove« ist eine Belohnung ab Level 3 (#lib/game/points.ts); gesperrt zeigt
+// »Einblasen« ihn mit »ab Level 3«.
 
 import { standardFingering, VALVE_BY_LOWERING } from '../music/fingering';
 import { spell } from '../music/notation';
+import type { Level } from '../game/points';
 import type { InstrumentKind, RawNote } from '../music/types';
 
 export const COUNT_IN_BEATS = 4;
@@ -30,6 +31,8 @@ export interface Exercise {
 	intro: string;
 	tips: string[];
 	rounds(level: ExerciseLevel): Round[];
+	/** Belohnung: erst ab dem Level mit dieser Freischaltung */
+	unlock?: NonNullable<Level['unlock']>;
 }
 
 const rep = (m: number, d: number, n: number): [number, number][] =>
@@ -138,6 +141,75 @@ export const EXERCISES: Exercise[] = [
 						{ notes: [60, 62, 64, 62].map((m) => [m, 1]) },
 						{ notes: [[60, 4]] }
 					]
+	},
+	{
+		id: 'groove',
+		name: 'Schränz-Groove',
+		unlock: 'groove',
+		intro: 'Guuggen-Rhythmen auf einem Ton: Synkopen, Pausen, Akzente. So klingt Fasnacht.',
+		tips: [
+			'Die Achtel zwischen den Schlägen genau setzen, nicht verschleppen.',
+			'Kurze Töne kurz, lange Töne voll aushalten.',
+			'Mit dem Fuss den Viertelpuls mittippen.'
+		],
+		rounds: (lvl) => {
+			const p = 67;
+			const q = 72;
+			const r: Round[] = [
+				{
+					notes: [
+						[p, 0.5],
+						[p, 1],
+						[p, 0.5],
+						[p, 1],
+						[p, 1]
+					]
+				},
+				{
+					notes: [
+						[p, 1],
+						[p, 0.5],
+						[p, 0.5],
+						[p, 0.5],
+						[p, 1.5]
+					]
+				},
+				{
+					notes: [
+						[p, 0.75],
+						[p, 0.75],
+						[p, 0.5],
+						[p, 1],
+						[p, 1]
+					]
+				}
+			];
+			if (lvl) {
+				r.push(
+					{
+						notes: [
+							[q, 0.5],
+							[q, 1],
+							[q, 0.5],
+							[p, 1],
+							[p, 1]
+						]
+					},
+					{
+						notes: [
+							[p, 0.25],
+							[p, 0.25],
+							[p, 0.5],
+							[q, 1],
+							[p, 0.5],
+							[p, 0.5],
+							[p, 1]
+						]
+					}
+				);
+			}
+			return r;
+		}
 	}
 ];
 

@@ -24,7 +24,7 @@
 		type PointsEntry,
 		type Register
 	} from '#lib/account/api.ts';
-	import { LEVELS, levelOf, nextLevel, rewardText } from '#lib/game/points.ts';
+	import { badgesOf, LEVELS, levelOf, nextLevel } from '#lib/game/points.ts';
 	import { BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
 
 	const sb = getSupabase();
@@ -44,6 +44,7 @@
 	const id = $derived(page.params.id ?? '');
 	const leitung = $derived(me?.role === 'leitung');
 	const level = $derived(levelOf(points?.points ?? 0));
+	const badges = $derived(badgesOf(points?.points ?? 0));
 	const next = $derived(nextLevel(points?.points ?? 0));
 	const progress = $derived(
 		next ? Math.round((((points?.points ?? 0) - level.min) / (next.min - level.min)) * 100) : 100
@@ -157,17 +158,22 @@
 				<div>
 					<h1>Level {level.n} · {level.name}</h1>
 					<p>{points.points} Punkte · diese Woche {points.week_points}</p>
+					{#if badges.length}
+						<p class="badges" aria-label="Abzeichen">
+							{#each badges as b (b)}<span class="abz">{b}</span>{/each}
+						</p>
+					{/if}
 				</div>
 			</div>
 			<div class="bar" aria-hidden="true"><i style:width="{progress}%"></i></div>
 			<p class="hint">
 				{next
-					? `Noch ${next.min - points.points} Punkte bis Level ${next.n} (${next.name})${next.reward ? ` · Belohnung: ${rewardText(next)}` : ''}`
+					? `Noch ${next.min - points.points} Punkte bis Level ${next.n} (${next.name})${next.reward ? ` · Belohnung: ${next.reward}` : ''}`
 					: 'Höchster Rang erreicht.'}
 			</p>
 			<p class="hint">
-				Punkte gibt es für bestandene Etappen und das Wochenziel (an 3 Tagen geübt), nicht für Zeit.
-				Wer eine Woche nicht übt, verliert nichts.
+				Punkte gibt es für bestandene Etappen, bewertete Durchgänge und das Wochenziel (an 3 Tagen
+				geübt), nicht für Zeit. Wer eine Woche nicht übt, verliert nichts.
 			</p>
 		</section>
 
@@ -183,7 +189,7 @@
 						<span class="what">
 							<strong>Level {l.n} · {l.name}</strong>
 							<span class="hint"
-								>{[rewardText(l), own ? `Von deiner Guugge: ${own}` : '']
+								>{[l.reward, own ? `Von deiner Guugge: ${own}` : '']
 									.filter(Boolean)
 									.join(' · ')}</span
 							>
@@ -194,6 +200,10 @@
 					</li>
 				{/each}
 			</ul>
+			<p class="hint">
+				Die Bahn-Looks wählst du in »Stück üben« unter »Bahn-Look«, den Schränz-Groove findest du
+				beim Einblasen. Dafür zählt der höchste Rang aus all deinen Guuggen.
+			</p>
 		</section>
 
 		<section class="card">
@@ -257,11 +267,15 @@
 				<ol class="board">
 					{#each rows as r, i (r.user_id)}
 						{@const lv = levelOf(r.points)}
+						{@const badge = badgesOf(r.points)[0]}
 						<li class:mine={r.user_id === auth.user?.id}>
 							<span class="pl">{i + 1}</span>
 							<span class="what">
 								<strong class:gold={lv.n >= 5}
-									>{r.user_id === auth.user?.id ? 'Du' : r.display_name || 'Ohne Namen'}</strong
+									>{r.user_id === auth.user?.id
+										? 'Du'
+										: r.display_name || 'Ohne Namen'}{#if badge}<span class="abz">{badge}</span
+										>{/if}</strong
 								>
 								<span class="hint"
 									>{voiceOf(r.voice)?.name ?? 'ohne Stimme'} · Level {lv.n} {lv.name}</span
@@ -401,6 +415,28 @@
 	}
 	.gold {
 		color: #d4a62a;
+	}
+	.badges {
+		margin: 6px 0 0;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	/* Abzeichen wie die Etiketten im Prototyp: Mono, Versalien, gelb */
+	.abz {
+		display: inline-block;
+		margin-left: 6px;
+		padding: 2px 8px;
+		border-radius: 999px;
+		background: var(--gelb);
+		color: #141619;
+		font: 600 10.5px var(--font-mono);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		vertical-align: 2px;
+	}
+	.badges .abz {
+		margin-left: 0;
 	}
 	h3 {
 		margin: 8px 0 0;

@@ -2,7 +2,9 @@
 	// Einblasen mit dem giordanomat-Dirigenten (Übungen in #lib/warmup/exercises.ts), portiert aus
 	// prototype/v7 (Reiter »Einblasen«). Der Dirigent spielt einen Takt vor, du spielst ihn nach.
 	// Mit Mithören wird jeder nachgespielte Ton bewertet (Abnahme M1: Lange Töne ≥ 90 %).
-	// Noch nicht hier: Tagesvorschlag, Fragen an den Dirigenten (KI) und der Schränz-Groove (M2).
+	// Der Schränz-Groove ist ab Level 3 freigeschaltet (höchster Rang über alle Guuggen, auf dem
+	// Gerät gemerkt, #lib/game/unlocks.ts); der Bahn-Look aus »Stück üben« gilt auch hier.
+	// Noch nicht hier: Punkte fürs Einblasen, Tagesvorschlag, Fragen an den Dirigenten (KI).
 	import { onDestroy, onMount } from 'svelte';
 	import { defaultRoundTrip, loadLatency } from '#lib/audio/latency.ts';
 	import { Listener, micErrorText } from '#lib/audio/listen.ts';
@@ -25,6 +27,10 @@
 		type ExerciseLevel
 	} from '#lib/warmup/exercises.ts';
 	import { WarmupPlayer } from '#lib/warmup/player.ts';
+	import { accountLoader, maybeSignedIn } from '#lib/account/lazy.ts';
+	import { hasUnlock, unlockLevel } from '#lib/game/points.ts';
+	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
+	import { activeLook } from '#lib/lane/looks.ts';
 
 	// Stimmen wie beim Stück (gleiche Einstellung pro Gerät)
 	const voices = BAD_TOUCH.voices;
@@ -47,6 +53,9 @@
 	let feedback = $state<{ text: string; tone: Tone } | null>(null);
 	let current = $state<number | null>(null);
 	let deviation = $state<number | null>(null);
+	/** Höchster Rang über alle Guuggen, für Schränz-Groove und Bahn-Look */
+	let bestPoints = $state(0);
+	let lockNote = $state('');
 
 	let ctx: AudioContext | null = null;
 	let player: WarmupPlayer | null = null;
@@ -95,6 +104,7 @@
 		help: 'all' as const,
 		names: prefs.names,
 		staff: prefs.staff,
+		look: activeLook(prefs.look, bestPoints),
 		sections: [],
 		countIn: counting,
 		judged,
@@ -129,7 +139,16 @@
 		judged = new Map();
 	}
 
+	const locked = (e: (typeof EXERCISES)[number]) => !!e.unlock && !hasUnlock(bestPoints, e.unlock);
+
 	function choose(patch: { ex?: string; lvl?: ExerciseLevel; voice?: string }) {
+		lockNote = '';
+		const e = EXERCISES.find((x) => x.id === patch.ex);
+		if (e?.unlock && locked(e)) {
+			const l = unlockLevel(e.unlock);
+			lockNote = `${e.name} wird mit Level ${l.n} (${l.name}) freigeschaltet. Punkte sammelst du in deiner Guugge mit Etappen und bewerteten Durchgängen.`;
+			return;
+		}
 		if (patch.ex) exId = patch.ex;
 		if (patch.lvl !== undefined) level = patch.lvl;
 		if (patch.voice) {
@@ -252,7 +271,13 @@
 			localStorage,
 			voices.map((v) => v.id)
 		);
+		bestPoints = loadBestPoints(localStorage);
 		reset();
+		if (maybeSignedIn())
+			void accountLoader()()
+				.then((a) => (a ? refreshBestPoints(a, localStorage) : bestPoints))
+				.then((p) => (bestPoints = p))
+				.catch(() => {});
 	});
 
 	onDestroy(() => {
@@ -292,8 +317,14 @@
 <section class="row">
 	<div class="seg" role="group" aria-label="Übung">
 		{#each EXERCISES as e (e.id)}
-			<button type="button" aria-pressed={e.id === exId} onclick={() => choose({ ex: e.id })}
-				>{e.name}</button
+			<button
+				type="button"
+				aria-pressed={e.id === exId}
+				class:locked={locked(e)}
+				onclick={() => choose({ ex: e.id })}
+				>{e.name}{#if e.unlock && locked(e)}<span class="lock"
+						>ab Level {unlockLevel(e.unlock).n}</span
+					>{/if}</button
 			>
 		{/each}
 	</div>
@@ -307,6 +338,8 @@
 		{/each}
 	</div>
 </section>
+
+{#if lockNote}<p class="hint" role="status">{lockNote}</p>{/if}
 
 <section class="row listen">
 	<button type="button" class="micbtn" aria-pressed={listening} onclick={toggleListening}>
@@ -399,6 +432,14 @@
 </section>
 
 <style>
+	.locked {
+		opacity: 0.7;
+	}
+	.lock {
+		margin-left: 6px;
+		font: 500 11px var(--font-mono);
+		color: var(--muted);
+	}
 	.head h1 {
 		margin: 2px 0 4px;
 		font-size: clamp(22px, 5vw, 30px);

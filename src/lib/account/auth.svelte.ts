@@ -7,6 +7,7 @@
 
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { accountErrorText, AccountError } from './api.ts';
+import { clearBestPoints } from '../game/unlocks.ts';
 
 export const auth = $state<{ ready: boolean; user: User | null }>({ ready: false, user: null });
 
@@ -63,4 +64,6 @@ export async function verifyLink(sb: SupabaseClient, tokenHash: string, type: st
 
 export async function signOut(sb: SupabaseClient) {
 	await check(sb.auth.signOut());
+	// Belohnungen auf dem Gerät gehören zum Konto
+	clearBestPoints(localStorage);
 }

@@ -50,6 +50,7 @@ Bewertung: getroffen = 1, knapp/falsche Stufe = 0,5. Der Stand eines Teils zähl
 - Punkte nur für nachgewiesene Leistung, **nicht für Zeit**, **keine täglichen Serien** (bestraft Leute mit wenig Zeit). Ein Übetag (für das Wochenziel) zählt erst, wenn bei einer Prüfung oder einem bewerteten Durchgang mindestens ein Ton getroffen ist (Vorschlag 29.10.2026, sonst brächte Nichtstun das Wochenziel). Prototyp-Werte: Etappe 40 (+20 ab 95 %, +15 rechtzeitig, ohne Mikrofon bei 4/5 halbiert), bewerteter Durchgang bis 15 (max. 15 pro Tag), Übung 5 (max. 6 pro Tag), Wochenziel »an 3 Tagen geübt« 25.
 - Sieben Ränge: Schnupperi (0) · Lehrling (100) · Schränzer (250) · Gassenhauer (500) · Bühnenfuchs (850) · Guuggen-Ass (1300) · Fasnachtslegende (1900). **Namen und Werte sind Vorschläge.**
 - Belohnungen: Bahn-Look »Fasnacht« (Farbe je Griff), Bonusübung »Schränz-Groove«, Bahn-Look »Gold«, goldener Name, Abzeichen; dazu eigene Belohnungen der Leitung pro Level.
+  - Bahn-Looks und Schränz-Groove gehören zu keiner Guugge. Sie gelten mit dem höchsten Rang aus allen eigenen Guuggen und werden auf dem Gerät gemerkt, bis zum Abmelden (Vorschlag 29.10.2026). Goldener Name und Abzeichen erscheinen in der Rangliste der jeweiligen Guugge.
 - **Punkte müssen im Produkt serverseitig vergeben werden** (siehe Architektur). Im Prototyp sind sie manipulierbar.
 
 ### Rangliste
