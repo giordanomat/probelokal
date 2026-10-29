@@ -11,6 +11,7 @@
 	import {
 		createInvite,
 		guuggeMembers,
+		listHints,
 		myAccount,
 		removeMember,
 		revokeInvites,
@@ -22,7 +23,8 @@
 		type Role
 	} from '#lib/account/api.ts';
 	import { inviteUrl } from '#lib/account/invite.ts';
-	import { BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
+	import { BAD_TOUCH_SLUG, BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
+	import { hintsFor } from '#lib/hints/hints.ts';
 
 	const sb = getSupabase();
 	const ROLES: Role[] = ['mitglied', 'registerchef', 'leitung'];
@@ -30,6 +32,8 @@
 	let me = $state<MyGuugge | null>(null);
 	let missing = $state(false);
 	let members = $state<Member[]>([]);
+	/** Neue Hinweise der Leitung für die eigene Stimme */
+	let newHints = $state(0);
 	let inviteRole = $state<Role>('mitglied');
 	let link = $state('');
 	let copied = $state(false);
@@ -54,6 +58,11 @@
 			me = acc.guuggen.find((g) => g.id === id) ?? null;
 			missing = !me;
 			members = me ? await guuggeMembers(sb, id) : [];
+			if (me) {
+				const v = BAD_TOUCH_VOICES.find((x) => x.id === me?.voice) ?? null;
+				const hs = await listHints(sb, id, BAD_TOUCH_SLUG);
+				newHints = hintsFor(hs, v).filter((h) => !h.is_read).length;
+			}
 		} catch (e) {
 			error = (e as Error).message;
 		}
@@ -178,6 +187,16 @@
 		</section>
 
 		<section class="card">
+			<h2>
+				Hinweise der Leitung{#if newHints}<span class="new">{newHints} neu</span>{/if}
+			</h2>
+			<p class="hint">
+				Dynamik, Atemstellen und Hinweise zu bestimmten Takten. Sie erscheinen auch auf der Bahn.
+			</p>
+			<p><a class="go" href={resolve('/guugge/[id]/hinweise', { id })}>Hinweise ansehen →</a></p>
+		</section>
+
+		<section class="card">
 			<h2>Punkte und Rangliste</h2>
 			<p class="hint">
 				Dein Rang, die Belohnungen und die freiwillige Rangliste (Standard: aus).
@@ -290,6 +309,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: 14px;
+	}
+	.new {
+		display: inline-block;
+		margin-left: 8px;
+		padding: 0 8px;
+		border-radius: 999px;
+		background: var(--gelb);
+		color: #141619;
+		font-size: 13px;
+		vertical-align: middle;
 	}
 	.you {
 		color: var(--muted);

@@ -2,6 +2,8 @@
 // brauchen nur die Stimmen und sollen das Noten-JSON nicht mitladen.
 import type { Voice } from '#lib/music/types.ts';
 
+export const BAD_TOUCH_SLUG = 'bad-touch-2-0';
+
 // Alle Stimmen im Violinschlüssel in B: Klang = notiert + shift (gemessen, siehe docs/04).
 export const BAD_TOUCH_VOICES: Voice[] = [
 	{

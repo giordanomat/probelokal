@@ -100,6 +100,7 @@
 		onclick={pick}
 		aria-hidden="true"
 		data-beat={scene.beat.toFixed(2)}
+		data-hints={scene.hints?.length ?? 0}
 	></canvas>
 </div>
 

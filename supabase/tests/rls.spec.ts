@@ -651,3 +651,88 @@ describe('Belohnungen, Punkteliste, Übersicht über den Kurznamen', () => {
 		).toEqual([]);
 	});
 });
+
+describe('Hinweise der Leitung', () => {
+	let f: Fixture;
+	const add = (who: { id: string }, args: unknown[]) =>
+		f.db
+			.as<{ id: string }>(
+				who,
+				`select add_hint($1, 'test-titel', $2, $3, $4, $5, $6, $7) as id`,
+				[f.guugge, ...args]
+			)
+			.then((r) => r[0].id);
+	let ids: Record<string, string> = {};
+	beforeAll(async () => {
+		f = await fixture();
+		ids = {
+			alle: await add(f.leitung, [1, 4, 'alle', 'atem', null, null]),
+			trp: await add(f.leitung, [9, 12, 'trp', 'dyn', 'pp', 'Trompeten zurück']),
+			trp1: await add(f.leitung, [13, 13, 'trp1', 'text', null, 'Hier Solo']),
+			pos: await add(f.leitung, [17, 20, 'pos', 'artik', null, 'kurz'])
+		};
+	});
+
+	it('nur die Leitung trägt ein; unsinnige Hinweise werden abgewiesen', async () => {
+		await expect(add(f.chef, [1, 1, 'alle', 'atem', null, null])).rejects.toThrow(
+			'Nur die Leitung kann Hinweise eintragen.'
+		);
+		for (const [args, msg] of [
+			[[0, 1, 'alle', 'atem', null, null], 'Takte von 1 bis 95'],
+			[[5, 4, 'alle', 'atem', null, null], 'Takte von 1 bis 95'],
+			[[1, 96, 'alle', 'atem', null, null], 'Takte von 1 bis 95'],
+			[[1, 1, 'xyz', 'atem', null, null], 'Für wen ist der Hinweis?'],
+			[[1, 1, 'alle', 'dyn', 'laut', null], 'Bitte eine Stärke wählen.'],
+			[[1, 1, 'alle', 'artik', null, '  '], 'Bitte einen kurzen Text eingeben.'],
+			[[1, 1, 'alle', 'text', null, 'x'.repeat(161)], 'zu lang']
+		] as const) {
+			await expect(add(f.leitung, [...args]), msg).rejects.toThrow(msg);
+		}
+	});
+
+	it('Mitglieder sehen alle Hinweise der Guugge, Fremde keine; neu bis gelesen', async () => {
+		const rows = await f.db.as<{ id: string; is_read: boolean }>(
+			f.trp[0],
+			`select id, is_read from list_hints($1, 'test-titel')`,
+			[f.guugge]
+		);
+		expect(rows.map((r) => r.id)).toEqual([ids.alle, ids.trp, ids.trp1, ids.pos]);
+		expect(rows.every((r) => !r.is_read)).toBe(true);
+		const lead = await f.db.as<{ is_read: boolean }>(
+			f.leitung,
+			`select is_read from list_hints($1, 'test-titel')`,
+			[f.guugge]
+		);
+		expect(lead.every((r) => r.is_read)).toBe(true);
+		expect(
+			await f.db.as(f.fremd, `select * from list_hints($1, 'test-titel')`, [f.guugge])
+		).toEqual([]);
+	});
+
+	it('gelesen markieren nur in eigenen Guuggen', async () => {
+		const [{ n }] = await f.db.as<{ n: number }>(f.trp[0], `select mark_hints_read($1) as n`, [
+			[ids.trp, ids.trp1]
+		]);
+		expect(n).toBe(2);
+		const read = await f.db.as<{ id: string }>(
+			f.trp[0],
+			`select id from list_hints($1, 'test-titel') where is_read`,
+			[f.guugge]
+		);
+		expect(read.map((r) => r.id)).toEqual([ids.trp, ids.trp1]);
+		const [{ n: none }] = await f.db.as<{ n: number }>(f.fremd, `select mark_hints_read($1) as n`, [
+			[ids.alle]
+		]);
+		expect(none).toBe(0);
+	});
+
+	it('löschen nur durch die Leitung', async () => {
+		await expect(f.db.as(f.trp[0], `select delete_hint($1)`, [ids.pos])).rejects.toThrow(
+			'Diesen Hinweis kannst du nicht löschen.'
+		);
+		await f.db.as(f.leitung, `select delete_hint($1)`, [ids.pos]);
+		expect(
+			await f.db.as(f.pos[0], `select id from list_hints($1, 'test-titel')`, [f.guugge])
+		).toEqual([{ id: ids.alle }, { id: ids.trp }, { id: ids.trp1 }]);
+	});
+});

@@ -157,7 +157,14 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Migration `20261029140000_m2_rangliste_uebersicht.sql`: `register_overview` zählt Pausen der Stimme als erledigt (`titles.voices[].rests`, wie »Mein Plan«); dazu `leitung_overview`, `guugge_settings`, `set_level_rewards`, `my_points_log`.
    - **Noch nicht gebaut**, in der Oberfläche als »kommt bald« markiert: Bahn-Looks »Fasnacht« und »Gold«, Bonusübung »Schränz-Groove«, Abzeichen. Gebaut ist nur der goldene Name in der Rangliste.
    - Getestet mit Vitest (Rechte, Belohnungen, Pausen in der Übersicht) und Playwright (Rangliste mit Opt-in, Übersicht nur für die Leitung).
-9. Offen: Hinweise der Leitung, bewertete Durchgänge mit Punkten.
+9. ~~Hinweise der Leitung~~ erledigt am 29.10.2026:
+   - `/guugge/[id]/hinweise`: Die Leitung trägt Hinweise ein (Takte, für Alle, ein Register oder eine Stimme; Dynamik, Artikulation, Atmen oder freier Text) und löscht sie.
+   - Alle sehen die Hinweise für ihre Stimme oder alle, mit »neu«, bis sie gelesen sind. »Hinhören« springt in »Stück üben« an die Stelle (`/ueben?takt=…`). Auf der Guugge-Seite steht die Zahl neuer Hinweise.
+   - Auf der Bahn erscheint ein gelbes Band mit Kurztext (»pp«, »Atmen«, »! Text«), gefiltert nach der gewählten Stimme. »Stück üben« lädt den Konto-Code dafür nur, wenn jemand angemeldet ist.
+   - Migration `20261029160000_m2_hinweise.sql`: `add_hint` (nur Leitung, prüft Takte, Ziel, Stärke, Text), `delete_hint`, `list_hints`, `mark_hints_read`.
+   - Getestet mit Vitest (Rechte, Prüfungen, gelesen) und Playwright (eintragen, neu, Hinhören, Band je nach Stimme, löschen).
+   - **Noch nicht:** Hinweise in der Notenansicht, Aktualisierung ohne Neuladen (Realtime, docs/02), Hinweise von Registerchefs (docs/03).
+10. Offen: bewertete Durchgänge mit Punkten.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

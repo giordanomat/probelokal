@@ -6,6 +6,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getSupabase } from '#lib/supabase/client.ts';
+	import { REGISTER_LABELS } from '#lib/music/registers.ts';
 	import { auth, watchAuth } from '#lib/account/auth.svelte.ts';
 	import {
 		guuggeSettings,
@@ -13,7 +14,6 @@
 		myAccount,
 		myPoints,
 		myPointsLog,
-		REGISTER_LABELS,
 		setLevelRewards,
 		setRanglisteEnabled,
 		setRanglisteOptIn,

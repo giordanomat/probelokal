@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ExamVia } from '../exams/exams';
+import type { Hint, HintKind } from '../hints/hints';
 
 export type Role = 'leitung' | 'registerchef' | 'mitglied';
 export type Register = 'trp' | 'pos' | 'tief' | 'perc';
@@ -193,13 +194,6 @@ export const finishExam = (sb: SupabaseClient, attempt: string, score: number) =
 export const myPoints = (sb: SupabaseClient, guugge: string) =>
 	call<MyPoints>(sb, 'my_points', { p_guugge: guugge });
 
-export const REGISTER_LABELS: Record<Register, string> = {
-	trp: 'Trompeten',
-	pos: 'Posaunen',
-	tief: 'Tiefes Blech',
-	perc: 'Perkussion'
-};
-
 export interface BoardRow {
 	user_id: string;
 	display_name: string;
@@ -244,3 +238,33 @@ export const setLevelRewards = (
 
 export const myPointsLog = (sb: SupabaseClient, guugge: string) =>
 	call<PointsEntry[]>(sb, 'my_points_log', { p_guugge: guugge });
+
+export interface HintInput {
+	from: number;
+	to: number;
+	target: string;
+	kind: HintKind;
+	dyn: string | null;
+	body: string | null;
+}
+
+export const listHints = (sb: SupabaseClient, guugge: string, slug: string) =>
+	call<Hint[]>(sb, 'list_hints', { p_guugge: guugge, p_slug: slug });
+
+export const addHint = (sb: SupabaseClient, guugge: string, slug: string, h: HintInput) =>
+	call<string>(sb, 'add_hint', {
+		p_guugge: guugge,
+		p_slug: slug,
+		p_from: h.from,
+		p_to: h.to,
+		p_target: h.target,
+		p_kind: h.kind,
+		p_dyn: h.dyn,
+		p_body: h.body
+	});
+
+export const deleteHint = (sb: SupabaseClient, hint: string) =>
+	call<void>(sb, 'delete_hint', { p_hint: hint });
+
+export const markHintsRead = (sb: SupabaseClient, ids: string[]) =>
+	call<number>(sb, 'mark_hints_read', { p_ids: ids });

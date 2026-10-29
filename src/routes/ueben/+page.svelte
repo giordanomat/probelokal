@@ -79,6 +79,7 @@
 		type LaneExamParams
 	} from '#lib/exams/exams.ts';
 	import { STAGES } from '#lib/plan/stand.ts';
+	import { hintShort, hintsFor, type Hint } from '#lib/hints/hints.ts';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import type { ExamResult } from '#lib/account/api.ts';
 	import { replaceState } from '$app/navigation';
@@ -151,13 +152,62 @@
 	let examError = $state('');
 	let examNotice = $state('');
 	let examBusy = $state(false);
-	let examApi: { api: typeof import('#lib/account/api.ts'); sb: SupabaseClient } | null = null;
+	let examApi: AccountApi | null = null;
+
+	// Konto-Code und Supabase nur laden, wenn jemand angemeldet ist (Sitzung von supabase-js im
+	// Speicher des Browsers) oder eine Prüfung läuft; ohne Konto bleibt »Stück üben« schlank.
+	type AccountApi = { api: typeof import('#lib/account/api.ts'); sb: SupabaseClient };
+	let accountApi: Promise<AccountApi | null> | null = null;
+	function loadAccountApi(): Promise<AccountApi | null> {
+		accountApi ??= (async () => {
+			const [{ getSupabase }, api] = await Promise.all([
+				import('#lib/supabase/client.ts'),
+				import('#lib/account/api.ts')
+			]);
+			const sb = getSupabase();
+			if (!sb || !(await sb.auth.getSession()).data.session) return null;
+			return { api, sb };
+		})();
+		return accountApi;
+	}
+	const maybeSignedIn = () => {
+		try {
+			return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k));
+		} catch {
+			return false;
+		}
+	};
+
+	// Hinweise der Leitung aus allen eigenen Guuggen, gefiltert nach der gewählten Stimme
+	let hints = $state<Hint[]>([]);
+
+	async function loadHints() {
+		const a = await loadAccountApi().catch(() => null);
+		if (!a) return;
+		try {
+			const acc = await a.api.myAccount(a.sb);
+			const lists = await Promise.all(
+				acc.guuggen.map((g) => a.api.listHints(a.sb, g.id, title.slug))
+			);
+			hints = lists.flat();
+		} catch {
+			// Hinweise sind eine Zugabe; ohne Netz oder Konto läuft die Bahn ohne sie
+		}
+	}
 
 	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
 	// Ablauf des Übens (nicht reaktiv; sync() spiegelt ihn in die Anzeige)
 	const session = new PracticeSession([], secondsPerBeat(title), rangeOf(1));
 
 	const voice = $derived(title.voices.find((v) => v.id === prefs.voice) ?? title.voices[0]);
+	const laneHints = $derived(
+		hintsFor(hints, voice).map((h) => ({
+			from: h.bar_from,
+			to: h.bar_to,
+			label: hintShort(h),
+			dyn: h.kind === 'dyn'
+		}))
+	);
 	const track = $derived.by(() => {
 		const part = BAD_TOUCH_NOTES.parts.find((p) => p.id === voice.part);
 		return buildTrack(part?.notes ?? [], voice.kind);
@@ -189,6 +239,7 @@
 		sections: title.sections,
 		countIn: counting,
 		judged,
+		hints: laneHints,
 		trace: listening !== 'off' ? session.trace : null,
 		current: listening !== 'off' ? current : null,
 		overlay:
@@ -648,17 +699,12 @@
 	});
 
 	async function setupExam(p: LaneExamParams) {
-		const [{ getSupabase }, api] = await Promise.all([
-			import('#lib/supabase/client.ts'),
-			import('#lib/account/api.ts')
-		]);
-		const sb = getSupabase();
-		const session_ = sb ? (await sb.auth.getSession()).data.session : null;
-		if (!sb || !session_) {
+		examApi = await loadAccountApi();
+		if (!examApi) {
 			examError = 'Für die Prüfung musst du angemeldet sein.';
 			return;
 		}
-		examApi = { api, sb };
+		const { api, sb } = examApi;
 		try {
 			const g = (await api.myAccount(sb)).guuggen.find((x) => x.id === p.guugge);
 			if (!g) throw new Error('Diese Guugge findest du hier nicht.');
@@ -793,8 +839,16 @@
 		loadBaustellen();
 		jumpTo(title.sections[1].from);
 		void startAudio();
-		const examParams = parseLaneExam(new URLSearchParams(location.search), title.sections.length);
+		const query = new URLSearchParams(location.search);
+		const examParams = parseLaneExam(query, title.sections.length);
 		if (examParams) void setupExam(examParams);
+		// »Hinhören« aus den Hinweisen: ?takt=13 springt mit einem Takt Anlauf dorthin
+		const takt = Number(query.get('takt'));
+		if (!examParams && Number.isInteger(takt) && takt >= 1 && takt < title.bars) {
+			chooseSection(sectionIndexOf(title.sections, takt));
+			jumpTo(takt);
+		}
+		if (examParams || maybeSignedIn()) void loadHints();
 		// Vollbild nicht auf andere Seiten mitnehmen (nur im Browser, darum hier statt in onDestroy)
 		return () => document.documentElement.classList.remove('fokus');
 	});

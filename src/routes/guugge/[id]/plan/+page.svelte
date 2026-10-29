@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getSupabase } from '#lib/supabase/client.ts';
+	import { REGISTER_LABELS } from '#lib/music/registers.ts';
 	import { auth, watchAuth } from '#lib/account/auth.svelte.ts';
 	import {
 		getPlan,
@@ -16,7 +17,6 @@
 		type MyGuugge,
 		type MyPoints,
 		type RegisterRow,
-		REGISTER_LABELS,
 		type StageRow,
 		type StoredPlan
 	} from '#lib/account/api.ts';

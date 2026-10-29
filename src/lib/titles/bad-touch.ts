@@ -6,7 +6,7 @@
 
 import { sectionsFromStarts } from '#lib/music/timing.ts';
 import type { NotesFile, Title } from '#lib/music/types.ts';
-import { BAD_TOUCH_VOICES } from './bad-touch-voices.ts';
+import { BAD_TOUCH_SLUG, BAD_TOUCH_VOICES } from './bad-touch-voices.ts';
 // Ausgabe von `npm run notes` (tools/extract_notes.py --fill-missing). Nicht von Hand ändern;
 // Quelle ist prototype/v7/badtouch.xml. Kommt ab M1-Abschluss aus Supabase Storage.
 import notes from './bad-touch.notes.json' with { type: 'json' };
@@ -18,7 +18,7 @@ const BARS = 93;
 const STARTS = [0, 1, 9, 13, 17, 21, 25, 29, 37, 45, 53, 55, 59, 63, 67, 71, 75, 88];
 
 export const BAD_TOUCH: Title = {
-	slug: 'bad-touch-2-0',
+	slug: BAD_TOUCH_SLUG,
 	name: 'Bad Touch 2.0',
 	version: 'Schuegu27',
 	bpm: 115,

@@ -81,6 +81,18 @@ export interface LaneScene {
 	trace?: readonly TracePoint[] | null;
 	/** Aktuell gehörte Tonhöhe (diatonisch) an der Spiellinie */
 	current?: number | null;
+	/** Hinweise der Leitung als Band über den Takten (wie im Prototyp) */
+	hints?: readonly LaneHint[] | null;
+}
+
+export interface LaneHint {
+	/** Takte einschliesslich */
+	from: number;
+	to: number;
+	/** Kurztext, z. B. »pp« oder »Atmen« (#lib/hints/hints.ts, hintShort) */
+	label: string;
+	/** Dynamik kursiv */
+	dyn: boolean;
 }
 
 const MONO = '"IBM Plex Mono", ui-monospace, monospace';
@@ -176,6 +188,21 @@ export function drawLane(
 				cx.fillText(sec.name, x + 4 + String(bar).length * 7 + 4, 14);
 			}
 		}
+	}
+
+	// Hinweise der Leitung: helles gelbes Band unter den Taktzahlen, Kurztext darin
+	for (const h of s.hints ?? []) {
+		const x0 = X(h.from * 4);
+		const x1 = X((h.to + 1) * 4);
+		if (x1 < 0 || x0 > W) continue;
+		cx.fillStyle = c.gelb;
+		cx.globalAlpha = 0.22;
+		cx.fillRect(x0, 17, x1 - x0, g.laneTop - 17);
+		cx.globalAlpha = 1;
+		cx.fillRect(x0, 17, x1 - x0, 2.5);
+		cx.fillStyle = c.ink;
+		cx.font = `${h.dyn ? 'italic ' : ''}700 12px ${BODY}`;
+		cx.fillText(h.label, Math.max(x0, 0) + 4, g.laneTop - 3);
 	}
 
 	const showGrip = g.gripHeight > 0;
