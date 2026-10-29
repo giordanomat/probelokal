@@ -13,8 +13,12 @@ test('Startseite zeigt die Landingpage, nicht den früheren Platzhalter', async 
 
 	const res = await page.goto('/');
 	expect(res?.status()).toBe(200);
-	await expect(page).toHaveTitle('giordanomat ARRANGEMENTS');
-	await expect(page.getByRole('img', { name: 'giordanomat PROBELOKAL' })).toHaveCount(0);
+	await expect(page).toHaveTitle('Probelokal');
+	// Die App-Kopfzeile (Lockup) gehört nicht auf die Landingpage.
+	await expect(page.getByRole('img', { name: 'Probelokal' })).toHaveCount(0);
+	// Instagram-Kanal ist @probelokal.ch (seit 29.10.2026), nicht mehr @giordanomat.arrangements.
+	await expect(page.locator('a[href*="instagram.com/giordanomat"]')).toHaveCount(0);
+	await expect(page.locator('a[href="https://www.instagram.com/probelokal.ch/"]')).toHaveCount(3);
 	await page.waitForTimeout(1500);
 	expect(errors).toEqual([]);
 });

@@ -1,4 +1,4 @@
-/* Farben und Schriften von giordanomat PROBELOKAL. Werte aus prototype/v7 übernommen.
+/* Farben und Schriften von Probelokal. Werte aus prototype/v7 übernommen.
    Dunkel ist Standard; hell über data-theme="light" am <html> (siehe src/lib/theme). */
 
 :root {
@@ -14,6 +14,8 @@
 	--blau: #6eacda;
 	--gruen: #3db874;
 	--akzent: #f5c242;
+	/* Unterzeile der Wortmarke: auf dunkel Gelb, auf hell Blau (Entscheid 27.10.2026) */
+	--marke-sub: #f5c242;
 	/* Tonbalken auf der Bahn: kommend, Schrift darauf, vorbei */
 	--blk: #f2efe9;
 	--blk-fg: #141619;
@@ -37,6 +39,7 @@
 	--grid: #ece8e0;
 	--gruen: #2e9e63;
 	--akzent: #8a6008;
+	--marke-sub: #2f6fa3;
 	--blk: #141619;
 	--blk-fg: #f2efe9;
 	--past: #b9b3a8;

@@ -263,7 +263,7 @@
 </script>
 
 <svelte:head>
-	<title>Einblasen · giordanomat PROBELOKAL</title>
+	<title>Einblasen · Probelokal</title>
 </svelte:head>
 
 <svelte:window onkeydown={onKey} />

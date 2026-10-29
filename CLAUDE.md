@@ -1,6 +1,6 @@
-# giordanomat PROBELOKAL – Projektgedächtnis für Claude Code
+# Probelokal – Projektgedächtnis für Claude Code
 
-Übe-Dienst für Guuggenmusigen und Hobby-Brass: Ein gekauftes Arrangement wird pro Stimme geübt (Notenbahn mit Griffspur, Mitspielen zur Band, Mithören per Mikrofon, Etappenprüfungen) und gemeinsam als Guugge geplant (Gesamtplan der Leitung, eigener Plan pro Person, Hinweise der Leitung, freiwillige Rangliste). Teil der Marke giordanomat ARRANGEMENTS (Shop) – Inhaber: Matthias Giordano.
+Übe-Dienst für Guuggenmusigen und Hobby-Brass: Ein gekauftes Arrangement wird pro Stimme geübt (Notenbahn mit Griffspur, Mitspielen zur Band, Mithören per Mikrofon, Etappenprüfungen) und gemeinsam als Guugge geplant (Gesamtplan der Leitung, eigener Plan pro Person, Hinweise der Leitung, freiwillige Rangliste). Marke seit 27.10.2026: »Probelokal« (probelokal.ch) ist das Hauptprodukt, der Arrangement-Laden ist darin enthalten; giordanomat tritt zurück. Betrieben von Matthias Giordano und Hans Jancar. Instagram: @probelokal.ch.
 
 Zuerst lesen, in dieser Reihenfolge:
 1. `docs/01-produkt.md` – was gebaut wird und welche Entscheidungen feststehen
@@ -22,10 +22,11 @@ Zuerst lesen, in dieser Reihenfolge:
 - **Keine Audiodateien ins Repository.** MP3/WAV liegen im Storage (siehe `docs/06-produktionsstrecke.md`). `.gitignore` deckt das ab.
 - **Tests vor Funktionen:** Reine Logik (Notenparser, Bewertung, Planerzeugung, Quiz, Punkte) mit Vitest; Abläufe mit Playwright inkl. synthetischer Audio-Tests wie im Prototyp.
 
-## Gestaltung (giordanomat ARRANGEMENTS / PROBELOKAL)
+## Gestaltung (Probelokal)
 
+- Wortmarke »Probelokal« (Figtree Bold) mit dem Zeichen, Unterzeile »Arrangements × Übungssuite« in IBM Plex Mono Versalien, auf dunkel Gelb, auf hell Blau. Keine Namenszeile. Quelle der Marke: Penpot, Datei »Arrangements - Marke«, Seite »Marke Probelokal«.
 - Zeichen: drei versetzte runde Balken Gelb `#F5C242`, Rot `#E0473C`, Blau `#6EACDA` auf schwarzer Scheibe `#141619`.
-- Schriften: Figtree (Text, »giordanomat« klein und fett), IBM Plex Mono (Bereichsname in Versalien, Spationierung 0.42em, Labels).
+- Schriften: Figtree (Text, Wortmarke fett), IBM Plex Mono (Unterzeile und Labels in Versalien).
 - Farben: Tinte `#141619`, Papier `#F2EFE9`, Akzent Text auf hell `#8A6008`, Grün für »getroffen« `#2E9E63` (dunkel `#3DB874`).
 - **Darstellung dunkel ist Standard**, pro Gerät auf hell umschaltbar.
 - Bahn: Töne als abgerundete Balken (wie die Balken im Zeichen), aktueller Ton blau, Bewertung grün/gelb/rot, verpasst = nur Umriss.

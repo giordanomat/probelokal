@@ -1,10 +1,10 @@
-<!-- Zeichen + »giordanomat PROBELOKAL«, wie im Prototyp mit echter Schrift statt Pfaden,
+<!-- Zeichen + Wortmarke »Probelokal« (Marke seit 27.10.2026), mit echter Schrift statt Pfaden,
      damit die Farben der Darstellung folgen. Vektorfassungen der Lockups liegen bei Matthias (Drive). -->
 <script lang="ts">
-	let { area = 'PROBELOKAL' }: { area?: string } = $props();
+	let { sub = 'Arrangements × Übungssuite' }: { sub?: string } = $props();
 </script>
 
-<div class="lockup" role="img" aria-label="giordanomat {area}">
+<div class="lockup" role="img" aria-label="Probelokal">
 	<svg viewBox="0 0 200 200" aria-hidden="true">
 		<circle cx="100" cy="100" r="100" fill="#141619" />
 		<circle cx="100" cy="100" r="97" fill="none" stroke="var(--disc-ring)" stroke-width="3" />
@@ -12,7 +12,7 @@
 		<rect x="68" y="88" width="94" height="26" rx="13" fill="#E0473C" />
 		<rect x="38" y="122" width="114" height="26" rx="13" fill="#6EACDA" />
 	</svg>
-	<p aria-hidden="true"><b>giordanomat</b><span>{area}</span></p>
+	<p aria-hidden="true"><b>Probelokal</b><span>{sub}</span></p>
 </div>
 
 <style>
@@ -41,8 +41,9 @@
 		font-family: var(--font-mono);
 		font-weight: 500;
 		font-size: 9.5px;
-		letter-spacing: 0.42em;
-		color: var(--akzent);
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--marke-sub);
 		margin-top: 4px;
 	}
 </style>

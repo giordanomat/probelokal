@@ -1,5 +1,5 @@
 import type { Handle } from '@sveltejs/kit/hooks';
-// Startseite unter jeder Adresse ist die Landingpage von giordanomat ARRANGEMENTS.
+// Startseite unter jeder Adresse ist die Landingpage von Probelokal (Datei heisst historisch arrangements.html).
 // Hauptadresse ist probelokal.ch (Entscheid Matthias, 27.10.2026); die frühere Platzhalter-Startseite
 // »Hier entsteht dein Probelokal« ist gelöscht. Alte Adressen leiten per Redirect Rule bei
 // Cloudflare um, nicht hier.

@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>Testzugang · giordanomat PROBELOKAL</title>
+	<title>Testzugang · Probelokal</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

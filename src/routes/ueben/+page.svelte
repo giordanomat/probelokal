@@ -650,7 +650,7 @@
 </script>
 
 <svelte:head>
-	<title>{title.name} üben · giordanomat PROBELOKAL</title>
+	<title>{title.name} üben · Probelokal</title>
 </svelte:head>
 
 <svelte:window onkeydown={onKey} bind:innerHeight />

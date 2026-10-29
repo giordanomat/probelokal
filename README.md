@@ -1,4 +1,4 @@
-# giordanomat PROBELOKAL
+# Probelokal
 
 Übe-Dienst für Guuggenmusigen und Hobby-Brass. Privat.
 
