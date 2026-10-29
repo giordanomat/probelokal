@@ -736,3 +736,24 @@ describe('Hinweise der Leitung', () => {
 		).toEqual([{ id: ids.alle }, { id: ids.trp }, { id: ids.trp1 }]);
 	});
 });
+
+describe('Hinweise ohne Neuladen (Realtime)', () => {
+	it('Hinweise stehen in der Realtime-Publikation, Mitglieder dürfen sie lesen, andere nicht', async () => {
+		const f = await fixture();
+		expect(
+			await f.db.owner(
+				`select tablename from pg_publication_tables where pubname = 'supabase_realtime'`
+			)
+		).toEqual([{ tablename: 'hints' }]);
+		// Realtime liefert neue Zeilen nur, wenn die Person sie nach RLS lesen darf
+		const [{ add_hint: h }] = await f.db.as<{ add_hint: string }>(
+			f.leitung,
+			`select add_hint($1, 'test-titel', 1, 2, 'alle', 'atem', null, null)`,
+			[f.guugge]
+		);
+		const sees = (who: { id: string }) =>
+			f.db.as(who, `select id from hints where id = $1`, [h]).then((r) => r.length);
+		expect(await sees(f.trp[1])).toBe(1);
+		expect(await sees(f.fremd)).toBe(0);
+	});
+});

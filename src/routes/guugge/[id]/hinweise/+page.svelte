@@ -2,6 +2,7 @@
 	// Hinweise der Leitung für Bad Touch, portiert aus prototype/v7 (renderHints, saveHint).
 	// Die Leitung trägt sie ein und löscht sie; alle sehen sie hier und in »Stück üben« auf der
 	// Bahn und in den Noten. »neu«, bis die Person sie gelesen hat (»Hinhören« oder »Alle gelesen«).
+	// Neue und gelöschte Hinweise erscheinen ohne Neuladen (#lib/hints/live.ts).
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -28,6 +29,7 @@
 		type Hint,
 		type HintKind
 	} from '#lib/hints/hints.ts';
+	import { watchHints } from '#lib/hints/live.ts';
 	import { REGISTER_LABELS } from '#lib/music/registers.ts';
 	import { BAD_TOUCH } from '#lib/titles/bad-touch.ts';
 
@@ -60,6 +62,15 @@
 
 	$effect(() => {
 		if (sb && auth.user && id) void load();
+	});
+
+	const joined = $derived(!!me);
+	$effect(() => {
+		if (!sb || !joined || !id) return;
+		return watchHints(sb, [id], {
+			onChange: () => void load(),
+			has: (h) => hints.some((x) => x.id === h)
+		});
 	});
 
 	async function load() {

@@ -98,3 +98,59 @@ test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn 
 	await expect(page.getByRole('status')).toHaveText('Hinweis gelöscht.');
 	await expect(list.getByRole('listitem')).toHaveCount(1);
 });
+
+test('ohne Neuladen: neuer und gelöschter Hinweis erscheinen bei der Trompete sofort', async ({
+	page,
+	browser,
+	baseURL
+}) => {
+	test.setTimeout(60_000);
+	const fake = await FakeSupabase.create();
+	await fake.attach(page.context());
+	const lea = { id: await fake.idOf('lea@test.ch') };
+	const [{ create_guugge: g }] = await fake.db.as<{ create_guugge: string }>(
+		lea,
+		`select create_guugge('Schuegu')`
+	);
+	const [{ create_invite: token }] = await fake.db.as<{ create_invite: string }>(
+		lea,
+		`select create_invite($1)`,
+		[g]
+	);
+	const toni = { id: await fake.idOf('toni@test.ch') };
+	await fake.db.as(toni, `select accept_invite($1)`, [token]);
+	await fake.db.as(toni, `select set_my_voice($1, 'trp1')`, [g]);
+
+	// Trompete hat Hinweis-Seite und »Stück üben« offen
+	const other = await browser.newContext({ baseURL });
+	await fake.attach(other);
+	const list = await other.newPage();
+	await fake.signIn(list, 'toni@test.ch');
+	await list.goto(`/guugge/${g}/hinweise`);
+	await expect(list.getByText('Noch keine Hinweise für Trompete 1.')).toBeVisible();
+	const lane = await other.newPage();
+	await lane.goto('/ueben');
+	await expect(lane.locator('.lane canvas')).toHaveAttribute('data-hints', '0');
+
+	// Leitung trägt ein
+	await fake.signIn(page, 'lea@test.ch');
+	await page.goto(`/guugge/${g}/hinweise`);
+	await page.getByLabel('Ab Takt').fill('13');
+	await page.getByLabel('Bis Takt').fill('16');
+	await page.getByLabel('Art').selectOption('Atmen');
+	await page.getByRole('button', { name: 'Hinweis speichern' }).click();
+	await expect(page.getByRole('status')).toContainText('Gespeichert.');
+
+	await expect(list.locator('ul.list li')).toHaveCount(1);
+	await expect(list.locator('ul.list')).toContainText('T. 13–16');
+	await expect(list.locator('ul.list')).toContainText('neu');
+	await expect(lane.locator('.lane canvas')).toHaveAttribute('data-hints', '1');
+
+	// Leitung löscht
+	page.once('dialog', (d) => d.accept());
+	await page.getByRole('button', { name: 'Hinweis T. 13–16 löschen' }).click();
+	await expect(page.getByRole('status')).toHaveText('Hinweis gelöscht.');
+	await expect(list.getByText('Noch keine Hinweise für Trompete 1.')).toBeVisible();
+	await expect(lane.locator('.lane canvas')).toHaveAttribute('data-hints', '0');
+	await other.close();
+});

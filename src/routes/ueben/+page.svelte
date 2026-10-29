@@ -80,6 +80,7 @@
 	} from '#lib/exams/exams.ts';
 	import { STAGES } from '#lib/plan/stand.ts';
 	import { bandHints, hintsFor, type Hint } from '#lib/hints/hints.ts';
+	import { watchHints } from '#lib/hints/live.ts';
 	import type { ExamResult } from '#lib/account/api.ts';
 	import { accountLoader, maybeSignedIn, type AccountApi } from '#lib/account/lazy.ts';
 	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
@@ -211,14 +212,26 @@
 		void refreshBestPoints(a, localStorage).then((p) => (bestPoints = p));
 		try {
 			const acc = await a.api.myAccount(a.sb);
-			const lists = await Promise.all(
-				acc.guuggen.map((g) => a.api.listHints(a.sb, g.id, title.slug))
-			);
-			hints = lists.flat();
-			memberOfAny = acc.guuggen.length > 0;
+			const ids = acc.guuggen.map((g) => g.id);
+			await fetchHints(a, ids);
+			memberOfAny = ids.length > 0;
+			// Neue oder gelöschte Hinweise ohne Neuladen (Realtime)
+			if (!destroyed)
+				stopLiveHints ??= watchHints(a.sb, ids, {
+					onChange: () => void fetchHints(a, ids).catch(() => {}),
+					has: (id) => hints.some((h) => h.id === id)
+				});
 		} catch {
 			// Hinweise sind eine Zugabe; ohne Netz oder Konto läuft die Bahn ohne sie
 		}
+	}
+
+	let stopLiveHints: (() => void) | null = null;
+	/** Seite verlassen, bevor die Hinweise geladen waren: dann nicht mehr zuhören */
+	let destroyed = false;
+	async function fetchHints(a: AccountApi, guuggen: readonly string[]) {
+		const lists = await Promise.all(guuggen.map((g) => a.api.listHints(a.sb, g, title.slug)));
+		hints = lists.flat();
 	}
 
 	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
@@ -879,6 +892,8 @@
 	});
 
 	onDestroy(() => {
+		destroyed = true;
+		stopLiveHints?.();
 		stopListening(true);
 		stems?.destroy();
 		blobUrls.forEach((u) => URL.revokeObjectURL(u));

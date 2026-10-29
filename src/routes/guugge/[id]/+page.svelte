@@ -25,6 +25,7 @@
 	import { inviteUrl } from '#lib/account/invite.ts';
 	import { BAD_TOUCH_SLUG, BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
 	import { hintsFor } from '#lib/hints/hints.ts';
+	import { watchHints } from '#lib/hints/live.ts';
 
 	const sb = getSupabase();
 	const ROLES: Role[] = ['mitglied', 'registerchef', 'leitung'];
@@ -34,6 +35,7 @@
 	let members = $state<Member[]>([]);
 	/** Neue Hinweise der Leitung für die eigene Stimme */
 	let newHints = $state(0);
+	let hintIds = new Set<string>();
 	let inviteRole = $state<Role>('mitglied');
 	let link = $state('');
 	let copied = $state(false);
@@ -51,6 +53,13 @@
 		if (sb && auth.user && id) void load();
 	});
 
+	// Neue oder gelöschte Hinweise ohne Neuladen (Realtime)
+	const joined = $derived(!!me);
+	$effect(() => {
+		if (!sb || !joined || !id) return;
+		return watchHints(sb, [id], { onChange: () => void load(), has: (h) => hintIds.has(h) });
+	});
+
 	async function load() {
 		if (!sb) return;
 		try {
@@ -61,6 +70,7 @@
 			if (me) {
 				const v = BAD_TOUCH_VOICES.find((x) => x.id === me?.voice) ?? null;
 				const hs = await listHints(sb, id, BAD_TOUCH_SLUG);
+				hintIds = new Set(hs.map((h) => h.id));
 				newHints = hintsFor(hs, v).filter((h) => !h.is_read).length;
 			}
 		} catch (e) {

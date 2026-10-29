@@ -164,7 +164,8 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Migration `20261029160000_m2_hinweise.sql`: `add_hint` (nur Leitung, prüft Takte, Ziel, Stärke, Text), `delete_hint`, `list_hints`, `mark_hints_read`.
    - Getestet mit Vitest (Rechte, Prüfungen, gelesen) und Playwright (eintragen, neu, Hinhören, Band je nach Stimme, löschen).
    - Hinweise in der Notenansicht kamen am 29.10.2026 dazu (Punkt 13).
-   - **Noch nicht:** Aktualisierung ohne Neuladen (Realtime, docs/02), Hinweise von Registerchefs (docs/03).
+   - Aktualisierung ohne Neuladen kam am 29.10.2026 dazu (Punkt 14).
+   - **Noch nicht:** Hinweise von Registerchefs (docs/03).
 10. ~~Punkte für bewertete Durchgänge~~ erledigt am 29.10.2026:
     - »Stück üben« meldet jeden Durchgang in der Schleife oder im Echo mit Bewertung beim Server an (`start_pass`) und ab (`finish_pass`). Ab 50 % ein Punkt pro 10 %, höchstens 10, im Originaltempo × 1,5. Höchstens 15 Durchgänge mit Punkten pro Tag und Guugge, wie im Prototyp.
     - Die Punkte gehen an jede Guugge, in der die Person Mitglied ist (»Stück üben« gehört zu keiner Guugge).
@@ -192,7 +193,12 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Getestet mit Vitest (Stücke pro Zeile, `src/lib/score/boxes.ts`) und Playwright (Band mit »pp« in den Noten der Trompete). Auf Bildschirmfotos angeschaut: Desktop und Handy, dunkel und hell.
     - Hinweise ab demselben Takt teilen sich einen Text (»pp · Atmen«), auf der Bahn wie in den Noten (`bandHints` in `src/lib/hints/hints.ts`). Vorher standen die Texte übereinander.
     - **Ungeprüft:** wie es mit vielen sich überlappenden Hinweisen aussieht (die Bänder liegen dann übereinander, die Texte stehen an ihrem jeweils ersten Takt).
-14. Offen in M2: Hinweise ohne Neuladen (Realtime). Danach Abnahme M2 (Testprotokoll).
+14. ~~Hinweise ohne Neuladen~~ erledigt am 29.10.2026:
+    - Supabase Realtime (Postgres Changes) meldet neue und gelöschte Hinweise; Hinweis-Seite, Guugge-Seite (»n neu«) und »Stück üben« (Bahn und Noten) holen dann neu. Auch beim Zurückkehren in die App wird neu geholt. Einzelheiten und Datenschutz in docs/02.
+    - Migration `20261029220000_m2_hinweise_live.sql`: `hints` in der Publikation `supabase_realtime`.
+    - Getestet mit Vitest (Abo, Filter, Sammeln, fremde Löschungen, Aufhören) und Playwright gegen einen Nachbau des Realtime-Protokolls: Trompete sieht neuen und gelöschten Hinweis ohne Neuladen. Gegenprobe: Ohne Meldungen des Nachbaus schlägt der Test fehl.
+    - **Ungeprüft:** gegen das echte Realtime, und wie zuverlässig die Verbindung auf dem iPhone im Hintergrund bleibt (dafür das Neuholen beim Zurückkehren).
+15. Offen in M2: Abnahme (Testprotokoll), nach dem Anwenden der Migrationen.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.
