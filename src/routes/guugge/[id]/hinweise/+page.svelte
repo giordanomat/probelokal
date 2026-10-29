@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Hinweise der Leitung für Bad Touch, portiert aus prototype/v7 (renderHints, saveHint).
-	// Die Leitung trägt sie ein und löscht sie; alle sehen sie hier und auf der Bahn in »Stück
-	// üben«. »neu«, bis die Person sie gelesen hat (»Hinhören« oder »Alle gelesen«).
+	// Die Leitung trägt sie ein und löscht sie; alle sehen sie hier und in »Stück üben« auf der
+	// Bahn und in den Noten. »neu«, bis die Person sie gelesen hat (»Hinhören« oder »Alle gelesen«).
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -138,7 +138,8 @@
 			<p class="label">Hinweise der Leitung</p>
 			<h1>{title.name}</h1>
 			<p class="hint">
-				Sie erscheinen auch auf der Bahn unter »Stück üben«, bei allen, für die sie gelten.
+				Sie erscheinen auch in »Stück üben« auf der Bahn und in den Noten, bei allen, für die sie
+				gelten.
 			</p>
 			{#if voice}
 				<div class="seg" role="group" aria-label="Welche Hinweise">

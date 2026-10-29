@@ -79,7 +79,7 @@
 		type LaneExamParams
 	} from '#lib/exams/exams.ts';
 	import { STAGES } from '#lib/plan/stand.ts';
-	import { hintShort, hintsFor, type Hint } from '#lib/hints/hints.ts';
+	import { bandHints, hintsFor, type Hint } from '#lib/hints/hints.ts';
 	import type { ExamResult } from '#lib/account/api.ts';
 	import { accountLoader, maybeSignedIn, type AccountApi } from '#lib/account/lazy.ts';
 	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
@@ -226,14 +226,7 @@
 	const session = new PracticeSession([], secondsPerBeat(title), rangeOf(1));
 
 	const voice = $derived(title.voices.find((v) => v.id === prefs.voice) ?? title.voices[0]);
-	const laneHints = $derived(
-		hintsFor(hints, voice).map((h) => ({
-			from: h.bar_from,
-			to: h.bar_to,
-			label: hintShort(h),
-			dyn: h.kind === 'dyn'
-		}))
-	);
+	const laneHints = $derived(bandHints(hintsFor(hints, voice)));
 	const track = $derived.by(() => {
 		const part = BAD_TOUCH_NOTES.parts.find((p) => p.id === voice.part);
 		return buildTrack(part?.notes ?? [], voice.kind);
@@ -1144,6 +1137,7 @@
 				partId={voice.part}
 				bar={Math.min(title.bars - 1, Math.floor(bar))}
 				{fingering}
+				hints={laneHints}
 				onpick={(b) => {
 					if (mode === 'echo') session.echoFrom(b);
 					jumpTo(b);

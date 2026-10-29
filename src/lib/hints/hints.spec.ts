@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH_VOICES } from '../titles/bad-touch-voices';
-import { barsLabel, bodyRequired, hintLong, hintShort, hintsFor, targetLabel } from './hints';
+import {
+	bandHints,
+	barsLabel,
+	bodyRequired,
+	hintLong,
+	hintShort,
+	hintsFor,
+	targetLabel
+} from './hints';
 
 describe('Hinweise der Leitung', () => {
 	it('kurz für die Bahn, lang für die Liste', () => {
@@ -29,6 +37,33 @@ describe('Hinweise der Leitung', () => {
 			false,
 			true
 		]);
+	});
+
+	it('Bänder: Hinweise ab demselben Takt teilen sich einen Text', () => {
+		const h = (
+			bar_from: number,
+			bar_to: number,
+			kind: 'dyn' | 'atem',
+			dyn: string | null = null
+		) => ({
+			bar_from,
+			bar_to,
+			kind,
+			dyn,
+			body: null
+		});
+		expect(bandHints([h(13, 16, 'atem'), h(9, 12, 'dyn', 'pp'), h(9, 9, 'dyn', 'f')])).toEqual([
+			{ from: 9, to: 12, label: 'pp · f', dyn: true },
+			{ from: 9, to: 9, label: '', dyn: true },
+			{ from: 13, to: 16, label: 'Atmen', dyn: false }
+		]);
+		// gemischt: nicht kursiv
+		expect(bandHints([h(9, 12, 'dyn', 'pp'), h(9, 10, 'atem')])[0]).toEqual({
+			from: 9,
+			to: 12,
+			label: 'pp · Atmen',
+			dyn: false
+		});
 	});
 
 	it('für eine Stimme: an alle, ihr Register oder sie selbst', () => {

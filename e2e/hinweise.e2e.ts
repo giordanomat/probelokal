@@ -1,10 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
 
 // Hinweise der Leitung gegen den Supabase-Nachbau: eintragen, für wen sie gelten, »neu« bis
-// gelesen, »Hinhören« springt in »Stück üben« an die Stelle, die Bahn zeigt sie.
+// gelesen, »Hinhören« springt in »Stück üben« an die Stelle, Bahn und Noten zeigen sie.
+// Die MusicXML liefert wie in noten.e2e.ts eine abgefangene Route aus dem Prototyp.
+const XML = readFileSync(new URL('../prototype/v7/badtouch.xml', import.meta.url));
 
-test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn zeigt ihn', async ({
+test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn und Noten zeigen ihn', async ({
 	page,
 	browser,
 	baseURL
@@ -51,6 +54,9 @@ test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn 
 	const other = await browser.newContext({ baseURL });
 	await fake.attach(other);
 	const p2 = await other.newPage();
+	await p2.route('**/audio/**/score.musicxml', (route) =>
+		route.fulfill({ status: 200, contentType: 'application/xml', body: XML })
+	);
 	await fake.signIn(p2, 'toni@test.ch');
 	await p2.goto(`/guugge/${g}`);
 	await expect(p2.getByRole('heading', { name: /Hinweise der Leitung\s*1 neu/ })).toBeVisible();
@@ -69,6 +75,12 @@ test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn 
 	await expect(p2.locator('.transport .pos')).toContainText('Takt 8');
 	await expect(p2.locator('.transport .pos')).toContainText('Teil B');
 	await expect(p2.locator('.lane canvas')).toHaveAttribute('data-hints', '1');
+	// Notenansicht: dasselbe Band über den Takten, Text nur einmal
+	await p2.getByRole('button', { name: 'Noten', exact: true }).click();
+	const score = p2.getByTestId('noten');
+	await expect(score.locator('svg').first()).toBeVisible({ timeout: 20_000 });
+	await expect(score.getByTestId('noten-band')).toHaveText('pp');
+	await p2.getByRole('button', { name: 'Bahn', exact: true }).click();
 	// Andere Stimme gewählt: der Trompeten-Hinweis gilt nicht mehr
 	await p2.getByRole('button', { name: 'Pos 1' }).click();
 	await expect(p2.locator('.lane canvas')).toHaveAttribute('data-hints', '1');

@@ -191,7 +191,8 @@
 				Hinweise der Leitung{#if newHints}<span class="new">{newHints} neu</span>{/if}
 			</h2>
 			<p class="hint">
-				Dynamik, Atemstellen und Hinweise zu bestimmten Takten. Sie erscheinen auch auf der Bahn.
+				Dynamik, Atemstellen und Hinweise zu bestimmten Takten. Sie erscheinen auch auf der Bahn und
+				in den Noten.
 			</p>
 			<p><a class="go" href={resolve('/guugge/[id]/hinweise', { id })}>Hinweise ansehen →</a></p>
 		</section>

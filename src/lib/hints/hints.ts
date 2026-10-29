@@ -1,6 +1,7 @@
 // Hinweise der Leitung: Texte und Filter, portiert aus prototype/v7 (DYN_TXT, hintShort, hintLong,
-// targetName, myHints). Gespeichert werden sie in der Datenbank (add_hint, list_hints, my_hints).
+// targetName, myHints). Gespeichert werden sie in der Datenbank (add_hint, list_hints).
 
+import type { LaneHint } from '../lane/draw';
 import { REGISTER_LABELS } from '../music/registers';
 import type { Register } from '../music/types';
 
@@ -81,6 +82,29 @@ export function hintsFor<T extends Pick<Hint, 'target'>>(
 	return hints.filter(
 		(h) => h.target === 'alle' || h.target === voice.register || h.target === voice.id
 	);
+}
+
+/**
+ * Bänder für Bahn und Noten. Hinweise ab demselben Takt teilen sich einen Text (»pp · Atmen«),
+ * sonst stünden die Texte übereinander; die weiteren Bänder bleiben ohne Text.
+ */
+export function bandHints(
+	hints: readonly Pick<Hint, 'bar_from' | 'bar_to' | 'kind' | 'dyn' | 'body'>[]
+): LaneHint[] {
+	const lead = new Map<number, LaneHint>();
+	return [...hints]
+		.sort((a, b) => a.bar_from - b.bar_from)
+		.map((h) => {
+			const band = { from: h.bar_from, to: h.bar_to, label: hintShort(h), dyn: h.kind === 'dyn' };
+			const first = lead.get(h.bar_from);
+			if (!first) {
+				lead.set(h.bar_from, band);
+				return band;
+			}
+			first.label += ` · ${band.label}`;
+			first.dyn &&= band.dyn;
+			return { ...band, label: '' };
+		});
 }
 
 /** »T. 9–12« bzw. »T. 13« */

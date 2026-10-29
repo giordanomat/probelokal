@@ -163,7 +163,8 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Auf der Bahn erscheint ein gelbes Band mit Kurztext (»pp«, »Atmen«, »! Text«), gefiltert nach der gewählten Stimme. »Stück üben« lädt den Konto-Code dafür nur, wenn jemand angemeldet ist.
    - Migration `20261029160000_m2_hinweise.sql`: `add_hint` (nur Leitung, prüft Takte, Ziel, Stärke, Text), `delete_hint`, `list_hints`, `mark_hints_read`.
    - Getestet mit Vitest (Rechte, Prüfungen, gelesen) und Playwright (eintragen, neu, Hinhören, Band je nach Stimme, löschen).
-   - **Noch nicht:** Hinweise in der Notenansicht, Aktualisierung ohne Neuladen (Realtime, docs/02), Hinweise von Registerchefs (docs/03).
+   - Hinweise in der Notenansicht kamen am 29.10.2026 dazu (Punkt 13).
+   - **Noch nicht:** Aktualisierung ohne Neuladen (Realtime, docs/02), Hinweise von Registerchefs (docs/03).
 10. ~~Punkte für bewertete Durchgänge~~ erledigt am 29.10.2026:
     - »Stück üben« meldet jeden Durchgang in der Schleife oder im Echo mit Bewertung beim Server an (`start_pass`) und ab (`finish_pass`). Ab 50 % ein Punkt pro 10 %, höchstens 10, im Originaltempo × 1,5. Höchstens 15 Durchgänge mit Punkten pro Tag und Guugge, wie im Prototyp.
     - Die Punkte gehen an jede Guugge, in der die Person Mitglied ist (»Stück üben« gehört zu keiner Guugge).
@@ -185,7 +186,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Die Liste, wofür es Punkte gibt, steht jetzt an einem Ort (`POINTS_RULE` in `src/lib/game/points.ts`) und nennt das Einblasen.
     - Getestet mit Vitest (Länge und Namen der Übungen wie in der App, Regel SQL = TypeScript, Dauer, Tageslimit, Groove-Sperre) und Playwright (Übung mit Mithören wird an- und abgemeldet, 0 % gibt keine Punkte).
     - **Ungeprüft:** eine Übung mit echtem Instrument über 50 %; das künstliche Mikrofon hört nur ein A. Gehört in den Gerätetest.
-13. Offen in M2: Hinweise in der Notenansicht und ohne Neuladen. Danach Abnahme M2 (Testprotokoll).
+13. ~~Hinweise in der Notenansicht~~ erledigt am 29.10.2026:
+    - Wie auf der Bahn liegt über den Takten ein gelbes Band mit Kurztext (»pp«, »Atmen«, »! Text«), gefiltert nach der gewählten Stimme. Über einen Zeilenumbruch gibt es pro Zeile ein Stück, der Text steht nur am Anfang. Das Band sitzt in der Lücke über den Taktnummern und verdeckt keine Noten.
+    - Im Prototyp stand das nur im Text (»erscheinen in Bahn und Noten«), gezeichnet war es dort nicht.
+    - Getestet mit Vitest (Stücke pro Zeile, `src/lib/score/boxes.ts`) und Playwright (Band mit »pp« in den Noten der Trompete). Auf Bildschirmfotos angeschaut: Desktop und Handy, dunkel und hell.
+    - Hinweise ab demselben Takt teilen sich einen Text (»pp · Atmen«), auf der Bahn wie in den Noten (`bandHints` in `src/lib/hints/hints.ts`). Vorher standen die Texte übereinander.
+    - **Ungeprüft:** wie es mit vielen sich überlappenden Hinweisen aussieht (die Bänder liegen dann übereinander, die Texte stehen an ihrem jeweils ersten Takt).
+14. Offen in M2: Hinweise ohne Neuladen (Realtime). Danach Abnahme M2 (Testprotokoll).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.
