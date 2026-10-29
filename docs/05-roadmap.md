@@ -138,7 +138,15 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
    - Seite `/guugge/[id]/pruefung?teil=…&etappe=…` mit Quiz (Etappe 1) und Griffprüfung (Etappe 2), Ergebnis mit Punkten. Im Plan stehen die Punkte, der Rang und bei »Als Nächstes« ein Link »Prüfung«.
    - Getestet mit Playwright: Quiz und Griffe bestanden, ein falscher Griff wird erkannt, Rang steigt auf Lehrling.
    - **Ungeprüft:** ob 4 s und 3 s Mindestdauer im Alltag passen.
-7. Offen: Etappen 3–5 auf der Bahn (`/ueben` mit Mithören oder Rhythmus tippen), bewertete Durchgänge mit Punkten, Hinweise der Leitung, Rangliste, Übersicht der Leitung.
+7. ~~Etappen 3–5 auf der Bahn~~ erledigt am 29.10.2026:
+   - Die Prüfungsseite schickt nach `/ueben?pruefung=<guugge>&teil=…&etappe=…&art=mic|rhythm`.
+   - Dort ist alles fest eingestellt: Teil, Tempo (Etappe 3: 80 %, sonst 100 %), Hilfen (Etappe 5: »Auswendig«) und Modus. Stimme, Modus und Mithören sind ausgeblendet; Teil, Schleife, Tempo und Hilfen sind gesperrt.
+   - »Abspielen« startet das Mikrofon und meldet den Versuch an (`start_exam`). Gibt es kein Mikrofon, geht es mit Rhythmus tippen weiter, wie im Prototyp.
+   - Am Ende des Teils zählen alle Töne der Stimme (`sectionScore`; nicht gehört = 0). Das Ergebnis geht an `finish_exam`, danach gelten wieder die Einstellungen von vorher.
+   - Ergebnis mit Punkten in »Stück üben«, mit Links »Weiter zu Etappe …«, »Nochmals« und »Zurück zum Plan«.
+   - Getestet mit Playwright: Rhythmus tippen ohne Tipp ergibt 0 %, und der Server speichert das Ergebnis. Mit dem künstlichen Mikrofon geht das Ergebnis als »mic« an den Server.
+   - **Ungeprüft:** ein bestandener Durchgang auf der Bahn im Browser-Test (Tippen müsste auf 70 ms genau sein, zu wackelig für CI) und mit echten Bläsern. Das gehört in den Gerätetest.
+8. Offen: bewertete Durchgänge mit Punkten, Hinweise der Leitung, Rangliste, Übersicht der Leitung.
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

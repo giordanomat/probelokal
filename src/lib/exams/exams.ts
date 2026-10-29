@@ -131,3 +131,46 @@ export const ENCOURAGE = [
 	'Kein Problem – genau dafür übt man.',
 	'Etwas langsamer üben, dann klappt es.'
 ];
+
+/** Ermutigung nach einer nicht bestandenen Prüfung; »Fast!« nur, wenn es wirklich knapp war. */
+export function encouragement(score: number, rng: Rng): string {
+	if (score >= 0.6) return ENCOURAGE[0];
+	return ENCOURAGE[1 + Math.floor(rng() * (ENCOURAGE.length - 1))];
+}
+
+/** Ergebnis auf der Bahn über alle Töne der Stimme im Teil (nicht bewertet = nicht gehört). */
+export function sectionScore(
+	notes: readonly Note[],
+	section: Section,
+	judged: ReadonlyMap<number, NoteVerdict>
+): number {
+	return laneScore(noteIndicesInBars(notes, section.from, section.to).map((i) => judged.get(i)));
+}
+
+/** Etappenprüfung auf der Bahn, wie /ueben sie aus der Adresse liest. */
+export interface LaneExamParams {
+	guugge: string;
+	section: number;
+	stage: 3 | 4 | 5;
+	via: 'mic' | 'rhythm';
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** `?pruefung=<guugge>&teil=<i>&etappe=3|4|5&art=mic|rhythm`; null, wenn etwas nicht passt. */
+export function parseLaneExam(q: URLSearchParams, sectionCount: number): LaneExamParams | null {
+	const guugge = q.get('pruefung') ?? '';
+	const section = Number(q.get('teil'));
+	const stage = Number(q.get('etappe'));
+	const via = q.get('art');
+	if (!UUID.test(guugge)) return null;
+	if (!Number.isInteger(section) || section < 1 || section >= sectionCount) return null;
+	if (stage !== 3 && stage !== 4 && stage !== 5) return null;
+	if (via !== 'mic' && via !== 'rhythm') return null;
+	return { guugge, section, stage, via };
+}
+
+/** Adresse für eine Prüfung auf der Bahn (Gegenstück zu parseLaneExam). */
+export function laneExamQuery(p: LaneExamParams): string {
+	return `?pruefung=${p.guugge}&teil=${p.section}&etappe=${p.stage}&art=${p.via}`;
+}

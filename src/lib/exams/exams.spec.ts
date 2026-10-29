@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH, BAD_TOUCH_NOTES } from '../titles/bad-touch';
 import { buildTrack } from '../music/track';
 import type { Section } from '../music/types';
+import type { NoteVerdict } from '../pitch/classify';
 import {
+	encouragement,
 	gripCorrect,
 	gripItems,
+	laneExamQuery,
 	laneScore,
+	parseLaneExam,
 	passMark,
 	quizFor,
 	sectionNotes,
+	sectionScore,
 	shuffle
 } from './exams';
 import {
@@ -95,6 +100,11 @@ describe('Etappen 3–5 und Bestehen', () => {
 		expect(laneScore([])).toBe(1);
 	});
 
+	it('»Fast!« nur, wenn es knapp war', () => {
+		expect(encouragement(0.7, seeded())).toMatch(/^Fast!/);
+		for (let i = 0; i < 20; i++) expect(encouragement(0, seeded(i + 1))).not.toMatch(/^Fast!/);
+	});
+
 	it('Etappe 1 ab 75 %, sonst ab 80 %', () => {
 		expect(passMark(1)).toBe(0.75);
 		expect([2, 3, 4, 5].map(passMark)).toEqual([0.8, 0.8, 0.8, 0.8]);
@@ -157,5 +167,34 @@ describe('Punkte', () => {
 		expect(reachesWeekGoal([...days, '2026-10-30'], '2026-10-31')).toBe(false);
 		// Vorwoche zählt nicht
 		expect(reachesWeekGoal(['2026-10-24', '2026-10-28'], '2026-10-30')).toBe(false);
+	});
+});
+
+describe('Prüfung auf der Bahn', () => {
+	const G = '0b7c1d2e-3f40-4a5b-8c6d-7e8f9a0b1c2d';
+
+	it('Ergebnis über alle Töne des Teils; nicht bewertete zählen 0', () => {
+		const idx = sectionNotes(trp, A).map((n) => trp.indexOf(n));
+		const judged = new Map<number, NoteVerdict>(idx.map((i) => [i, 'hit']));
+		expect(sectionScore(trp, A, judged)).toBe(1);
+		judged.delete(idx[0]);
+		judged.set(idx[1], 'near');
+		expect(sectionScore(trp, A, judged)).toBeCloseTo((idx.length - 1.5) / idx.length);
+		expect(sectionScore(trp, A, new Map())).toBe(0);
+	});
+
+	it('Angaben aus der Adresse, hin und zurück; Unsinn ergibt null', () => {
+		const p = { guugge: G, section: 3, stage: 4, via: 'rhythm' } as const;
+		expect(parseLaneExam(new URLSearchParams(laneExamQuery(p)), 18)).toEqual(p);
+		for (const bad of [
+			`?pruefung=x&teil=3&etappe=4&art=mic`,
+			`?pruefung=${G}&teil=0&etappe=4&art=mic`,
+			`?pruefung=${G}&teil=18&etappe=4&art=mic`,
+			`?pruefung=${G}&teil=3&etappe=2&art=mic`,
+			`?pruefung=${G}&teil=3&etappe=4&art=quiz`,
+			''
+		]) {
+			expect(parseLaneExam(new URLSearchParams(bad), 18), bad).toBeNull();
+		}
 	});
 });

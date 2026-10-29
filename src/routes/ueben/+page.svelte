@@ -4,6 +4,7 @@
 	// ohne Aufnahmen läuft die Bahn mit einer eigenen Uhr weiter, und ein Hinweis sagt warum.
 	// Modi Mitspielen, Echo und Rhythmus tippen: Ablauf in #lib/practice/session.ts.
 	// Mithören: AudioWorklet mit der Tonerkennung (#lib/audio/listen.ts), Bewertung in der session.
+	// Etappenprüfungen 3–5 (M2): ?pruefung=<guugge>&teil=…&etappe=…&art=mic|rhythm, siehe unten.
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -70,6 +71,17 @@
 	import type { Tone } from '#lib/pitch/coach.ts';
 	import type { NoteVerdict } from '#lib/pitch/classify.ts';
 	import { BAD_TOUCH, BAD_TOUCH_NOTES } from '#lib/titles/bad-touch.ts';
+	import {
+		encouragement,
+		PRAISE,
+		parseLaneExam,
+		sectionScore,
+		type LaneExamParams
+	} from '#lib/exams/exams.ts';
+	import { STAGES } from '#lib/plan/stand.ts';
+	import type { SupabaseClient } from '@supabase/supabase-js';
+	import type { ExamResult } from '#lib/account/api.ts';
+	import { replaceState } from '$app/navigation';
 
 	const title = BAD_TOUCH;
 	const voiceIds = title.voices.map((v) => v.id);
@@ -122,6 +134,24 @@
 	let customRange = $state<{ from: number; to: number } | null>(null);
 	let bauStats = $state<BarStats>({});
 	const baustellen = $derived(topBaustellen(bauStats));
+
+	// Etappenprüfung auf der Bahn (Etappen 3–5), Aufruf aus /guugge/[id]/pruefung. Teil, Tempo
+	// (Etappe 3: 80 %, sonst 100 %), Hilfen (Etappe 5: »Auswendig«) und Modus sind fest; die
+	// Prüfung beginnt mit »Abspielen« und endet am Ende des Teils. Ergebnis über alle Töne des Teils
+	// (#lib/exams/exams.ts, sectionScore); Punkte vergibt der Server (finish_exam).
+	// Konto-Code und Supabase werden nur für eine Prüfung geladen.
+	interface LaneExam extends LaneExamParams {
+		attempt: string | null;
+		restore: { help: HelpLevel; tempo: number; mode: PracticeMode; loop: boolean };
+	}
+	let exam = $state<LaneExam | null>(null);
+	let examDone = $state<{ params: LaneExamParams; result: ExamResult; message: string } | null>(
+		null
+	);
+	let examError = $state('');
+	let examNotice = $state('');
+	let examBusy = $state(false);
+	let examApi: { api: typeof import('#lib/account/api.ts'); sb: SupabaseClient } | null = null;
 
 	const rangeOf = (i: number) => ({ from: title.sections[i].from, to: title.sections[i].to });
 	// Ablauf des Übens (nicht reaktiv; sync() spiegelt ihn in die Anzeige)
@@ -557,6 +587,10 @@
 			const r = session.finish(false, tempo);
 			if (r) report = r;
 		} else {
+			if (exam && !exam.attempt) {
+				void startExamRun();
+				return;
+			}
 			if (bar >= title.bars - 0.01) jumpTo(section.from);
 			const echoFrom = session.startEcho();
 			if (echoFrom !== null) jumpTo(echoFrom);
@@ -574,6 +608,10 @@
 			outputMs = Math.round(stems.latency() * 1000);
 		}
 		time = clock.time();
+		if (exam?.attempt && clock.playing && beat / 4 >= title.sections[exam.section].to + 1) {
+			void endExamRun();
+			return;
+		}
 		if (clock.playing) {
 			const step = session.advance(frameInfo(), tempo);
 			if (step.seekTo !== null) jumpTo(step.seekTo, true, true);
@@ -609,6 +647,124 @@
 		return () => cancelAnimationFrame(raf);
 	});
 
+	async function setupExam(p: LaneExamParams) {
+		const [{ getSupabase }, api] = await Promise.all([
+			import('#lib/supabase/client.ts'),
+			import('#lib/account/api.ts')
+		]);
+		const sb = getSupabase();
+		const session_ = sb ? (await sb.auth.getSession()).data.session : null;
+		if (!sb || !session_) {
+			examError = 'Für die Prüfung musst du angemeldet sein.';
+			return;
+		}
+		examApi = { api, sb };
+		try {
+			const g = (await api.myAccount(sb)).guuggen.find((x) => x.id === p.guugge);
+			if (!g) throw new Error('Diese Guugge findest du hier nicht.');
+			if (!g.voice) throw new Error('Wähl zuerst deine Stimme.');
+			if (g.voice !== voice.id) chooseVoice(g.voice);
+		} catch (e) {
+			examError = (e as Error).message;
+			return;
+		}
+		const restore = { help: prefs.help, tempo, mode, loop };
+		// Nur für die Prüfung, nicht gespeichert
+		prefs = { ...prefs, help: p.stage === 5 ? 'memo' : 'all' };
+		tempo = p.stage === 3 ? 80 : 100;
+		if (loop) toggleLoop();
+		setFokus(false);
+		view = 'bahn';
+		chooseMode(p.via === 'rhythm' ? 'rhythm' : 'play');
+		chooseSection(p.section);
+		examDone = null;
+		exam = { ...p, attempt: null, restore };
+	}
+
+	/** »Abspielen« in einer Prüfung: Mikrofon an (braucht die Berührung), Versuch anmelden, los. */
+	async function startExamRun() {
+		if (!exam || !examApi || examBusy) return;
+		examBusy = true;
+		examError = '';
+		try {
+			if (exam.via === 'mic' && listening !== 'mic') {
+				await toggleListening('mic');
+				// toggleListening setzt listening; TypeScript sieht das nicht
+				if ((listening as Listening) !== 'mic') {
+					exam.via = 'rhythm';
+					chooseMode('rhythm');
+					examNotice = 'Mikrofon nicht verfügbar – weiter mit Rhythmus tippen.';
+				}
+			}
+			exam.attempt = await examApi.api.startExam(
+				examApi.sb,
+				exam.guugge,
+				title.slug,
+				exam.section,
+				exam.stage,
+				exam.via
+			);
+		} catch (e) {
+			examError = (e as Error).message;
+			return;
+		} finally {
+			examBusy = false;
+		}
+		jumpTo(title.sections[exam.section].from);
+		sync();
+		clock.play();
+		playing = clock.playing;
+	}
+
+	/** Teil zu Ende: alle Töne bewerten, Einstellungen zurück, Ergebnis an den Server. */
+	async function endExamRun() {
+		const run = exam;
+		if (!run?.attempt || !examApi) return;
+		const s = title.sections[run.section];
+		clock.pause();
+		playing = false;
+		session.catchMisses(frameInfo());
+		session.closeHeard((s.to + 1) * 4);
+		const score = sectionScore(track.notes, s, session.judged);
+		sync();
+		leaveExam(run);
+		examBusy = true;
+		try {
+			const result = await examApi.api.finishExam(examApi.sb, run.attempt, score);
+			const pick = (a: readonly string[]) => a[Math.floor(Math.random() * a.length)];
+			const message = result.passed
+				? result.points > 0
+					? pick(PRAISE)
+					: 'Wieder bestanden – das sitzt.'
+				: `${encouragement(result.score, Math.random)} Mein Vorschlag: ${sectionLabel(s)} im Echo bei 70 %, dann nochmals.`;
+			const { guugge, section, stage, via } = run;
+			examDone = { params: { guugge, section, stage, via }, result, message };
+		} catch (e) {
+			examError = (e as Error).message;
+		} finally {
+			examBusy = false;
+		}
+	}
+
+	/** Prüfungsmodus verlassen: Einstellungen von vorher, Adresse ohne Prüfung. */
+	function leaveExam(run: LaneExam) {
+		exam = null;
+		if (listening !== 'off') stopListening(true);
+		prefs = { ...prefs, help: run.restore.help };
+		tempo = run.restore.tempo;
+		if (run.restore.mode !== mode) chooseMode(run.restore.mode);
+		if (run.restore.loop !== loop) toggleLoop();
+		replaceState(resolve('/ueben'), {});
+	}
+
+	function abortExam() {
+		if (!exam) return;
+		if (clock.playing) clock.pause();
+		playing = false;
+		leaveExam(exam);
+		examNotice = 'Prüfung abgebrochen.';
+	}
+
 	function setPrefs(patch: Partial<LanePrefs>) {
 		prefs = { ...prefs, ...patch };
 		savePrefs(localStorage, prefs);
@@ -637,6 +793,8 @@
 		loadBaustellen();
 		jumpTo(title.sections[1].from);
 		void startAudio();
+		const examParams = parseLaneExam(new URLSearchParams(location.search), title.sections.length);
+		if (examParams) void setupExam(examParams);
 		// Vollbild nicht auf andere Seiten mitnehmen (nur im Browser, darum hier statt in onDestroy)
 		return () => document.documentElement.classList.remove('fokus');
 	});
@@ -683,75 +841,132 @@
 	{/if}
 </section>
 
-<section class="row">
-	<div class="seg" role="group" aria-label="Stimme">
-		{#each title.voices as v (v.id)}
-			<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
-				>{v.short}</button
-			>
-		{/each}
-	</div>
-</section>
-
-<section class="row">
-	<div class="seg" role="group" aria-label="Übe-Modus">
-		{#each Object.entries(MODE_LABELS) as [m, label] (m)}
-			<button type="button" aria-pressed={m === mode} onclick={() => chooseMode(m as PracticeMode)}
-				>{label}</button
-			>
-		{/each}
-	</div>
-	<span class="hint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</span>
-</section>
-
-<section class="row">
-	<span class="toggle">Meine Stimme</span>
-	<div class="seg" role="group" aria-label="Meine Stimme im Kopfhörer">
-		{#each OWN_LEVELS as l (l.value)}
-			<button
-				type="button"
-				aria-pressed={l.value === prefs.own}
-				disabled={audio !== 'ok'}
-				onclick={() => chooseOwn(l.value)}>{l.label}</button
-			>
-		{/each}
-	</div>
-	<span class="hint">»Aus« heisst: Du spielst deine Stimme selbst.</span>
-</section>
-
-<section class="row listen">
-	<button
-		type="button"
-		class="micbtn"
-		aria-pressed={listening === 'mic'}
-		disabled={mode === 'rhythm' || calibration === 'running'}
-		onclick={() => toggleListening('mic')}
-	>
-		<svg viewBox="0 0 24 24" aria-hidden="true"
-			><path
-				d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"
-			/></svg
+{#if exam}
+	<section class="exambar" aria-label="Prüfung" data-testid="pruefung">
+		<b
+			>Prüfung · {sectionLabel(title.sections[exam.section])} · Etappe {exam.stage}: {STAGES[
+				exam.stage - 1
+			].name} · {exam.via === 'mic' ? 'Mithören' : 'Rhythmus tippen'}</b
 		>
-		Mithören
-	</button>
-	<button
-		type="button"
-		class="mini"
-		aria-pressed={listening === 'demo'}
-		disabled={audio !== 'ok' || mode === 'rhythm' || calibration === 'running'}
-		onclick={() => toggleListening('demo')}
-		>{listening === 'demo' ? 'Vorführung beenden' : 'Vorführung mit Aufnahme'}</button
-	>
-	<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
-		>Verzögerung abgleichen</button
-	>
-	{#if listenError}
-		<span class="say" data-tone="bad" role="alert">{listenError}</span>
-	{:else}
-		<span class="hint">{listenHint}</span>
-	{/if}
-	<span class="hint" data-testid="verzoegerung">{latencyText}</span>
-</section>
+		<span class="hint"
+			>{exam.attempt
+				? 'Läuft – spiel den ganzen Teil durch.'
+				: `Drück auf Abspielen, wenn du bereit bist. Tempo ${tempo} %, ein Takt wird eingezählt.`}</span
+		>
+		<button type="button" class="mini" onclick={abortExam}>Abbrechen</button>
+	</section>
+{/if}
+{#if examError}<p class="notice" role="alert">{examError}</p>{/if}
+{#if examNotice}<p class="notice" role="status">{examNotice}</p>{/if}
+{#if examDone}
+	{@const r = examDone.result}
+	{@const p = examDone.params}
+	<section class="examresult" data-testid="pruefung-ergebnis">
+		<p class="label">
+			Ergebnis · {sectionLabel(title.sections[p.section])} · Etappe {p.stage}: {STAGES[p.stage - 1]
+				.name}
+		</p>
+		<p class="score" class:ok={r.passed}>{Math.round(r.score * 100)} %</p>
+		<b>{r.passed ? 'Bestanden' : 'Noch nicht ganz'}</b>
+		<p>{examDone.message}</p>
+		{#if r.points}<p class="hint">+{r.points} Punkte · {r.reasons.join(' · ')}</p>{/if}
+		{#if r.week_goal}<p class="hint">+{r.week_goal} Punkte · Wochenziel: an 3 Tagen geübt</p>{/if}
+		<div class="row">
+			{#if r.passed && p.stage < 5}
+				<a
+					class="mini"
+					href="{resolve('/guugge/[id]/pruefung', {
+						id: p.guugge
+					})}?teil={p.section}&etappe={p.stage + 1}">Weiter zu Etappe {p.stage + 1}</a
+				>
+			{/if}
+			{#if !r.passed}
+				<a
+					class="mini"
+					href="{resolve('/guugge/[id]/pruefung', {
+						id: p.guugge
+					})}?teil={p.section}&etappe={p.stage}">Nochmals</a
+				>
+			{/if}
+			<a class="mini" href={resolve('/guugge/[id]/plan', { id: p.guugge })}>Zurück zum Plan</a>
+			<button type="button" class="mini" onclick={() => (examDone = null)}>Schliessen</button>
+		</div>
+	</section>
+{/if}
+
+{#if !exam}
+	<section class="row">
+		<div class="seg" role="group" aria-label="Stimme">
+			{#each title.voices as v (v.id)}
+				<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
+					>{v.short}</button
+				>
+			{/each}
+		</div>
+	</section>
+
+	<section class="row">
+		<div class="seg" role="group" aria-label="Übe-Modus">
+			{#each Object.entries(MODE_LABELS) as [m, label] (m)}
+				<button
+					type="button"
+					aria-pressed={m === mode}
+					onclick={() => chooseMode(m as PracticeMode)}>{label}</button
+				>
+			{/each}
+		</div>
+		<span class="hint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</span>
+	</section>
+
+	<section class="row">
+		<span class="toggle">Meine Stimme</span>
+		<div class="seg" role="group" aria-label="Meine Stimme im Kopfhörer">
+			{#each OWN_LEVELS as l (l.value)}
+				<button
+					type="button"
+					aria-pressed={l.value === prefs.own}
+					disabled={audio !== 'ok'}
+					onclick={() => chooseOwn(l.value)}>{l.label}</button
+				>
+			{/each}
+		</div>
+		<span class="hint">»Aus« heisst: Du spielst deine Stimme selbst.</span>
+	</section>
+
+	<section class="row listen">
+		<button
+			type="button"
+			class="micbtn"
+			aria-pressed={listening === 'mic'}
+			disabled={mode === 'rhythm' || calibration === 'running'}
+			onclick={() => toggleListening('mic')}
+		>
+			<svg viewBox="0 0 24 24" aria-hidden="true"
+				><path
+					d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"
+				/></svg
+			>
+			Mithören
+		</button>
+		<button
+			type="button"
+			class="mini"
+			aria-pressed={listening === 'demo'}
+			disabled={audio !== 'ok' || mode === 'rhythm' || calibration === 'running'}
+			onclick={() => toggleListening('demo')}
+			>{listening === 'demo' ? 'Vorführung beenden' : 'Vorführung mit Aufnahme'}</button
+		>
+		<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
+			>Verzögerung abgleichen</button
+		>
+		{#if listenError}
+			<span class="say" data-tone="bad" role="alert">{listenError}</span>
+		{:else}
+			<span class="hint">{listenHint}</span>
+		{/if}
+		<span class="hint" data-testid="verzoegerung">{latencyText}</span>
+	</section>
+{/if}
 
 <section class="row opts">
 	<div class="seg" role="group" aria-label="Ansicht">
@@ -785,6 +1000,7 @@
 			>Hilfen
 			<select
 				value={prefs.help}
+				disabled={!!exam}
 				onchange={(e) => setPrefs({ help: e.currentTarget.value as HelpLevel })}
 			>
 				{#each Object.entries(HELP_LABELS) as [k, label] (k)}
@@ -847,7 +1063,7 @@
 			zoom={prefs.zoom}
 			height={fokus ? Math.max(240, innerHeight - 190) : undefined}
 			onpick={(b) => {
-				if (clock.playing) return;
+				if (clock.playing || exam) return;
 				const toBar = Math.max(0, Math.floor(b / 4));
 				if (mode === 'echo') session.echoFrom(toBar);
 				jumpTo(toBar);
@@ -977,6 +1193,7 @@
 	<label class="toggle">
 		<span class="sr">Teil</span>
 		<select
+			disabled={!!exam}
 			value={customRange ? 'c' : String(sectionIndex)}
 			onchange={(e) => {
 				if (e.currentTarget.value !== 'c') chooseSection(Number(e.currentTarget.value));
@@ -992,10 +1209,19 @@
 			{/if}
 		</select>
 	</label>
-	<button type="button" class="mini" aria-pressed={loop} onclick={toggleLoop}>Schleife</button>
+	<button type="button" class="mini" aria-pressed={loop} disabled={!!exam} onclick={toggleLoop}
+		>Schleife</button
+	>
 	<label class="tempo">
 		Tempo
-		<input type="range" min={TEMPO_MIN} max={TEMPO_MAX} step="5" bind:value={tempo} />
+		<input
+			type="range"
+			min={TEMPO_MIN}
+			max={TEMPO_MAX}
+			step="5"
+			disabled={!!exam}
+			bind:value={tempo}
+		/>
 		<output>{tempo} % · ♩ {Math.round((title.bpm * tempo) / 100)}</output>
 	</label>
 </section>
@@ -1006,6 +1232,38 @@
 <audio bind:this={ownEl} data-stem="own" crossorigin="anonymous" preload="auto"></audio>
 
 <style>
+	.exambar,
+	.examresult {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px 12px;
+		border: 1px solid var(--akzent);
+		border-radius: 14px;
+		padding: 10px 14px;
+		background: var(--surface);
+	}
+	.examresult {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+	.examresult p {
+		margin: 0;
+	}
+	.examresult .score {
+		font-size: 36px;
+		font-weight: 700;
+		line-height: 1;
+		color: var(--rot);
+	}
+	.examresult .score.ok {
+		color: var(--gruen);
+	}
+	.examresult a.mini {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+	}
 	.head h1 {
 		margin: 2px 0 4px;
 		font-size: clamp(22px, 5vw, 30px);

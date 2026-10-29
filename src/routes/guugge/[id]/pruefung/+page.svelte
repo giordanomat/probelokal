@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Etappenprüfung eines Teils (?teil=1&etappe=2), portiert aus prototype/v7 (openExam, runQuiz,
-	// runGrip, finishExam). Etappe 1 Quiz und 2 Griffe laufen hier; 3–5 kommen auf die Bahn.
+	// runGrip, finishExam). Etappe 1 Quiz und 2 Griffe laufen hier; 3–5 auf der Bahn in /ueben.
 	// Der Server prüft Reihenfolge und Dauer und vergibt die Punkte (start_exam, finish_exam).
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -20,10 +20,11 @@
 	import { fingeringLabel } from '#lib/music/fingering.ts';
 	import { sectionLabel } from '#lib/music/timing.ts';
 	import {
-		ENCOURAGE,
+		encouragement,
 		gripCorrect,
 		gripItems,
 		PRAISE,
+		laneExamQuery,
 		quizFor,
 		type Question
 	} from '#lib/exams/exams.ts';
@@ -169,7 +170,7 @@
 				? result.points > 0
 					? pick(PRAISE)
 					: 'Wieder bestanden – das sitzt.'
-				: pick(ENCOURAGE);
+				: encouragement(score, Math.random);
 			if (result.passed) best = Math.max(best, stage);
 			phase = 'result';
 		} catch (e) {
@@ -180,6 +181,8 @@
 		}
 	}
 
+	const laneQuery = (via: 'mic' | 'rhythm') =>
+		laneExamQuery({ guugge: id, section: sectionIdx, stage: stage as 3 | 4 | 5, via });
 	const planHref = $derived(resolve('/guugge/[id]/plan', { id }));
 </script>
 
@@ -235,8 +238,21 @@
 							: `${label} auswendig: Die Bahn zeigt nur noch Takte und Einsätze.`}
 					80 % sauber = bestanden.
 				</p>
+				<p>Ich zähle einen Takt ein. Die Prüfung läuft auf der Bahn, unter »Stück üben«.</p>
+				{#if stage <= best}
+					<p class="hint">Diese Etappe hast du schon. Wiederholen geht, gibt aber keine Punkte.</p>
+				{/if}
+				<div class="row">
+					<a class="btn" href="{resolve('/ueben')}{laneQuery('mic')}">Vorspielen mit Mikrofon</a>
+					<a class="btn ghost" href="{resolve('/ueben')}{laneQuery('rhythm')}"
+						>Ohne Mikrofon: Rhythmus tippen</a
+					>
+				</div>
 				<p class="hint">
-					Die Etappen 3 bis 5 prüfst du bald direkt auf der Bahn, mit Mithören oder Rhythmus tippen.
+					{stage === 3
+						? 'Rhythmus tippen zählt bei dieser Etappe voll.'
+						: 'Ohne Mikrofon zählt die Etappe, ist aber als »ohne Mikrofon« markiert und gibt halbe Punkte.'}
+					Mikrofon nur mit Kopfhörer.
 				</p>
 			{:else}
 				<p>
