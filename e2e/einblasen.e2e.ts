@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { FakeSupabase } from './fake-supabase';
 
 // Einblasen: Navigation, Vorspielen/Nachspielen und Bewertung mit dem künstlichen Mikrofon
 // (klingendes G4 = notiert A4 für Trompete, siehe e2e/global-setup.ts). Tonleiter-Häppchen
@@ -61,4 +62,37 @@ test('Einblasen ohne Mithören: Stufe und Stimme wechseln, anhalten', async ({ p
 	await page.getByRole('button', { name: 'Übung anhalten' }).click();
 	await expect(page.getByRole('button', { name: 'Übung starten' })).toBeVisible();
 	await expect(page.getByTestId('ergebnis')).toHaveCount(0);
+});
+
+test('Einblasen angemeldet: Übung mit Mithören wird beim Server an- und abgemeldet', async ({
+	page
+}) => {
+	// Das Mikrofon hört nur ein A, die Tonleiter hat keins: 0 % und keine Punkte. Die Punkteregel
+	// selbst prüft supabase/tests/points.spec.ts.
+	test.setTimeout(60_000);
+	const fake = await FakeSupabase.create();
+	await fake.attach(page.context());
+	const lea = { id: await fake.idOf('lea@test.ch') };
+	await fake.db.as(lea, `select create_guugge('Schuegu')`);
+	await fake.signIn(page, 'lea@test.ch');
+
+	await page.goto('/einblasen');
+	await expect(page.getByText('Mit Mithören gibt es 5 Punkte pro Übung')).toBeVisible();
+	await page.getByRole('button', { name: 'Tonleiter-Häppchen' }).click();
+	await page.getByLabel('Tempo').fill('120');
+	await page.getByRole('button', { name: 'Mithören' }).click();
+	await expect(page.getByTestId('mithoeren')).toContainText('Ich höre zu');
+	await page.getByRole('button', { name: 'Übung starten' }).click();
+	await expect(page.getByTestId('ergebnis')).toContainText('Geschafft:', { timeout: 30_000 });
+	await expect(page.getByTestId('einblasen-punkte')).toHaveText(
+		'Punkte gibt es ab 50 % getroffen.'
+	);
+	expect(
+		await fake.db.owner(
+			`select exercise, level, bpm, finished_at is not null as done from exercise_attempts`
+		)
+	).toEqual([{ exercise: 'leiter', level: 0, bpm: 120, done: true }]);
+	expect(
+		await fake.db.owner(`select count(*)::int as n from points_ledger where user_id = $1`, [lea.id])
+	).toEqual([{ n: 0 }]);
 });

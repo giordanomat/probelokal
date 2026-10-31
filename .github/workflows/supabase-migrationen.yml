@@ -1,0 +1,57 @@
+# Migrationen aus supabase/migrations auf das Supabase-Projekt anwenden – nur von Hand gestartet
+# (GitHub → Actions → »Supabase-Migrationen« → Run workflow). Braucht die Repository-Secrets
+# SUPABASE_ACCESS_TOKEN (persönliches Zugangstoken) und SUPABASE_DB_PASSWORD (Datenbank-Passwort).
+# Ablauf und Reihenfolge der Schritte: docs/03-datenmodell.md, »Anwenden«.
+# Ungeprüft, bis Matthias ihn zum ersten Mal laufen lässt.
+name: Supabase-Migrationen
+
+on:
+  workflow_dispatch:
+    inputs:
+      schritt:
+        description: 'anzeigen = nur Stand zeigen · verlauf-nachtragen = einmalig 20261025140000 und 20261025180000 als angewendet eintragen · probelauf = zeigen, was angewendet würde · anwenden = anwenden (nur von main)'
+        type: choice
+        options: [anzeigen, verlauf-nachtragen, probelauf, anwenden]
+        default: anzeigen
+
+concurrency:
+  group: supabase-migrationen
+  cancel-in-progress: false
+
+jobs:
+  migrationen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: qieunfhizsxsyzmrrvci
+    steps:
+      - name: Anwenden nur von main
+        if: inputs.schritt == 'anwenden' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Anwenden geht nur vom Branch main (gestartet auf ${GITHUB_REF})."
+          exit 1
+      - uses: actions/checkout@v4
+      # Vorher die Regeln prüfen: dieselben Tests wie in CI
+      - uses: actions/setup-node@v4
+        if: inputs.schritt == 'probelauf' || inputs.schritt == 'anwenden'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - if: inputs.schritt == 'probelauf' || inputs.schritt == 'anwenden'
+        run: npm ci && npx vitest --run supabase/tests
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase link --project-ref "$PROJECT_REF"
+      - name: Verlauf nachtragen (einmalig)
+        if: inputs.schritt == 'verlauf-nachtragen'
+        run: supabase migration repair --status applied 20261025140000 20261025180000
+      - run: supabase migration list
+      - name: Probelauf
+        if: inputs.schritt == 'probelauf'
+        run: supabase db push --dry-run
+      - name: Anwenden
+        if: inputs.schritt == 'anwenden'
+        run: supabase db push

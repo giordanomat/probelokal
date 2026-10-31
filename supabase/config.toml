@@ -1,0 +1,4 @@
+# Minimale Einstellung für die Supabase-CLI (Ablauf .github/workflows/supabase-migrationen.yml).
+# Alles Weitere bleibt auf den Vorgaben der CLI; Einstellungen des Projekts (Auth, Storage) werden
+# im Dashboard gepflegt, nicht von hier aus übertragen.
+project_id = "probelokal"
