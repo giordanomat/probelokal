@@ -3,6 +3,7 @@
 
 import type { HelpLevel } from '../lane/geometry';
 import { ZOOM_STEPS } from '../lane/geometry';
+import { LANE_LOOKS, type LaneLook } from '../lane/looks';
 
 export interface LanePrefs {
 	voice: string;
@@ -12,6 +13,8 @@ export interface LanePrefs {
 	zoom: number;
 	/** Lautstärke meiner Stimme im Kopfhörer (wie im Prototyp: Aus, Leise, Laut). */
 	own: number;
+	/** Bahn-Look (Belohnung); gilt nur, solange er freigeschaltet ist (activeLook) */
+	look: LaneLook;
 }
 
 export const OWN_LEVELS = [
@@ -28,7 +31,8 @@ export const DEFAULT_PREFS: LanePrefs = {
 	names: false,
 	staff: false,
 	zoom: 1,
-	own: 1
+	own: 1,
+	look: 'std'
 };
 
 const HELP: readonly HelpLevel[] = ['all', 'nogrip', 'rhythm', 'memo'];
@@ -55,7 +59,8 @@ export function parsePrefs(raw: string | null | undefined, voiceIds: readonly st
 		zoom: (ZOOM_STEPS as readonly number[]).includes(data.zoom as number)
 			? (data.zoom as number)
 			: d.zoom,
-		own: OWN_LEVELS.some((l) => l.value === data.own) ? (data.own as number) : d.own
+		own: OWN_LEVELS.some((l) => l.value === data.own) ? (data.own as number) : d.own,
+		look: LANE_LOOKS.some((l) => l.id === data.look) ? (data.look as LaneLook) : d.look
 	};
 }
 

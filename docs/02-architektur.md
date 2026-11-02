@@ -37,13 +37,46 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
 
 - **Grundsatz »keine Vollüberwachung«** technisch durchsetzen, nicht nur in der Oberfläche:
   - Einzelwerte (Etappen, Punkte, Übungstage) liest nur die Person selbst – RLS.
-  - Leitung bekommt Aggregate über `SECURITY DEFINER`-Funktionen, die nur Durchschnitte pro Register liefern und bei weniger als drei Personen pro Register nichts zurückgeben (sonst wären Einzelwerte ablesbar). **Mindestgruppe 3 ist ein Vorschlag.**
+  - Leitung bekommt Aggregate über `SECURITY DEFINER`-Funktionen, die nur Durchschnitte pro Register liefern und bei weniger als drei Personen pro Register nichts zurückgeben (sonst wären Einzelwerte ablesbar). **Mindestgruppe 3 ist ein Vorschlag.** Personen ohne Ergebnis zählen mit Etappe 0 (sonst wäre bei einem Ergebnis unter dreien der Einzelwert ablesbar). **Grenze:** Eine Leitung, die eigene Zweitkonten einlädt, kann ein Register auf drei bringen und Einzelwerte zurückrechnen. Datenbankregeln verhindern das nicht; abschwächen liesse es sich nur über Hürden beim Beitritt (z. B. Bestätigung durch Registerchef). Für den Pilot in Kauf genommen, beim Ausrollen neu entscheiden.
   - Rangliste liest nur Zeilen von Personen mit `rangliste_opt_in = true` in Guuggen mit eingeschalteter Rangliste.
-- **Punkte nur serverseitig:** Der Browser meldet ein Prüfungs- oder Durchgangsergebnis an eine Edge Function. Diese prüft Plausibilität (Dauer seit Start ≥ Dauer des Teils beim gewählten Tempo, Anzahl bewerteter Töne = Töne des Teils, Tageslimits, Reihenfolge der Etappen) und schreibt Ergebnis und Punkte. Clients haben keine Schreibrechte auf `points_ledger` und `exam_results`.
+- **Punkte nur serverseitig**, in **Datenbankfunktionen** statt Edge Functions (Entscheid Matthias, 29.10.2026): Alle Regeln liegen dort, wo Rechte und Daten liegen, und laufen in denselben PGlite-Tests.
+  - Der Browser startet eine Prüfung (`start_exam`: Mitglied, Stimme gewählt, Etappe in der Reihenfolge, Art passt zur Etappe) und meldet das Ergebnis (`finish_exam`).
+  - `finish_exam` prüft die Dauer seit dem Start, den Wertebereich, ob der Versuch schon abgeschlossen ist und ob er abgelaufen ist (2 Stunden). Dann schreibt es Ergebnis, Punkte und Übetag. Die Mindestdauer ist ein Vorschlag: Quiz 4 s, Griffe 3 s, auf der Bahn 90 % der Spieldauer des Teils.
+  - Nicht geprüft: die Anzahl bewerteter Töne. Die Noten liegen nicht in der Datenbank.
+  - Clients haben keine Schreibrechte auf `points_ledger`, `exam_results`, `practice_days` und keinen Zugriff auf `exam_attempts`.
+  - Bewertete Durchgänge ausserhalb von Prüfungen laufen nach demselben Muster (`start_pass`, `finish_pass`): Mindestdauer 90 % des Bereichs beim gewählten Tempo, höchstens 15 Durchgänge mit Punkten pro Tag und Guugge.
+  - Übungen beim Einblasen ebenso (`start_exercise`, `finish_exercise`): Mindestdauer 90 % der Übung beim gewählten Tempo, höchstens 6 Übungen mit Punkten pro Tag und Guugge; den Schränz-Groove nimmt der Server erst ab Level 3 an.
   - **Ehrlich:** Weil die Tonerkennung im Browser läuft, lässt sich Betrug nicht ausschliessen, nur erschweren. Für eine freiwillige Rangliste unter Bekannten reicht das; keine Geldpreise an Ranglisten koppeln.
 - Kein Audio verlässt das Gerät. Keine Aufnahmen speichern.
+- **Realtime für Hinweise (M2):** Postgres Changes auf `hints` (`src/lib/hints/live.ts`). Die Meldung ist nur ein Anstoss; danach holt die App die Liste über `list_hints`. Wird die App wieder sichtbar (Hintergrund, Netz weg), holt sie ebenfalls neu, falls Meldungen verloren gingen.
+  - Neue Hinweise bekommt nur, wer sie nach RLS lesen darf (Mitglieder), gefiltert nach den eigenen Guuggen.
+  - Löschungen lassen sich laut Supabase-Doku weder filtern noch nach RLS prüfen. Sie gehen an alle Angemeldeten, die zuhören, aber nur mit der ID des Hinweises; Inhalt und Guugge bleiben verborgen. Die App holt nur neu, wenn der gelöschte Hinweis in ihrer Liste steht.
+  - **Ungeprüft gegen das echte Realtime.** Getestet gegen einen Nachbau des Protokolls in `e2e/fake-supabase.ts`. Prüfen nach dem Anwenden: zwei Geräte, auf einem einen Hinweis eintragen und löschen, das andere zeigt es ohne Neuladen.
 - Zugangsdaten: Im Browser nur Projekt-URL und publishable key – eingetragen in `wrangler.jsonc` (`vars`, gilt für den Cloudflare-Worker) und lokal in `.env` (Vorlage `.env.example`). Projekt: `qieunfhizsxsyzmrrvci`, Zürich. Beide sind absichtlich öffentlich – sie stehen in jedem Browser, der die App lädt. Schutz der Daten allein über RLS: **jede Tabelle im Schema `public` mit RLS**, sonst ist sie mit dem publishable key für alle les- und schreibbar. Prüfen mit den Supabase Advisors nach jeder Migration. Secret key, Datenbank-Passwort und Zugangstoken nie im Repository, nie im Chat; für Migrationen aus GitHub Actions als Repository-Secrets (setzt Matthias). Der Claude-Supabase-Connector hängt an der Organisation »Skim« und wird für Probelokal nicht benutzt.
-- Auth: E-Mail-Link (magic link) als Start; Einladung in eine Guugge per Link mit Rolle.
+- **Anmelden (M2):** mit Code aus der E-Mail, ohne Passwort (Supabase Auth, OTP). In der Mail stehen ein Code und ein Link.
+  - **Der Code ist der Hauptweg.** Auf dem iPhone öffnet ein Link aus Mail die Seite in Safari. Eine App auf dem Home-Bildschirm hat aber einen eigenen Speicher: Wer den Link antippt, wäre in Safari angemeldet, in der App nicht. Den Code tippt man dort ein, wo man angemeldet sein will, auch wenn die Mail auf einem anderen Gerät liegt.
+  - Der Link (`/anmelden?token_hash=…`) meldet in dem Browser an, in dem er aufgeht.
+  - Die Sitzung liegt pro Gerät im Browser (supabase-js, localStorage); der Server kennt sie nicht.
+  - Wer sich mit einer neuen Adresse anmeldet, bekommt ein Konto.
+  - Umsetzung: `src/lib/account/` (`auth.svelte.ts`, `api.ts`, `invite.ts`), Seiten `/anmelden`, `/guugge`, `/guugge/[id]`, `/einladung`. Die Oberfläche ruft nur Datenbank-Funktionen auf (docs/03).
+- **Einladung in eine Guugge** per Link mit Rolle: `/einladung#<schlüssel>`. Der Schlüssel steht hinter dem #, geht also nie an einen Server und landet nicht in Logs. Wer noch nicht angemeldet ist, meldet sich zuerst an; bis dahin wartet der Schlüssel im Speicher des Geräts.
+- **Einstellungen in Supabase (Matthias, vor dem ersten Konto):**
+  1. Authentication → URL Configuration: Site URL `https://probelokal.ch`, Redirect URLs `https://probelokal.ch/**`.
+  2. Authentication → Emails → Templates: In »Magic Link« **und** »Confirm signup« (neue Konten) den Code und den Link einsetzen. Vorschlag, Betreff »Dein Code fürs Probelokal«:
+     ```html
+     <h2>Hoi!</h2>
+     <p>Dein Code fürs Probelokal: <strong>{{ .Token }}</strong></p>
+     <p>Tipp ihn in der App ein. Oder melde dich mit diesem Link an:
+       <a href="{{ .SiteURL }}/anmelden?token_hash={{ .TokenHash }}&type=email">Anmelden</a></p>
+     <p>Warst du das nicht? Dann kannst du diese Mail löschen.</p>
+     ```
+  3. **Eigener Mailversand (SMTP), nötig vor der Abnahme M2 und dem Pilot.** Ohne eigenen SMTP-Zugang schickt Supabase Mails nur an Adressen aus dem Team des Projekts (Organisation → Team), alle anderen scheitern mit »Email address not authorized«, und nur wenige pro Stunde (Supabase-Doku »Send emails with custom SMTP«, nachgelesen 29.10.2026). Einrichten unter Authentication → Emails → SMTP Settings. Danach gilt zunächst eine Grenze von 30 Mails pro Stunde, einstellbar unter Authentication → Rate Limits. Absender mit eigener Domain, dazu DKIM und DMARC, sonst landen die Codes im Spam.
+     - **Eingerichtet am 31.10.2026 mit Brevo (Entscheid Matthias).** Geprüft: Einladungsmail aus dem Supabase-Dashboard an eine Adresse ausserhalb des Teams kam an, nicht im Spam. Noch offen: eine Anmelde-Mail mit Code über `/anmelden` (nach dem Merge von PR #4, Abnahme Abschnitt 1). Sitz Paris, Daten laut Brevo bei OVH in Frankreich und Deutschland sowie Google Cloud in Belgien; Gratisplan laut Drittquellen 300 Mails pro Tag (auf brevo.com nachprüfen). Brevo hat eine Anleitung für Supabase (developers.brevo.com, »supabase-smtp-integration«).
+     - Werte in Supabase: Host `smtp-relay.brevo.com`, Port `587`, Benutzername = »Login« aus Brevo → Settings → SMTP & API → SMTP, Passwort = ein dort erzeugter **SMTP-Schlüssel** (kein API-Schlüssel). Absender `no-reply@probelokal.ch`, Name »giordanomat PROBELOKAL«. Der Schlüssel liegt nur in Supabase, nie im Repository oder im Chat.
+     - Domain `probelokal.ch` in Brevo bestätigen (Brevo-Code, DKIM, DMARC als DNS-Einträge in Cloudflare; CNAME-Einträge »DNS only«). **Achtung SPF:** `probelokal.ch` hat schon einen SPF-Eintrag für Cloudflare Email Routing (`v=spf1 include:_spf.mx.cloudflare.net ~all`, geprüft 29.10.2026). Eine Domain darf nur einen haben: Verlangt Brevo SPF, den bestehenden ergänzen, keinen zweiten anlegen. DMARC gab es noch keinen.
+     - Eingehende Mails an `@probelokal.ch` laufen über Cloudflare Email Routing (MX-Einträge `route*.mx.cloudflare.net`). Damit Bestätigungen und Antworten an `no-reply@probelokal.ch` ankommen, dort eine Weiterleitung an Matthias einrichten.
+     - Datenschutzerklärung: Brevo als Auftragsverarbeiter für Anmelde-Mails nennen.
+  - **Ungeprüft gegen das echte Projekt:** ob `type=email` im Link für beide Vorlagen passt, wie lang der Code ist (die Eingabe nimmt 6 bis 12 Ziffern) und wie die Fehlertexte von Supabase genau lauten. Die Abläufe sind nur gegen einen Nachbau getestet (`e2e/fake-supabase.ts`). Prüfen: mit einer echten Adresse anmelden, einmal per Code, einmal per Link.
 - Audiodateien im Storage nur für Guuggen mit Lizenz für diese Fassung lesbar (signierte URLs).
 - **Testzugang (M1, Entscheid Matthias 26.10.2026):** Bis es Konten und Lizenzen gibt (M2), liegt der Testtitel im privaten Bucket `titles`. Wer unter `/zugang` den Testcode eingibt, bekommt ein Cookie (HMAC des Codes, 60 Tage, httpOnly). `/audio/<slug>/<fassung>/<datei>` prüft das Cookie, lässt nur bekannte Dateinamen zu und leitet auf eine signierte Storage-Adresse (6 h) weiter. Liegt eine erlaubte Datei nicht im Bucket, antwortet es 404 »Aufnahme fehlt noch«. Erlaubt sind die Mischungen und `score.musicxml` für die Notenansicht. Die MusicXML liegt bewusst nicht offen im App-Bundle, sie ist das, was verkauft wird. Das Noten-JSON für die Bahn liegt dagegen vorläufig im Bundle (`docs/05`, M1). Erkannt wird das an der Storage-Meldung »Object not found«; gegen das echte Projekt ungeprüft. Dafür braucht der Worker zwei **Cloudflare-Secrets** (Worker → Settings → Variables and Secrets, Typ »Secret«): `SUPABASE_SECRET_KEY` und `TEST_ACCESS_CODE`. Lokal in `.dev.vars` (nicht eingecheckt). **Abwägung:** Der secret key hat vollen Zugriff auf das Projekt; er liegt nur im Worker und wird dort nur zum Signieren benutzt. Code wechseln = alle Testgeräte ausgesperrt. Service Worker lässt `/audio/` und `/zugang` unberührt.
 
@@ -70,13 +103,14 @@ src/
 e2e/              Playwright-Abläufe
 supabase/
   migrations/     SQL
-  functions/      Edge Functions (exam-result, pass-result, dirigent-ask, stripe-webhook)
+  functions/      Edge Functions (dirigent-ask, stripe-webhook); Punkte rechnen Datenbankfunktionen
 tools/            Produktionsstrecke (Python/ffmpeg)
 prototype/v7/     Referenz
 ```
 
 ## Tests
 
+- Vitest für die Datenbankregeln: `supabase/tests/rls.spec.ts` mit PGlite und nachgebautem Supabase-Rahmen, siehe docs/03 »Tests«.
 - Vitest für: Noten-Parser (gegen `prototype/v7/badtouch.xml`: Notenanzahl je Stimme, Übergebundenes zusammengeführt), Transposition, Griff-Äquivalenz (`3` = `12`), Naturton-Erkennung, Planerzeugung (Fälligkeiten, Phasen), Quiz-Generator, Bewertung, Punkte-Regeln.
 - Playwright für: Bahn-Darstellung auf Handy/Tablet/Desktop in hell/dunkel (Screenshots), Rhythmus-Prüfung mit simuliertem Tippen, Tonerkennung mit synthetischen Tönen (OscillatorNode in den Analyser) und mit der eigenen Spur als »Spieler« (Vorführung).
 - Echte Geräte: Testprotokoll in `docs/` für iPhone und iPad (siehe Roadmap M1).

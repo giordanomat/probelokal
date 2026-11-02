@@ -1,5 +1,5 @@
-// Bahn zeichnen (Canvas 2D), portiert aus prototype/v7 (Lane.draw). Ohne Hinweise der Leitung,
-// Bahn-Looks und Dirigent-Vorspiel – die kommen mit M2/M3.
+// Bahn zeichnen (Canvas 2D), portiert aus prototype/v7 (Lane.draw), mit Hinweisen der Leitung und
+// Bahn-Looks (#lib/lane/looks.ts). Ohne Dirigent-Vorspiel, das kommt mit M3.
 
 import { pressedValves } from '../music/fingering';
 import type { InstrumentKind, Section, Track } from '../music/types';
@@ -15,6 +15,7 @@ import {
 	type LaneGeometry,
 	type NoteLook
 } from './geometry';
+import { LOOK_FG, lookFill, type LaneLook } from './looks';
 
 export interface LaneColors {
 	surface: string;
@@ -81,6 +82,20 @@ export interface LaneScene {
 	trace?: readonly TracePoint[] | null;
 	/** Aktuell gehörte Tonhöhe (diatonisch) an der Spiellinie */
 	current?: number | null;
+	/** Hinweise der Leitung als Band über den Takten (wie im Prototyp) */
+	hints?: readonly LaneHint[] | null;
+	/** Bahn-Look (Belohnung); nur schon freigeschaltete übergeben */
+	look?: LaneLook;
+}
+
+export interface LaneHint {
+	/** Takte einschliesslich */
+	from: number;
+	to: number;
+	/** Kurztext, z. B. »pp« oder »Atmen« (#lib/hints/hints.ts, hintShort) */
+	label: string;
+	/** Dynamik kursiv */
+	dyn: boolean;
 }
 
 const MONO = '"IBM Plex Mono", ui-monospace, monospace';
@@ -104,7 +119,10 @@ function roundRect(
 	cx.closePath();
 }
 
-function lookColors(look: NoteLook, c: LaneColors) {
+function lookColors(
+	look: NoteLook,
+	c: LaneColors
+): { fill: string | null; fg: string; stroke: string | null } {
 	switch (look) {
 		case 'hit':
 			return { fill: c.gruen, fg: '#fff', stroke: null };
@@ -178,6 +196,21 @@ export function drawLane(
 		}
 	}
 
+	// Hinweise der Leitung: helles gelbes Band unter den Taktzahlen, Kurztext darin
+	for (const h of s.hints ?? []) {
+		const x0 = X(h.from * 4);
+		const x1 = X((h.to + 1) * 4);
+		if (x1 < 0 || x0 > W) continue;
+		cx.fillStyle = c.gelb;
+		cx.globalAlpha = 0.22;
+		cx.fillRect(x0, 17, x1 - x0, g.laneTop - 17);
+		cx.globalAlpha = 1;
+		cx.fillRect(x0, 17, x1 - x0, 2.5);
+		cx.fillStyle = c.ink;
+		cx.font = `${h.dyn ? 'italic ' : ''}700 12px ${BODY}`;
+		cx.fillText(h.label, Math.max(x0, 0) + 4, g.laneTop - 3);
+	}
+
 	const showGrip = g.gripHeight > 0;
 	const rowH = showGrip ? g.gripHeight / g.gripRows : 0;
 	if (showGrip) {
@@ -221,6 +254,11 @@ export function drawLane(
 			const y = (s.help === 'rhythm' ? midY : yOfDia(g, n.dia)) - ph / 2;
 			const look = noteLook(n, now, s.judged?.get(i));
 			const col = lookColors(look, c);
+			const special = look === 'upcoming' && s.look ? lookFill(s.look, n.fing, s.kind) : null;
+			if (special) {
+				col.fill = special;
+				col.fg = LOOK_FG;
+			}
 			roundRect(cx, x, y, w, ph, ph / 2);
 			if (col.fill) {
 				cx.fillStyle = col.fill;

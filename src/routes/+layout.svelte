@@ -5,8 +5,10 @@
 	import '@fontsource/ibm-plex-mono/latin-500.css';
 	import '#lib/styles/tokens.css';
 	import '#lib/styles/controls.css';
+	import '#lib/styles/forms.css';
 	import Lockup from '#lib/brand/Lockup.svelte';
 	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
+	import { resolve } from '$app/paths';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -15,7 +17,10 @@
 <div class="wrap">
 	<header class="topbar">
 		<span class="home"><Lockup /></span>
-		<ThemeSwitch />
+		<span class="tools">
+			<a class="account" href={resolve('/guugge')}>Meine Guugge</a>
+			<ThemeSwitch />
+		</span>
 	</header>
 
 	<main>
@@ -41,6 +46,23 @@
 		justify-content: space-between;
 		gap: 12px;
 		flex-wrap: wrap;
+	}
+	.tools {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.account {
+		box-sizing: border-box;
+		display: inline-flex;
+		align-items: center;
+		min-height: 40px;
+		padding: 6px 14px;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		color: var(--ink);
+		font: 600 14px/1.2 var(--font-body);
+		text-decoration: none;
 	}
 	.home {
 		color: inherit;

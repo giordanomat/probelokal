@@ -42,6 +42,23 @@ describe('Einblasen: Übungen', () => {
 		}
 	});
 
+	it('Schränz-Groove: Belohnung ab Level 3, Synkopen auf G und C', () => {
+		expect(ex('groove').unlock).toBe('groove');
+		expect(EXERCISES.filter((e) => e.unlock).map((e) => e.id)).toEqual(['groove']);
+		const { notes, total } = buildExercise(ex('groove'), 0, 'valve');
+		expect(total).toBe(COUNT_IN_BEATS + 3 * 2 * PHRASE_BEATS);
+		expect(notes.slice(0, 5).map((n) => [n.b, n.d])).toEqual([
+			[4, 0.5],
+			[4.5, 1],
+			[5.5, 0.5],
+			[6, 1],
+			[7, 1]
+		]);
+		expect(new Set(buildExercise(ex('groove'), 1, 'valve').notes.map((n) => n.m))).toEqual(
+			new Set([67, 72])
+		);
+	});
+
 	it('Lippenbindungen: ein Griff pro Runde, bei der Posaune Zugposition statt Ventil', () => {
 		const valve = buildExercise(ex('bind'), 1, 'valve').notes;
 		expect(valve.slice(0, 4).map((n) => n.fing)).toEqual(['0', '0', '0', '0']);

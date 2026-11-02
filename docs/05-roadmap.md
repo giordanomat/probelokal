@@ -81,12 +81,12 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Übungen Lange Töne, Lippenbindungen, Zungenstoss und Tonleiter-Häppchen aus dem Prototyp, je in den Stufen Einstieg und Weiter (`src/lib/warmup/exercises.ts`).
      - Der Dirigent spielt einen Takt vor (gestrichelt, synthetischer Ton), du spielst ihn nach. Klick und Vorspielton werden in Web Audio vorausgeplant (`src/lib/warmup/player.ts`).
      - Mithören bewertet nur das Nachspielen (`PracticeSession`, vorgespielte Töne tragen `call`).
-     - Noch nicht dabei: Schränz-Groove (im Prototyp ab Level 3, Levels kommen mit M2), Tagesvorschlag, Fragen an den Dirigenten (KI).
+     - Noch nicht dabei: Tagesvorschlag, Fragen an den Dirigenten (KI). Der Schränz-Groove kam mit M2 (Punkt 11).
      - **Ungeprüft:** wie der synthetische Vorspielton auf Handy-Lautsprecher und Kopfhörer klingt; echte Aufnahmen pro Instrument sind geplant (docs/02).
-- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) liegt in einem neuen PR. Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
+- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) ist mit PR #3 gemergt und live (`/einblasen`, geprüft 28.10.2026). Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
-  - Cloudflare-Builds für Branches schlagen fehl. Die Ursache ist ungeprüft; die Logs gibt es nur im Cloudflare-Dashboard.
+  - Cloudflare-Builds für Branches schlugen fehl (Ursache ungeprüft). Matthias hat die Preview-Builds am 28.10.2026 abgeschaltet; Branches prüft nur noch GitHub Actions.
 
 **Abnahme (Testprotokoll in `docs/testprotokolle/`):**
 - iPhone und iPad, Safari: Bahn läuft flüssig; Band und eigene Spur bleiben über das ganze Stück innerhalb 50 ms.
@@ -100,8 +100,105 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 
 - Auth per E-Mail-Link, Guugge anlegen, Einladung per Link mit Rolle, Stimme wählen.
 - Hinweise der Leitung (inkl. Realtime), Gesamtplan, Mein Plan, Etappenprüfungen 1–5.
-- Edge Functions `exam-result` und `pass-result`: Plausibilitätsprüfung, Punkte, Übetage; Tageslimits.
+- Punkte auf dem Server (Datenbankfunktionen, Entscheid 29.10.2026): Plausibilitätsprüfung, Punkte, Übetage; Tageslimits.
 - Ränge und Belohnungen (Anzeige), Rangliste mit Opt-in, Register-Übersicht über Aggregatfunktion.
+
+**Stand 28.10.2026 (begonnen, Branch `claude/dreamy-franklin-mle6hm`):**
+
+1. ~~**Datenbank: Konten, Guuggen, Einladungen, Rollen**~~ erledigt am 28.10.2026, Migration `20261028150000_m2_konten_guuggen.sql`, Einzelheiten in docs/03:
+   - Schliesst eine Lücke aus 0001: Ein Mitglied konnte sich selbst zur Leitung machen, die Leitung das Opt-in anderer setzen. Im echten Projekt besteht die Lücke, bis die Migration angewendet ist.
+   - Mitgliedschaften und Einladungen nur über prüfende Funktionen. Einladungs-Schlüssel nur als Hash gespeichert. Profile automatisch beim ersten Anmelden.
+   - `register_overview` zählt Personen ohne Ergebnis mit Etappe 0.
+   - RLS-Tests pro Rolle mit PGlite (`supabase/tests/`), laufen mit `npm run test:unit` und in CI. Sie decken die Abnahme unten ab.
+   - Ablauf »Supabase-Migrationen« in GitHub Actions. **Matthias:** Secrets anlegen und den Ablauf starten (docs/03 »Anwenden«). **Ungeprüft**, bis er gelaufen ist.
+2. ~~**Anmelden**~~ erledigt am 28.10.2026, mit Code aus der E-Mail statt nur per Link. Grund: Auf dem iPhone öffnet ein Link aus Mail die Seite in Safari, nicht in der App auf dem Home-Bildschirm. Einzelheiten in docs/02 »Anmelden«. **Matthias:** URL-Einstellungen, Mailvorlagen und Mailversand in Supabase, siehe dort.
+3. ~~Guugge anlegen, Einladungslink teilen, Stimme wählen~~ erledigt am 28.10.2026:
+   - `/guugge`: Name, eigene Guuggen, neue Guugge anlegen, abmelden.
+   - `/guugge/[id]`: Stimme, Rangliste mitmachen. Für die Leitung zusätzlich einladen (Link mit Rolle, kopieren, teilen, zurückziehen), Rollen, entfernen, Rangliste ein/aus. Austreten.
+   - `/einladung#<schlüssel>`: beitreten, auch über das Anmelden hinweg.
+   - Dazu die Migration `20261028170000_m2_konto_funktionen.sql` (`my_account`, `set_my_name`, `set_rangliste_enabled`).
+   - Getestet mit Vitest und Playwright: ganzer Ablauf mit zwei Geräten gegen einen Supabase-Nachbau (`e2e/fake-supabase.ts`, echte Migrationen in PGlite).
+   - **Ungeprüft:** gegen das echte Supabase. Geht erst, wenn die Migrationen angewendet und die Einstellungen gesetzt sind.
+   - Die Stimmen sind vorerst die von Bad Touch. Wie `/ueben` die gewählte Stimme übernimmt, kommt mit den Plänen.
+4. ~~Logik für Pläne, Etappen und Punkte~~ portiert am 29.10.2026, noch ohne Oberfläche:
+   - `src/lib/plan/`: Gesamtplan mit Gewichtung der Teile, Fälligkeit der Etappen, »Mein Plan« (Pausen, voraus/hinterher, als Nächstes, Wochenziele). Kalendertage ohne Zeitzone; »heute« gilt in der Schweiz.
+   - `src/lib/exams/`: Quiz, Griffprüfung, Bewertung auf der Bahn, Bestehensgrenzen.
+   - `src/lib/game/points.ts`: Punkte, Ränge, Tageslimits, Wochenziel.
+   - Gegen den Prototyp gerechnet: Gewichte, Lernwochen, Wochentexte, Fälligkeiten und Meilensteine stimmten in vier Fällen überein, auch über die Zeitumstellung. Die Sollwerte stehen in `plan.spec.ts`.
+5. ~~Gesamtplan und »Mein Plan« in der Oberfläche~~ erledigt am 29.10.2026, unter `/guugge/[id]/plan`:
+   - Die Leitung legt den Plan an und ändert ihn; alle Mitglieder sehen Wochen und Meilensteine.
+   - »Mein Plan« für die eigene Stimme: voraus/hinterher, Prozent bis auftrittsreif, als Nächstes mit Fälligkeit, Wochenziele, alle Teile mit Etappen. Pausen zählen als erledigt.
+   - Migration `20261029100000_m2_titel_plan.sql`: Bad Touch im Katalog (`catalog.spec.ts` prüft, dass er zu `bad-touch.ts` passt), `get_plan`, `set_plan` (nur Leitung, mit Plausibilitätsprüfung), `my_stages`.
+   - Getestet mit Vitest (Regeln) und Playwright (Plan anlegen, Mitglied sieht seinen Stand).
+   - Noch ohne Etappenprüfungen: Der Stand bleibt bei 0, bis Prüfungen Ergebnisse schreiben.
+6. ~~Etappen 1 und 2 mit Punkten auf dem Server~~ erledigt am 29.10.2026:
+   - **Entscheid Matthias (29.10.2026):** Punkte rechnen Datenbankfunktionen, nicht Edge Functions (docs/02 »Sicherheit«).
+   - Migration `20261029120000_m2_etappen_punkte.sql`: `start_exam`, `finish_exam`, `my_points`, Wochenziel am dritten Übetag. `plans.due` für den Bonus »rechtzeitig«.
+   - `supabase/tests/points.spec.ts`: Die Punkteregeln in SQL und TypeScript stimmen in allen 1920 Kombinationen überein. Dazu Reihenfolge, Mindestdauer, fremde und abgelaufene Versuche.
+   - Seite `/guugge/[id]/pruefung?teil=…&etappe=…` mit Quiz (Etappe 1) und Griffprüfung (Etappe 2), Ergebnis mit Punkten. Im Plan stehen die Punkte, der Rang und bei »Als Nächstes« ein Link »Prüfung«.
+   - Getestet mit Playwright: Quiz und Griffe bestanden, ein falscher Griff wird erkannt, Rang steigt auf Lehrling.
+   - **Ungeprüft:** ob 4 s und 3 s Mindestdauer im Alltag passen.
+7. ~~Etappen 3–5 auf der Bahn~~ erledigt am 29.10.2026:
+   - Die Prüfungsseite schickt nach `/ueben?pruefung=<guugge>&teil=…&etappe=…&art=mic|rhythm`.
+   - Dort ist alles fest eingestellt: Teil, Tempo (Etappe 3: 80 %, sonst 100 %), Hilfen (Etappe 5: »Auswendig«) und Modus. Stimme, Modus und Mithören sind ausgeblendet; Teil, Schleife, Tempo und Hilfen sind gesperrt.
+   - »Abspielen« startet das Mikrofon und meldet den Versuch an (`start_exam`). Gibt es kein Mikrofon, geht es mit Rhythmus tippen weiter, wie im Prototyp.
+   - Am Ende des Teils zählen alle Töne der Stimme (`sectionScore`; nicht gehört = 0). Das Ergebnis geht an `finish_exam`, danach gelten wieder die Einstellungen von vorher.
+   - Ergebnis mit Punkten in »Stück üben«, mit Links »Weiter zu Etappe …«, »Nochmals« und »Zurück zum Plan«.
+   - Getestet mit Playwright: Rhythmus tippen ohne Tipp ergibt 0 %, und der Server speichert das Ergebnis. Mit dem künstlichen Mikrofon geht das Ergebnis als »mic« an den Server.
+   - **Ungeprüft:** ein bestandener Durchgang auf der Bahn im Browser-Test (Tippen müsste auf 70 ms genau sein, zu wackelig für CI) und mit echten Bläsern. Das gehört in den Gerätetest.
+8. ~~Rangliste, Belohnungen, Übersicht der Leitung~~ erledigt am 29.10.2026:
+   - `/guugge/[id]/rangliste`:
+     - eigener Rang mit Fortschritt zum nächsten Level und letzten Punkten;
+     - Belohnungen pro Level, dazu die eigenen der Guugge;
+     - Rangliste nur eingeschaltet und nur mit Opt-in, sortiert gesamt oder nach dieser Woche, mit Register-Wertung aus den Teilnehmenden.
+   - Die Leitung schaltet die Rangliste ein und legt Belohnungen fest.
+   - Die Schalter zur Rangliste sind von der Guugge-Seite hierher umgezogen.
+   - Im Gesamtplan sieht die Leitung die Übersicht der Register: Karten mit Schnitt und »hat diese Woche geübt«, dazu eine Tabelle Register × Teil mit der Plan-Zeile. Nur Register mit mindestens drei Personen.
+   - Migration `20261029140000_m2_rangliste_uebersicht.sql`: `register_overview` zählt Pausen der Stimme als erledigt (`titles.voices[].rests`, wie »Mein Plan«); dazu `leitung_overview`, `guugge_settings`, `set_level_rewards`, `my_points_log`.
+   - Bahn-Looks, Schränz-Groove und Abzeichen kamen am 29.10.2026 dazu (Punkt 11).
+   - Getestet mit Vitest (Rechte, Belohnungen, Pausen in der Übersicht) und Playwright (Rangliste mit Opt-in, Übersicht nur für die Leitung).
+9. ~~Hinweise der Leitung~~ erledigt am 29.10.2026:
+   - `/guugge/[id]/hinweise`: Die Leitung trägt Hinweise ein (Takte, für Alle, ein Register oder eine Stimme; Dynamik, Artikulation, Atmen oder freier Text) und löscht sie.
+   - Alle sehen die Hinweise für ihre Stimme oder alle, mit »neu«, bis sie gelesen sind. »Hinhören« springt in »Stück üben« an die Stelle (`/ueben?takt=…`). Auf der Guugge-Seite steht die Zahl neuer Hinweise.
+   - Auf der Bahn erscheint ein gelbes Band mit Kurztext (»pp«, »Atmen«, »! Text«), gefiltert nach der gewählten Stimme. »Stück üben« lädt den Konto-Code dafür nur, wenn jemand angemeldet ist.
+   - Migration `20261029160000_m2_hinweise.sql`: `add_hint` (nur Leitung, prüft Takte, Ziel, Stärke, Text), `delete_hint`, `list_hints`, `mark_hints_read`.
+   - Getestet mit Vitest (Rechte, Prüfungen, gelesen) und Playwright (eintragen, neu, Hinhören, Band je nach Stimme, löschen).
+   - Hinweise in der Notenansicht kamen am 29.10.2026 dazu (Punkt 13).
+   - Aktualisierung ohne Neuladen kam am 29.10.2026 dazu (Punkt 14).
+   - **Noch nicht:** Hinweise von Registerchefs (docs/03).
+10. ~~Punkte für bewertete Durchgänge~~ erledigt am 29.10.2026:
+    - »Stück üben« meldet jeden Durchgang in der Schleife oder im Echo mit Bewertung beim Server an (`start_pass`) und ab (`finish_pass`). Ab 50 % ein Punkt pro 10 %, höchstens 10, im Originaltempo × 1,5. Höchstens 15 Durchgänge mit Punkten pro Tag und Guugge, wie im Prototyp.
+    - Die Punkte gehen an jede Guugge, in der die Person Mitglied ist (»Stück üben« gehört zu keiner Guugge).
+    - **Neu (Vorschlag, docs/01):** Ein Übetag zählt erst ab einem getroffenen Ton, sonst brächte ein Durchgang ohne Spielen das Wochenziel. Gilt auch für Prüfungen.
+    - Migration `20261029180000_m2_durchgaenge.sql`. Die Punkteregel in SQL und TypeScript stimmt für alle 1111 Kombinationen überein.
+    - Getestet mit Playwright: Ein Durchgang wird angemeldet, abgeschlossen und neu gestartet; 0 % gibt keine Punkte und keinen Übetag.
+    - Punkte fürs Einblasen kamen am 29.10.2026 dazu (Punkt 12).
+11. ~~Belohnungen der Ränge~~ erledigt am 29.10.2026:
+    - Bahn-Look »Fasnacht« (ab Level 2, eigene Farbe je Griff bzw. Zugposition) und »Gold« (ab Level 4) in »Stück üben« unter »Bahn-Look«, gilt auch beim Einblasen. Gefärbt werden nur die kommenden Töne; gespielt, aktuell und bewertet bleiben wie immer.
+    - Bonusübung »Schränz-Groove« beim Einblasen ab Level 3, vorher mit »ab Level 3« gesperrt.
+    - Abzeichen »Guuggen-Ass« (Level 6) und »Fasnachtslegende« (Level 7) beim eigenen Rang und in der Rangliste.
+    - Looks und Groove gelten mit dem höchsten Rang aus allen eigenen Guuggen, auf dem Gerät gemerkt bis zum Abmelden (Vorschlag, docs/01). Migration `20261029200000_m2_belohnungen.sql` mit `my_best_points`.
+    - Getestet mit Vitest (Farben, Freischaltung, Groove-Runden, Höchstwert über Guuggen) und Playwright (ohne Konto gesperrt; mit Punkten Look wählen, Groove üben, Abzeichen; nach dem Abmelden wieder Standard).
+    - **Ungeprüft:** wie die Farben beim Spielen wirken. »Fasnacht« nutzt wie im Prototyp auch Rot, Gelb und Blau, die sonst »falsch«, »knapp« und den aktuellen Ton bedeuten. Bewertete Töne stehen links der Spiellinie, gefärbte rechts; ob das reicht, zeigt der Pilot.
+12. ~~Punkte fürs Einblasen~~ erledigt am 29.10.2026:
+    - Mit »Mithören« meldet »Einblasen« jede Übung beim Server an (`start_exercise`) und schickt am Ende das Ergebnis (`finish_exercise`). 5 Punkte ab 50 % getroffen, höchstens 6 Übungen mit Punkten pro Tag und Guugge. Ohne Mithören gibt es keine Punkte.
+    - **Neu (Vorschlag, docs/01):** Im Prototyp gab es die Punkte fürs Durchspielen; das wären Punkte für Zeit.
+    - Der Server prüft Übung, Stufe, Tempo und Mindestdauer und nimmt den Schränz-Groove erst ab Level 3 an. Migration `20261029210000_m2_einblasen.sql`.
+    - Die Liste, wofür es Punkte gibt, steht jetzt an einem Ort (`POINTS_RULE` in `src/lib/game/points.ts`) und nennt das Einblasen.
+    - Getestet mit Vitest (Länge und Namen der Übungen wie in der App, Regel SQL = TypeScript, Dauer, Tageslimit, Groove-Sperre) und Playwright (Übung mit Mithören wird an- und abgemeldet, 0 % gibt keine Punkte).
+    - **Ungeprüft:** eine Übung mit echtem Instrument über 50 %; das künstliche Mikrofon hört nur ein A. Gehört in den Gerätetest.
+13. ~~Hinweise in der Notenansicht~~ erledigt am 29.10.2026:
+    - Wie auf der Bahn liegt über den Takten ein gelbes Band mit Kurztext (»pp«, »Atmen«, »! Text«), gefiltert nach der gewählten Stimme. Über einen Zeilenumbruch gibt es pro Zeile ein Stück, der Text steht nur am Anfang. Das Band sitzt in der Lücke über den Taktnummern und verdeckt keine Noten.
+    - Im Prototyp stand das nur im Text (»erscheinen in Bahn und Noten«), gezeichnet war es dort nicht.
+    - Getestet mit Vitest (Stücke pro Zeile, `src/lib/score/boxes.ts`) und Playwright (Band mit »pp« in den Noten der Trompete). Auf Bildschirmfotos angeschaut: Desktop und Handy, dunkel und hell.
+    - Hinweise ab demselben Takt teilen sich einen Text (»pp · Atmen«), auf der Bahn wie in den Noten (`bandHints` in `src/lib/hints/hints.ts`). Vorher standen die Texte übereinander.
+    - **Ungeprüft:** wie es mit vielen sich überlappenden Hinweisen aussieht (die Bänder liegen dann übereinander, die Texte stehen an ihrem jeweils ersten Takt).
+14. ~~Hinweise ohne Neuladen~~ erledigt am 29.10.2026:
+    - Supabase Realtime (Postgres Changes) meldet neue und gelöschte Hinweise; Hinweis-Seite, Guugge-Seite (»n neu«) und »Stück üben« (Bahn und Noten) holen dann neu. Auch beim Zurückkehren in die App wird neu geholt. Einzelheiten und Datenschutz in docs/02.
+    - Migration `20261029220000_m2_hinweise_live.sql`: `hints` in der Publikation `supabase_realtime`.
+    - Getestet mit Vitest (Abo, Filter, Sammeln, fremde Löschungen, Aufhören) und Playwright gegen einen Nachbau des Realtime-Protokolls: Trompete sieht neuen und gelöschten Hinweis ohne Neuladen. Gegenprobe: Ohne Meldungen des Nachbaus schlägt der Test fehl.
+    - **Ungeprüft:** gegen das echte Realtime, und wie zuverlässig die Verbindung auf dem iPhone im Hintergrund bleibt (dafür das Neuholen beim Zurückkehren).
+15. Offen in M2: Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Eigener Mailversand (SMTP) über Brevo seit 31.10.2026 eingerichtet und mit einer Einladungsmail geprüft (docs/02).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

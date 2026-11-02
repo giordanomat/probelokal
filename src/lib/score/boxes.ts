@@ -34,3 +34,32 @@ export function scrollToShow(
 export function scoreZoom(width: number): number {
 	return width < 520 ? 0.62 : 0.8;
 }
+
+/** Stück eines Hinweis-Bands auf einer Notenzeile, in Pixeln relativ zur Noten-SVG. */
+export interface BandSegment {
+	x: number;
+	y: number;
+	w: number;
+	/** Erstes Stück des Hinweises (trägt den Text) */
+	first: boolean;
+}
+
+/**
+ * Band über den Takten from–to (einschliesslich), pro Notenzeile ein Stück. Takte ohne Kasten
+ * (nicht gezeichnet) unterbrechen das Band nicht; eine neue Zeile erkennt man an einem anderen y.
+ */
+export function bandSegments(
+	boxes: readonly (BarBox | null)[],
+	from: number,
+	to: number
+): BandSegment[] {
+	const out: BandSegment[] = [];
+	for (let i = Math.max(0, from); i <= Math.min(to, boxes.length - 1); i++) {
+		const b = boxes[i];
+		if (!b) continue;
+		const last = out[out.length - 1];
+		if (last && Math.abs(last.y - b.y) < 1) last.w = b.x + b.w - last.x;
+		else out.push({ x: b.x, y: b.y, w: b.w, first: out.length === 0 });
+	}
+	return out;
+}

@@ -21,6 +21,7 @@
 		"deploy": "npm run build && wrangler deploy"
 	},
 	"devDependencies": {
+		"@electric-sql/pglite": "^0.5.13",
 		"@eslint/js": "^10.0.1",
 		"@playwright/test": "1.63.0",
 		"@sveltejs/adapter-cloudflare": "^8.0.0",

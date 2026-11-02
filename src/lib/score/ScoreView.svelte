@@ -2,15 +2,18 @@
 	// Notenansicht mit OpenSheetMusicDisplay (BSD-3), portiert aus prototype/v7 (initScore,
 	// renderScore, highlight). Die Bibliothek wird erst geladen, wenn die Ansicht aufgeht.
 	// Zeigt nur die gewählte Stimme; der aktuelle Takt ist markiert, Antippen springt dorthin.
+	// Hinweise der Leitung liegen als gelbes Band über den Takten, wie auf der Bahn (lane/draw.ts).
 	import { onMount } from 'svelte';
 	import type { OpenSheetMusicDisplay } from 'opensheetmusicdisplay';
-	import { barAt, scoreZoom, scrollToShow, type BarBox } from './boxes';
+	import type { LaneHint } from '../lane/draw';
+	import { bandSegments, barAt, scoreZoom, scrollToShow, type BarBox } from './boxes';
 
 	let {
 		xml,
 		partId,
 		bar,
 		fingering,
+		hints = [],
 		onpick
 	}: {
 		xml: string;
@@ -20,6 +23,8 @@
 		bar: number;
 		/** Griffe und Zugpositionen (Liedtext) anzeigen */
 		fingering: boolean;
+		/** Hinweise der Leitung für die gewählte Stimme */
+		hints?: readonly LaneHint[];
 		onpick?: (bar: number) => void;
 	} = $props();
 
@@ -119,6 +124,13 @@
 	});
 
 	const current = $derived(boxes[bar] ?? null);
+	/** Band über den Taktnummern, in der Lücke zur Zeile darüber */
+	const BAND_LIFT = 12;
+	const bands = $derived(
+		hints.flatMap((h, i) =>
+			bandSegments(boxes, h.from, h.to).map((s) => ({ ...s, key: `${i}-${s.x}-${s.y}`, h }))
+		)
+	);
 	/** Höhe der Wiedergabeleiste unten (sticky), die die Noten überdeckt */
 	const TRANSPORT_PX = 110;
 
@@ -146,6 +158,18 @@
 <div class="score" bind:this={box} data-testid="noten" data-bar={current ? bar : ''}>
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<div class="host" bind:this={host} onclick={pick}></div>
+	{#each bands as b (b.key)}
+		<div
+			class="band"
+			class:first={b.first}
+			style:left="{b.x + offsetX}px"
+			style:top="{b.y - BAND_LIFT}px"
+			style:width="{b.w}px"
+		>
+			{#if b.first && b.h.label}<span class:dyn={b.h.dyn} data-testid="noten-band">{b.h.label}</span
+				>{/if}
+		</div>
+	{/each}
 	{#if current}
 		<div
 			class="hl"
@@ -192,6 +216,24 @@
 		.hl {
 			transition: none;
 		}
+	}
+	.band {
+		position: absolute;
+		pointer-events: none;
+		height: 16px;
+		background: color-mix(in srgb, var(--gelb) 22%, transparent);
+		border-top: 2.5px solid var(--gelb);
+	}
+	.band span {
+		position: absolute;
+		left: 4px;
+		top: -1px;
+		font: 700 12px var(--font-body);
+		color: var(--ink);
+		white-space: nowrap;
+	}
+	.band .dyn {
+		font-style: italic;
 	}
 	.msg {
 		margin: 0;
