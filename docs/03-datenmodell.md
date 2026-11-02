@@ -61,7 +61,7 @@ Der Ablauf ist **ungeprüft**, bis er zum ersten Mal läuft: Die CLI liess sich 
 
 ## Angewendet (Stand 25.10.2026, im Supabase-Projekt `qieunfhizsxsyzmrrvci` nachgesehen)
 
-`20261028150000_m2_konten_guuggen.sql` ist noch **nicht** angewendet (Stand 28.10.2026). Bis dahin gilt im echten Projekt die Lücke aus 0001: Ein Mitglied kann sich selbst zur Leitung machen. Das schadet nicht, solange es keine Konten und Guuggen gibt. Die Migration muss aber angewendet sein, bevor Konten freigeschaltet werden.
+**Stand 02.11.2026:** PR #4 ist gemergt; die GitHub-Anbindung von Supabase hat die M2-Migrationen angewendet. Von aussen geprüft (anonyme Aufrufe über die API): `my_account`, `list_hints`, `my_best_points` und `start_exercise` existieren und lehnen anonyme Aufrufe mit »permission denied« ab. Nicht von aussen prüfbar: `20261029220000` (Realtime-Publikation); nachsehen im Migrationsverlauf (13 Zeilen erwartet) und unter Database → Publications. Die Lücke aus 0001 ist damit geschlossen.
 
 
 - `0001_grundmodell.sql` ist **bereits angewendet**, Migrationsverlauf Version `0001 grundmodell` – obwohl als ungeprüfter Entwurf markiert. Wer und womit (vermutlich `supabase db push`), ist offen. Der Security Advisor meldete dazu 8 Warnungen (SECURITY-DEFINER-Funktionen für `anon` und angemeldete Nutzer aufrufbar).
