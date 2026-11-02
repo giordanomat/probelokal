@@ -86,7 +86,7 @@
 	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
 	import { activeLook, LANE_LOOKS, lookUnlocked, type LaneLook } from '#lib/lane/looks.ts';
 	import { unlockLevel } from '#lib/game/points.ts';
-	import { replaceState } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 
 	const title = BAD_TOUCH;
 	const voiceIds = title.voices.map((v) => v.id);
@@ -840,12 +840,15 @@
 		replaceState(resolve('/ueben'), {});
 	}
 
+	/** Abbrechen führt zurück zum Plan: In der App auf dem Home-Bildschirm gibt es keinen
+	 * Zurück-Knopf des Browsers. Ein angefangener Versuch bleibt offen und zählt nicht. */
 	function abortExam() {
 		if (!exam) return;
+		const guugge = exam.guugge;
 		if (clock.playing) clock.pause();
 		playing = false;
 		leaveExam(exam);
-		examNotice = 'Prüfung abgebrochen.';
+		void goto(resolve('/guugge/[id]/plan', { id: guugge }));
 	}
 
 	function setPrefs(patch: Partial<LanePrefs>) {
@@ -936,6 +939,9 @@
 </section>
 
 {#if exam}
+	<p>
+		<a class="back" href={resolve('/guugge/[id]/plan', { id: exam.guugge })}>← Plan</a>
+	</p>
 	<section class="exambar" aria-label="Prüfung" data-testid="pruefung">
 		<b
 			>Prüfung · {sectionLabel(title.sections[exam.section])} · Etappe {exam.stage}: {STAGES[
@@ -947,7 +953,7 @@
 				? 'Läuft – spiel den ganzen Teil durch.'
 				: `Drück auf Abspielen, wenn du bereit bist. Tempo ${tempo} %, ein Takt wird eingezählt.`}</span
 		>
-		<button type="button" class="mini" onclick={abortExam}>Abbrechen</button>
+		<button type="button" class="mini" onclick={abortExam}>Abbrechen, zurück zum Plan</button>
 	</section>
 {/if}
 {#if examError}<p class="notice" role="alert">{examError}</p>{/if}
@@ -1343,6 +1349,11 @@
 <audio bind:this={ownEl} data-stem="own" crossorigin="anonymous" preload="auto"></audio>
 
 <style>
+	.back {
+		color: var(--muted);
+		font-weight: 600;
+		text-decoration: none;
+	}
 	.exambar,
 	.examresult {
 		display: flex;

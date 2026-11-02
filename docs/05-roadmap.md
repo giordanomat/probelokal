@@ -198,7 +198,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Migration `20261029220000_m2_hinweise_live.sql`: `hints` in der Publikation `supabase_realtime`.
     - Getestet mit Vitest (Abo, Filter, Sammeln, fremde Löschungen, Aufhören) und Playwright gegen einen Nachbau des Realtime-Protokolls: Trompete sieht neuen und gelöschten Hinweis ohne Neuladen. Gegenprobe: Ohne Meldungen des Nachbaus schlägt der Test fehl.
     - **Ungeprüft:** gegen das echte Realtime, und wie zuverlässig die Verbindung auf dem iPhone im Hintergrund bleibt (dafür das Neuholen beim Zurückkehren).
-15. Offen in M2: Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Eigener Mailversand (SMTP) über Brevo seit 31.10.2026 eingerichtet und mit einer Einladungsmail geprüft (docs/02).
+15. **Abnahme läuft seit 02.11.2026** (Matthias, iPhone und Computer). Bisher: Abschnitte 1–3 bestanden (Anmelden mit 6-stelligem Code, falscher Code »Der Code stimmt nicht oder ist abgelaufen.«, Einladung, Plan mit Pausen), Etappen 1 und 2 bestanden, Level 2 erreicht. Befunde:
+    - Etappe 3: kein Ton auf der Bahn. Ursache offen (Testzugang in der Home-Bildschirm-App oder Mischungen nicht im Storage). Mit Konto sollte kein Testcode nötig sein: umbauen, sobald es Lizenzen gibt.
+    - Unklar, ob das Mikrofon die richtigen Töne hört. Prüfen mit Einblasen → Lange Töne → Mithören (wie M1-Abnahme).
+    - Kein Weg zurück aus der Prüfung auf der Bahn (in der App auf dem Home-Bildschirm fehlt der Zurück-Knopf des Browsers). **Behoben 02.11.2026:** Link »← Plan« und »Abbrechen, zurück zum Plan«.
+    - Zwei Spuren (Töne oben, Griffe unten) lassen sich nicht gleichzeitig lesen. **Entscheid Matthias 02.11.2026:** Griff als Ziffern im Ton-Balken, Griffspur unten nur noch bei Hilfen »alles« (Vorschläge a + b). Vorher Entwurf zeigen.
+    - Seiten wirken unübersichtlich und unattraktiv (Plan). Gestaltungsrunde nach der Abnahme, zuerst »Mein Plan«.
+16. Rest der Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Eigener Mailversand (SMTP) über Brevo seit 31.10.2026 eingerichtet und mit einer Einladungsmail geprüft (docs/02).
 
 **Abnahme:**
 - Automatische RLS-Tests: Mitglied sieht keine Etappen, Punkte oder Übetage anderer; Leitung sieht nur Aggregate und erst ab 3 Personen pro Register; Rangliste zeigt nur Opt-in.

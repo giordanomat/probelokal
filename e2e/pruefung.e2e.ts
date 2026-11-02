@@ -179,3 +179,23 @@ test('Etappe 3 mit Mithören: Mikrofon startet mit »Abspielen«, Ergebnis geht 
 	expect(Number(rows[0].score)).toBeGreaterThanOrEqual(0);
 	expect(Number(rows[0].score)).toBeLessThanOrEqual(1);
 });
+
+test('Prüfung auf der Bahn abbrechen: zurück zum Plan, ohne Ergebnis', async ({ page }) => {
+	test.setTimeout(60_000);
+	const { fake, g } = await readyForLane(page);
+	await fake.signIn(page, 'lea@test.ch');
+	await page.goto(`/guugge/${g}/pruefung?teil=3&etappe=3`);
+	await page.getByRole('link', { name: 'Ohne Mikrofon: Rhythmus tippen' }).click();
+	// Oben ein Weg zurück (in der App auf dem Home-Bildschirm gibt es keinen Zurück-Knopf)
+	await expect(page.getByRole('link', { name: '← Plan' })).toHaveAttribute(
+		'href',
+		`/guugge/${g}/plan`
+	);
+	await page.getByRole('button', { name: 'Abspielen' }).click();
+	await expect(page.getByTestId('pruefung')).toContainText('Läuft');
+	await page.getByRole('button', { name: 'Abbrechen, zurück zum Plan' }).click();
+	await expect(page).toHaveURL(new RegExp(`/guugge/${g}/plan$`));
+	expect(
+		await fake.db.owner(`select count(*)::int as n from exam_results where stage = 3`)
+	).toEqual([{ n: 0 }]);
+});
