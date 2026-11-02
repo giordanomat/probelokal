@@ -1,12 +1,12 @@
 // Bahn zeichnen (Canvas 2D), portiert aus prototype/v7 (Lane.draw), mit Hinweisen der Leitung und
 // Bahn-Looks (#lib/lane/looks.ts). Ohne Dirigent-Vorspiel, das kommt mit M3.
 
-import { pressedValves } from '../music/fingering';
 import type { InstrumentKind, Section, Track } from '../music/types';
 import type { NoteVerdict } from '../pitch/classify';
 import {
 	STAFF_LINES,
 	noteLook,
+	pillGripLabel,
 	pillHeight,
 	visibleBeats,
 	xOfBeat,
@@ -211,17 +211,6 @@ export function drawLane(
 		cx.fillText(h.label, Math.max(x0, 0) + 4, g.laneTop - 3);
 	}
 
-	const showGrip = g.gripHeight > 0;
-	const rowH = showGrip ? g.gripHeight / g.gripRows : 0;
-	if (showGrip) {
-		cx.fillStyle = c.grid;
-		for (let r = 0; r < g.gripRows; r++)
-			cx.fillRect(0, g.gripTop + r * rowH + rowH / 2 - 0.5, W, 1);
-		cx.fillStyle = c.muted;
-		cx.font = `500 9.5px ${MONO}`;
-		cx.fillText(s.kind === 'slide' ? 'ZUG' : 'VENTIL', 24, g.gripTop - 2);
-	}
-
 	const midY = g.laneTop + g.laneHeight / 2;
 	if (s.help === 'memo') {
 		// Auswendig: nur Einsätze
@@ -278,70 +267,39 @@ export function drawLane(
 				cx.stroke();
 			}
 			if (s.help !== 'rhythm') {
-				const label = names ? n.name : n.acc > 0 ? '♯' : n.acc < 0 ? '♭' : '';
-				if (label && w >= (names ? 26 : 12)) {
+				// Im Balken: der Griff (Hilfen »alles«), sonst der Notenname oder das Vorzeichen.
+				// Passt der Text nicht hinein, steht er klein darüber.
+				const grip = s.help === 'all' ? pillGripLabel(n.fing, s.kind) : '';
+				const label = grip || (names ? n.name : n.acc > 0 ? '♯' : n.acc < 0 ? '♭' : '');
+				// Erst normal, dann kleiner; passt es gar nicht, über den Balken
+				let size = Math.round(ph * 0.55);
+				cx.font = `700 ${size}px ${BODY}`;
+				if (label && cx.measureText(label).width + 6 > w) {
+					size = Math.round(ph * 0.42);
+					cx.font = `700 ${size}px ${BODY}`;
+				}
+				const fits = label && cx.measureText(label).width + 6 <= w;
+				if (fits) {
 					cx.fillStyle = col.fg;
-					cx.font = `700 ${Math.round(ph * 0.55)}px ${BODY}`;
-					cx.fillText(label, x + ph * 0.35, y + ph * 0.7);
-				} else if (names && label) {
+					cx.globalAlpha = n.fing_auto && grip ? 0.7 : 1;
+					cx.textAlign = 'center';
+					cx.fillText(label, x + w / 2, y + ph / 2 + size * 0.36);
+					cx.textAlign = 'left';
+					cx.globalAlpha = 1;
+				} else if (label) {
+					cx.fillStyle = look === 'upcoming' || look === 'active' ? c.ink : c.muted;
+					cx.font = `700 12px ${BODY}`;
+					cx.textAlign = 'center';
+					cx.fillText(label, x + w / 2, y - 4);
+					cx.textAlign = 'left';
+				}
+				if (grip && names && fits) {
 					cx.fillStyle = c.muted;
 					cx.font = `600 10px ${BODY}`;
-					cx.fillText(label, x, y - 3);
+					cx.fillText(n.name, x, y - 3);
 				}
-			}
-			if (showGrip) {
-				const gf = col.fill ?? (look === 'ghost' ? c.ghost : c.past);
-				// ergänzte Griffe (aus der Standardtabelle) und vorgespielte Töne etwas blasser
-				cx.globalAlpha =
-					(n.fing_auto && look === 'upcoming') || look === 'ghost'
-						? look === 'ghost'
-							? 0.55
-							: 0.6
-						: 1;
-				if (s.kind === 'slide') {
-					const p = Number(n.fing);
-					if (p >= 1 && p <= 7) {
-						roundRect(cx, x, g.gripTop + (p - 1) * rowH + rowH * 0.18, w, rowH * 0.64, rowH * 0.32);
-						cx.fillStyle = gf;
-						cx.fill();
-					}
-				} else {
-					const pr = pressedValves(n.fing);
-					for (let r = 0; r < 3; r++) {
-						if (!pr.includes(r + 1)) continue;
-						roundRect(cx, x, g.gripTop + r * rowH + rowH * 0.2, w, rowH * 0.6, rowH * 0.3);
-						cx.fillStyle = gf;
-						cx.fill();
-					}
-					if (!pr.length && n.fing) {
-						const cy = g.gripTop + g.gripHeight / 2;
-						const r0 = Math.min(rowH * 0.42, 9);
-						cx.strokeStyle = gf;
-						cx.lineWidth = 2;
-						cx.beginPath();
-						cx.arc(x + r0 + 1, cy, r0, 0, Math.PI * 2);
-						cx.stroke();
-						if (w > r0 * 2 + 30) {
-							cx.fillStyle = gf;
-							cx.font = `600 11px ${BODY}`;
-							cx.fillText('offen', x + r0 * 2 + 6, cy + 4);
-						}
-					}
-				}
-				cx.globalAlpha = 1;
 			}
 		});
-	}
-
-	if (showGrip) {
-		cx.fillStyle = c.surface;
-		cx.globalAlpha = 0.92;
-		cx.fillRect(0, g.gripTop, 20, g.gripHeight);
-		cx.globalAlpha = 1;
-		cx.fillStyle = c.muted;
-		cx.font = `700 11px ${BODY}`;
-		for (let r = 0; r < g.gripRows; r++)
-			cx.fillText(String(r + 1), 6, g.gripTop + r * rowH + rowH / 2 + 4);
 	}
 
 	// Spur der gehörten Tonhöhe (Mithören)

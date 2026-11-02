@@ -86,7 +86,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
 src/
   lib/
     music/        Noten-JSON laden, Transposition, Griffe, Notennamen
-    lane/         Bahn-Renderer (Canvas), Griffspur, Looks
+    lane/         Bahn-Renderer (Canvas), Griff im Ton-Balken, Looks
     audio/        Wiedergabe, Sync, Klick/Ton-Synthese, Latenz-Abgleich
     pitch/        AudioWorklet (YIN), Klassifikation (Treffer, Naturton)
     practice/     Modi (Mitspielen, Echo, Rhythmus), Durchgänge, Baustellen

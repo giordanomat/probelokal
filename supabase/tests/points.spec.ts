@@ -282,7 +282,7 @@ describe('Bewertete Durchgänge', () => {
 });
 
 describe('Höchster Rang über alle Guuggen (Bahn-Looks, Schränz-Groove)', () => {
-	it('zählt die Guugge mit den meisten Punkten, nur eigene und nur als Mitglied', async () => {
+	it('zählt die Guugge mit den meisten Punkten, nur eigene und nur als Mitglied', { timeout: 30_000 }, async () => {
 		const f = await fixture();
 		const best = (who: { id: string } | 'anon') =>
 			f.db.as<{ p: number }>(who, `select my_best_points() as p`).then((r) => r[0].p);

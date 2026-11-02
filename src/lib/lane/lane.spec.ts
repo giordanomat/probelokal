@@ -6,6 +6,7 @@ import {
 	beatAtX,
 	computeGeometry,
 	noteLook,
+	pillGripLabel,
 	pillHeight,
 	visibleBeats,
 	xOfBeat,
@@ -16,7 +17,6 @@ import {
 import { panelState } from './panel';
 
 const trp = buildTrack(badTouchPart('P1').notes, 'valve');
-const pos = buildTrack(badTouchPart('P3').notes, 'slide');
 const opts: LaneOptions = {
 	width: 800,
 	height: 380,
@@ -27,20 +27,17 @@ const opts: LaneOptions = {
 };
 
 describe('Geometrie der Bahn', () => {
-	it('Griffspur: 3 Zeilen Ventile, 7 Zeilen Zug, ohne Griffe keine', () => {
+	it('eine Spur: die ganze Höhe gehört den Tönen, der Griff steht im Balken', () => {
 		const g = computeGeometry(trp, opts);
-		expect(g.gripRows).toBe(3);
-		expect(g.gripHeight).toBeGreaterThan(0);
-		expect(g.gripTop).toBeGreaterThan(g.laneTop + g.laneHeight);
-		expect(g.gripTop + g.gripHeight).toBeLessThanOrEqual(g.height);
-		const gp = computeGeometry(pos, { ...opts, kind: 'slide' });
-		expect(gp.gripRows).toBe(7);
-		expect(gp.gripHeight).toBeGreaterThan(g.gripHeight);
+		expect(g.laneTop + g.laneHeight).toBeLessThanOrEqual(g.height);
 		for (const help of ['nogrip', 'rhythm', 'memo'] as const) {
-			const gn = computeGeometry(trp, { ...opts, help });
-			expect(gn.gripHeight, help).toBe(0);
-			expect(gn.laneHeight).toBeGreaterThan(g.laneHeight);
+			expect(computeGeometry(trp, { ...opts, help }).laneHeight, help).toBe(g.laneHeight);
 		}
+		expect(pillGripLabel('12', 'valve')).toBe('1 2');
+		expect(pillGripLabel('0', 'valve')).toBe('0');
+		expect(pillGripLabel('123', 'valve')).toBe('1 2 3');
+		expect(pillGripLabel('4', 'slide')).toBe('4');
+		expect(pillGripLabel('', 'valve')).toBe('');
 	});
 
 	it('höhere Töne liegen weiter oben, der ganze Umfang passt in die Bahn', () => {
@@ -78,8 +75,8 @@ describe('Geometrie der Bahn', () => {
 
 	it('Balkenhöhe bleibt lesbar', () => {
 		const h = pillHeight(computeGeometry(trp, opts));
-		expect(h).toBeGreaterThanOrEqual(14);
-		expect(h).toBeLessThanOrEqual(26);
+		expect(h).toBeGreaterThanOrEqual(18);
+		expect(h).toBeLessThanOrEqual(28);
 	});
 
 	it('Aussehen: Bewertung vor »jetzt« vor »vorbei«', () => {

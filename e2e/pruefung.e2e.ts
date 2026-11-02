@@ -43,6 +43,8 @@ async function readyForLane(page: Page) {
 test('Quiz und Griffe: bestanden, Punkte, Rang steigt; Reihenfolge wird eingehalten', async ({
 	page
 }) => {
+	// zwei Prüfungen mit Mindestdauer: dauerte schon unbelastet 28 s
+	test.setTimeout(60_000);
 	const fake = await FakeSupabase.create();
 	await fake.attach(page.context());
 	const lea = { id: await fake.idOf('lea@test.ch') };

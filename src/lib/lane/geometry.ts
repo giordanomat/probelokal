@@ -35,9 +35,6 @@ export interface LaneGeometry {
 	laneTop: number;
 	laneHeight: number;
 	/** Griffspur; Höhe 0, wenn keine Griffe gezeigt werden */
-	gripTop: number;
-	gripHeight: number;
-	gripRows: number;
 	/** Pixel pro Schlag */
 	ppb: number;
 	/** x der Spiellinie */
@@ -63,19 +60,13 @@ export function computeGeometry(
 		diaLo = Math.min(diaLo, STAFF_LINES[0] - 1);
 		diaHi = Math.max(diaHi, STAFF_LINES[STAFF_LINES.length - 1] + 1);
 	}
-	const showGrip = o.help === 'all';
-	const gripRows = o.kind === 'slide' ? 7 : 3;
-	const gripHeight = showGrip ? Math.round(o.height * (o.kind === 'slide' ? 0.3 : 0.27)) : 0;
 	const laneTop = HEADER + 6;
-	const laneHeight = o.height - laneTop - gripHeight - (showGrip ? 14 : 10);
+	const laneHeight = o.height - laneTop - 10;
 	return {
 		width: o.width,
 		height: o.height,
 		laneTop,
 		laneHeight,
-		gripTop: laneTop + laneHeight + 8,
-		gripHeight,
-		gripRows,
 		ppb: Math.max(40, Math.min(160, (o.width / 8) * o.zoom)),
 		playX: Math.round(Math.max(56, o.width * 0.22)),
 		diaLo,
@@ -103,9 +94,18 @@ export function visibleBeats(g: LaneGeometry, now: number): [number, number] {
 	return [now - g.playX / g.ppb, now + (g.width - g.playX) / g.ppb];
 }
 
-/** Höhe der Tonbalken: 1,5 Stufen, begrenzt auf 14–26 px. */
+/** Höhe der Tonbalken: 1,5 Stufen, begrenzt auf 18–28 px (der Griff steht darin). */
 export function pillHeight(g: LaneGeometry): number {
-	return Math.max(14, Math.min(26, (g.laneHeight / (g.diaHi - g.diaLo)) * 1.5));
+	return Math.max(18, Math.min(28, (g.laneHeight / (g.diaHi - g.diaLo)) * 1.5));
+}
+
+/**
+ * Griff im Ton-Balken (Entscheid Matthias 02.11.2026, statt einer eigenen Griffspur):
+ * Ventile als Ziffern »1 2«, »0« = offen; Posaune die Zugposition.
+ */
+export function pillGripLabel(fing: string, kind: InstrumentKind): string {
+	if (!fing) return '';
+	return kind === 'slide' ? fing : fing.split('').join(' ');
 }
 
 /** Abstand-Stufen für »Enger« und »Weiter«. */
