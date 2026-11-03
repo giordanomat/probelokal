@@ -11,7 +11,7 @@ test('Rhythmus tippen: Rückmeldung, Durchgang in der Schleife, Tempo-Vorschlag,
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/ueben');
 
-	await page.getByRole('button', { name: 'Rhythmus tippen' }).click();
+	await page.getByRole('button', { name: 'Rhythmus', exact: true }).click();
 	await expect(page.getByTestId('modus-hinweis')).toContainText('Tippe bei jedem Ton');
 	const tap = page.getByRole('button', { name: 'Tippen', exact: true });
 	await expect(tap).toBeVisible();
@@ -48,7 +48,7 @@ test('Echo: erst »Hör zu«, nach zwei Takten »Jetzt du«', async ({ page }) =
 	test.setTimeout(30_000);
 	await page.goto('/ueben');
 	await page.getByRole('button', { name: 'Echo' }).click();
-	await expect(page.getByTestId('modus-hinweis')).toContainText('Zwei Takte vorhören');
+	await expect(page.getByTestId('modus-hinweis')).toContainText('Zwei Takte hören');
 
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 	const big = page.getByTestId('griff');

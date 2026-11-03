@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fakeAudio } from './audio';
+import { chooseVoice, closeSheet, openMore } from './practice';
 
 // Ton in /ueben mit synthetischem Audio: /audio/… wird abgefangen und liefert ein WAV mit
 // Sinuston (Band 220 Hz, eigene Stimme 440 Hz). Ob die echte Weiterleitung auf Supabase samt
@@ -29,7 +30,9 @@ test('Band ist die Uhr der Bahn, eigene Stimme läuft mit, Tempo und Stimme wech
 	const requested = await fakeAudio(page);
 	await page.goto('/ueben');
 
+	await openMore(page);
 	await expect(page.getByRole('button', { name: 'Laut' })).toBeEnabled();
+	await closeSheet(page);
 	await expect(page.getByTestId('ton-hinweis')).toHaveCount(0);
 	expect(requested).toContain('minus_trp1.mp3');
 	expect((await media(page, 'band')).src).toMatch(/minus_trp1\.mp3$/);
@@ -51,7 +54,7 @@ test('Band ist die Uhr der Bahn, eigene Stimme läuft mit, Tempo und Stimme wech
 	expect(Math.abs(beat - (t - OFFSET) / SPB)).toBeLessThan(0.5);
 
 	// Tempo auf beiden Spuren, Tonhöhe bleibt
-	await page.getByLabel('Tempo').fill('80');
+	await page.getByLabel('Tempo').selectOption('80');
 	for (const s of ['band', 'own'] as const) {
 		const m = await media(page, s);
 		expect(m.rate).toBeCloseTo(0.8, 5);
@@ -65,15 +68,17 @@ test('Band ist die Uhr der Bahn, eigene Stimme läuft mit, Tempo und Stimme wech
 
 	// Stimme wechseln lädt die Spuren der neuen Stimme an derselben Stelle
 	const before = (await media(page, 'band')).t;
-	await page.getByRole('button', { name: 'Pos 1' }).click();
+	await chooseVoice(page, 'Pos 1');
 	await expect.poll(async () => (await media(page, 'band')).src).toMatch(/minus_pos1\.mp3$/);
 	await expect.poll(async () => (await media(page, 'band')).t).toBeCloseTo(before, 1);
 	expect((await media(page, 'own')).src).toMatch(/\/pos1\.mp3$/);
 	expect((await media(page, 'band')).rate).toBeCloseTo(0.8, 5);
 
 	// Lautstärke meiner Stimme bleibt pro Gerät
+	await openMore(page);
 	await page.getByRole('button', { name: 'Leise' }).click();
 	await page.reload();
+	await openMore(page);
 	await expect(page.getByRole('button', { name: 'Leise' })).toHaveAttribute('aria-pressed', 'true');
 
 	expect(errors).toEqual([]);
@@ -86,7 +91,9 @@ test('ohne Testzugang: Hinweis mit Weg zum Code, Bahn läuft ohne Ton', async ({
 		'href',
 		'/zugang'
 	);
+	await openMore(page);
 	await expect(page.getByRole('button', { name: 'Laut' })).toBeDisabled();
+	await closeSheet(page);
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 	await expect.poll(() => canvasBeat(page)).toBeGreaterThan(1);
 });

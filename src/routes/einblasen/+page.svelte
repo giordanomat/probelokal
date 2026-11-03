@@ -34,6 +34,7 @@
 	import { summarizePass } from '#lib/practice/pass.ts';
 	import { loadBestPoints, refreshBestPoints } from '#lib/game/unlocks.ts';
 	import { activeLook } from '#lib/lane/looks.ts';
+	import { setAudioSession } from '#lib/audio/session.ts';
 
 	// Stimmen wie beim Stück (gleiche Einstellung pro Gerät)
 	const voices = BAD_TOUCH.voices;
@@ -130,7 +131,10 @@
 	const roundTrip = () => loadLatency(localStorage) ?? defaultRoundTrip(0.02);
 
 	function audio(): AudioContext | null {
-		if (!ctx && typeof AudioContext !== 'undefined') ctx = new AudioContext();
+		if (!ctx && typeof AudioContext !== 'undefined') {
+			setAudioSession('playback');
+			ctx = new AudioContext();
+		}
 		if (ctx?.state === 'suspended') void ctx.resume();
 		return ctx;
 	}

@@ -92,7 +92,7 @@
 	class="lane"
 	bind:this={wrap}
 	role="figure"
-	aria-label="Bahn: Die Töne laufen von rechts zur roten Linie, unten die Griffe."
+	aria-label="Bahn: Die Töne laufen von rechts zur roten Linie, der Griff steht im Ton."
 >
 	<canvas
 		bind:this={canvas}

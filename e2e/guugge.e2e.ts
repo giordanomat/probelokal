@@ -15,7 +15,7 @@ test('Leitung legt eine Guugge an und lädt ein, ein Mitglied tritt per Link bei
 
 	// Anmelden mit Code; ein falscher Code wird abgewiesen
 	await page.goto('/ueben');
-	await page.getByRole('link', { name: 'Meine Guugge' }).click();
+	await page.getByRole('link', { name: '‹ Guugge' }).click();
 	await expect(page.getByRole('heading', { name: 'Melde dich an.' })).toBeVisible();
 	await page.getByRole('link', { name: 'Anmelden →' }).click();
 	await page.getByLabel('E-Mail').fill('Lea@Test.ch');

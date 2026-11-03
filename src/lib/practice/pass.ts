@@ -8,6 +8,14 @@ export const MIN_JUDGED = 3;
 export const TEMPO_MIN = 50;
 export const TEMPO_MAX = 100;
 
+/** Tempo-Auswahl in 5er-Schritten; ein Wert dazwischen (falls es ihn gibt) bleibt wählbar. */
+export function tempoSteps(current?: number): number[] {
+	const steps: number[] = [];
+	for (let t = TEMPO_MIN; t <= TEMPO_MAX; t += 5) steps.push(t);
+	if (current !== undefined && !steps.includes(current)) steps.push(current);
+	return steps.sort((a, b) => a - b);
+}
+
 export interface PassSummary {
 	total: number;
 	hit: number;
