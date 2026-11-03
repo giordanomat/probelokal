@@ -3,7 +3,14 @@
 // lässt sich der Rest der Seite nicht bedienen.
 import type { Page } from '@playwright/test';
 
+/** Erst klicken, wenn die Seite eingehängt ist: Ein Klick davor geht ins Leere (in CI gesehen,
+ * angemeldet direkt nach reload). */
+export async function ready(page: Page) {
+	await page.locator('.practice[data-ready]').waitFor();
+}
+
 export async function openMore(page: Page) {
+	await ready(page);
 	await page.getByRole('button', { name: 'Mehr', exact: true }).click();
 	await page.getByRole('dialog', { name: 'Mehr' }).waitFor();
 }
@@ -15,6 +22,7 @@ export async function closeSheet(page: Page) {
 
 /** Stimme über das Blatt wählen, z. B. »Pos 1« (das Blatt schliesst sich dabei). */
 export async function chooseVoice(page: Page, short: string) {
+	await ready(page);
 	await page.getByRole('button', { name: /^Stimme:/ }).click();
 	await page
 		.getByRole('dialog', { name: 'Deine Stimme' })
