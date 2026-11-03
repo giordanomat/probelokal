@@ -41,13 +41,14 @@ import { judgeTap, missedNotes, tapBeat, type TapContext, type TapResult } from 
 export const MODE_LABELS: Record<PracticeMode, string> = {
 	play: 'Mitspielen',
 	echo: 'Echo',
-	rhythm: 'Rhythmus tippen'
+	rhythm: 'Rhythmus'
 };
 
+/** Eine kurze Zeile unter den Reitern (seit 03.11.2026 kurz: wenige Worte statt Erklärtexte). */
 export const MODE_HINTS: Record<PracticeMode, string> = {
 	play: 'Die Band spielt, du spielst mit.',
-	echo: 'Zwei Takte vorhören (deine Stimme klingt), dann dieselben zwei Takte selbst spielen. Danach die nächsten zwei.',
-	rhythm: 'Tippe bei jedem Ton im richtigen Moment. Nur Rhythmus, ohne Instrument.'
+	echo: 'Zwei Takte hören, dann selbst spielen.',
+	rhythm: 'Tippe bei jedem Ton. Ohne Instrument.'
 };
 
 /** Was die Seite zum Zeitpunkt eines Bildes weiss. */

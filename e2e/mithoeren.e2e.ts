@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { fakeAudio } from './audio';
+import { closeSheet, openMore } from './practice';
 
 // Mithören mit künstlichem Mikrofon (Chromium spielt ein WAV ab, siehe e2e/global-setup.ts):
 // Sägezahn auf klingendem G4, für Trompete notiert A4 (MIDI 69). Echte Bläser, Handymikrofone und
@@ -12,7 +13,9 @@ test('Mikrofon: gehörter Ton, Rückmeldung, Bewertung in der Schleife, eigene S
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/ueben');
+	await openMore(page);
 	await expect(page.getByTestId('verzoegerung')).toContainText('geschätzt');
+	await closeSheet(page);
 
 	await page.getByRole('button', { name: 'Mithören' }).click();
 	const box = page.getByTestId('mithoeren');
@@ -22,7 +25,7 @@ test('Mikrofon: gehörter Ton, Rückmeldung, Bewertung in der Schleife, eigene S
 	await expect(box).toHaveAttribute('data-heard', '69');
 
 	// Mithören und Rhythmus tippen schliessen sich aus
-	await expect(page.getByRole('button', { name: 'Rhythmus tippen' })).toBeEnabled();
+	await expect(page.getByRole('button', { name: 'Rhythmus', exact: true })).toBeEnabled();
 
 	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();
@@ -46,7 +49,8 @@ test('Vorführung: die eigene Spur wird bewertet', async ({ page }) => {
 	page.on('pageerror', (e) => errors.push(e.message));
 	await fakeAudio(page);
 	await page.goto('/ueben');
-	const demo = page.getByRole('button', { name: 'Vorführung mit Aufnahme' });
+	await openMore(page);
+	const demo = page.getByRole('button', { name: 'Vorführung starten' });
 	await expect(demo).toBeEnabled();
 	await demo.click();
 	// Vorführung startet die Wiedergabe selbst
@@ -54,8 +58,10 @@ test('Vorführung: die eigene Spur wird bewertet', async ({ page }) => {
 	const box = page.getByTestId('mithoeren');
 	// eigene Spur klingt 440 Hz = A4, für Trompete notiert H4 (MIDI 71)
 	await expect(box).toHaveAttribute('data-heard', '71', { timeout: 8000 });
-	await expect(page.getByRole('button', { name: 'Vorführung beenden' })).toBeVisible();
-	await page.getByRole('button', { name: 'Vorführung beenden' }).click();
+	// Der Mithören-Knopf zeigt die Vorführung und beendet sie
+	const running = page.getByRole('button', { name: 'Vorführung', exact: true });
+	await expect(running).toHaveAttribute('aria-pressed', 'true');
+	await running.click();
 	await expect(box).toHaveCount(0);
 	expect(errors).toEqual([]);
 });

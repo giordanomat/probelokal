@@ -9,24 +9,34 @@
 	import Lockup from '#lib/brand/Lockup.svelte';
 	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+	// »Stück üben« hat eine eigene, schmale Kopfzeile und braucht die ganze Höhe für die Bahn
+	// (Entscheid Matthias 03.11.2026); Darstellung und »Meine Guugge« liegen dort unter »Mehr«.
+	const bare = $derived(page.url.pathname === resolve('/ueben'));
 </script>
 
-<div class="wrap">
-	<header class="topbar">
-		<span class="home"><Lockup /></span>
-		<span class="tools">
-			<a class="account" href={resolve('/guugge')}>Meine Guugge</a>
-			<ThemeSwitch />
-		</span>
-	</header>
-
-	<main>
+{#if bare}
+	<main class="bare">
 		{@render children()}
 	</main>
-</div>
+{:else}
+	<div class="wrap">
+		<header class="topbar">
+			<span class="home"><Lockup /></span>
+			<span class="tools">
+				<a class="account" href={resolve('/guugge')}>Meine Guugge</a>
+				<ThemeSwitch />
+			</span>
+		</header>
+
+		<main>
+			{@render children()}
+		</main>
+	</div>
+{/if}
 
 <style>
 	.wrap {

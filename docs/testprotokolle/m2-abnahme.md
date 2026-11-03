@@ -90,6 +90,21 @@ Bestehen: Etappe 1 ab 75 %, sonst ab 80 %. Punkte beim ersten Bestehen 40, ab 95
 | Etappe 4 mit »Ohne Mikrofon: Rhythmus tippen« | zählt, aber halbe Punkte | | |
 | »Mein Plan« danach | Etappen und Stand nachgeführt, »Als Nächstes« weiter | | |
 
+## 4a · »Stück üben« neu (seit 03.11.2026, T1 auf B, iPhone und iPad)
+
+Vorher die App ganz schliessen und neu öffnen, damit die neue Fassung lädt.
+
+| Prüfung | Soll | Ist | OK? |
+|---|---|---|---|
+| iPhone auf **stumm** (Schalter an der Seite), »Abspielen« | Band klingt trotzdem. Kein Ton: notieren, ob über der Bahn ein Hinweis steht | | |
+| Stummschalter aus, nochmals | Band klingt | | |
+| Hochkant | alles auf einem Bildschirm, nichts zum Scrollen; rote Linie weit links, gut zwei Takte voraus sichtbar | | |
+| Quer (iPhone und iPad) | Bahn links über die ganze Höhe, Bedienung rechts; nichts von der Notch verdeckt | | |
+| Stimme-Knopf oben rechts | Auswahl aller Stimmen, Wahl schliesst das Blatt | | |
+| »Mehr« | Meine Stimme, Vorführung, Ansicht, Hilfen, Look, Darstellung, Verzögerung; »Fertig« oder daneben tippen schliesst | | |
+| Achtel mit gleichem Griff | Griff steht einmal darüber, nichts klebt zusammen (kein »1212«) | | |
+| Gefühl insgesamt | übersichtlich? Was fehlt, was stört? (unter »Bemerkungen«) | | |
+
 ## 5 · Punkte für Üben (T1 auf B)
 
 | Prüfung | Soll | Ist | OK? |
@@ -124,7 +139,7 @@ Gerät B hat die Seite »Hinweise« der Testguugge offen.
 | L trägt ein: T. 13–16, für Trompeten, Dynamik pp | bei T1 erscheint der Hinweis **ohne Neuladen** mit »neu«. Zeit bis dahin notieren. **Realtime erstmals echt** | | |
 | L trägt ein: T. 17–20, für Posaunen, Atmen | bei T1 nicht (oder nur unter »Alle«) | | |
 | T1: »Hinhören« | »Stück üben« springt an Takt 12 (ein Takt Anlauf), gelbes Band »pp« über T. 13–16 | | |
-| T1: »Noten« | dasselbe Band über den Takten 13–16 | | |
+| T1: »Mehr« → »Noten« | dasselbe Band über den Takten 13–16 | | |
 | T1 zurück auf »Hinweise« | »neu« ist weg | | |
 | T1: App in den Hintergrund (Home-Taste), L trägt einen weiteren Hinweis ein, nach 1 Minute App wieder öffnen | neuer Hinweis ist da, ohne Neuladen | | |
 | L löscht den Trompeten-Hinweis | verschwindet bei T1 ohne Neuladen, auch auf der Bahn | | |
@@ -134,7 +149,7 @@ Gerät B hat die Seite »Hinweise« der Testguugge offen.
 
 | Prüfung | Soll | Ist | OK? |
 |---|---|---|---|
-| Ab Level 2: »Stück üben« → »Bahn-Look« »Fasnacht« | jeder Griff in eigener Farbe; gespielte und bewertete Töne wie immer | | |
+| Ab Level 2: »Stück üben« → »Mehr« → »Bahn-Look« »Fasnacht« | jeder Griff in eigener Farbe; gespielte und bewertete Töne wie immer | | |
 | Wirkt »Fasnacht« beim Spielen verwirrend? (Rot, Gelb, Blau bedeuten sonst Bewertung) | Eindruck notieren | | |
 | Ab Level 3 (250 Punkte): »Einblasen« → »Schränz-Groove« | spielbar, vorher »ab Level 3« | | |
 | Abmelden, dann »Stück üben« | Look wieder Standard | | |

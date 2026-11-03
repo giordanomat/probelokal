@@ -189,7 +189,7 @@ test('Prüfung auf der Bahn abbrechen: zurück zum Plan, ohne Ergebnis', async (
 	await page.goto(`/guugge/${g}/pruefung?teil=3&etappe=3`);
 	await page.getByRole('link', { name: 'Ohne Mikrofon: Rhythmus tippen' }).click();
 	// Oben ein Weg zurück (in der App auf dem Home-Bildschirm gibt es keinen Zurück-Knopf)
-	await expect(page.getByRole('link', { name: '← Plan' })).toHaveAttribute(
+	await expect(page.getByRole('link', { name: '‹ Plan' })).toHaveAttribute(
 		'href',
 		`/guugge/${g}/plan`
 	);

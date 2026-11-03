@@ -9,6 +9,7 @@ import {
 	saveLatency
 } from './latency';
 import { audioStatusOf, probeAudio, stemUrls } from './access';
+import { setAudioSession } from './session';
 import {
 	FALLBACK_LATENCY_SEC,
 	MAX_DRIFT_SEC,
@@ -296,5 +297,17 @@ describe('Verzögerung abgleichen', () => {
 		};
 		expect(loadLatency(broken)).toBeNull();
 		expect(() => saveLatency(broken, 0.1)).not.toThrow();
+	});
+});
+
+describe('iOS-Audio-Sitzung', () => {
+	it('meldet Wiedergabe an, wo es audioSession gibt, sonst passiert nichts', () => {
+		const nav = { audioSession: { type: 'auto' } };
+		expect(setAudioSession('playback', nav)).toBe(true);
+		expect(nav.audioSession.type).toBe('playback');
+		expect(setAudioSession('play-and-record', nav)).toBe(true);
+		expect(nav.audioSession.type).toBe('play-and-record');
+		expect(setAudioSession('playback', {})).toBe(false);
+		expect(setAudioSession('playback', undefined)).toBe(false);
 	});
 });

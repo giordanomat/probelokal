@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
+import { openMore } from './practice';
 
 // Einblasen: Navigation, Vorspielen/Nachspielen und Bewertung mit dem künstlichen Mikrofon
 // (klingendes G4 = notiert A4 für Trompete, siehe e2e/global-setup.ts). Tonleiter-Häppchen
@@ -12,7 +13,8 @@ test('Einblasen: Dirigent spielt vor, du spielst nach, Mithören bewertet nur de
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/ueben');
-	await page.getByRole('link', { name: 'Einblasen' }).click();
+	await openMore(page);
+	await page.getByRole('link', { name: 'Einblasen →' }).click();
 	await expect(page).toHaveURL(/\/einblasen$/);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 		'Mit dem giordanomat-Dirigenten'

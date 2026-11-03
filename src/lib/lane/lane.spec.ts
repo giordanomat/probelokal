@@ -6,6 +6,7 @@ import {
 	beatAtX,
 	computeGeometry,
 	noteLook,
+	AboveLabels,
 	pillGripLabel,
 	pillHeight,
 	visibleBeats,
@@ -40,6 +41,22 @@ describe('Geometrie der Bahn', () => {
 		expect(pillGripLabel('', 'valve')).toBe('');
 	});
 
+	it('Griffe über kurzen Balken: gleicher Griff hintereinander nur einmal, nichts überlappt', () => {
+		const lay = new AboveLabels();
+		// zwei Achtel mit »1 2« nebeneinander: nur die erste beschriftet
+		expect(lay.place(0, '1 2', 100, 18)).toBe(true);
+		expect(lay.place(1, '1 2', 120, 18)).toBe(false);
+		expect(lay.place(2, '1 2', 140, 18)).toBe(false);
+		// anderer Griff, aber zu nah: weg
+		expect(lay.place(3, '0', 112, 8)).toBe(false);
+		// anderer Griff mit Platz: steht
+		expect(lay.place(4, '1', 160, 8)).toBe(true);
+		// derselbe Griff nach einem anderen Ton wieder beschriftet
+		expect(lay.place(5, '1 2', 200, 18)).toBe(true);
+		// gleicher Griff, aber nicht direkt dahinter (Ton dazwischen im Balken beschriftet)
+		expect(lay.place(7, '1 2', 260, 18)).toBe(true);
+	});
+
 	it('höhere Töne liegen weiter oben, der ganze Umfang passt in die Bahn', () => {
 		const g = computeGeometry(trp, opts);
 		expect(yOfDia(g, trp.diaMax)).toBeLessThan(yOfDia(g, trp.diaMin));
@@ -64,9 +81,23 @@ describe('Geometrie der Bahn', () => {
 		expect(xOfBeat(g, b1, 40)).toBeCloseTo(g.width);
 	});
 
-	it('Abstand: Pixel pro Schlag 40–160, Stufen enger/weiter', () => {
-		expect(computeGeometry(trp, { ...opts, width: 320 }).ppb).toBe(40);
-		expect(computeGeometry(trp, { ...opts, zoom: 2 }).ppb).toBe(160);
+	it('Spiellinie weit links: Was kommt, ist wichtiger als was war (Entscheid Matthias 03.11.2026)', () => {
+		for (const width of [358, 650, 800, 1100]) {
+			const g = computeGeometry(trp, { ...opts, width });
+			expect(g.playX / width, String(width)).toBeLessThanOrEqual(0.13);
+			expect(g.playX, String(width)).toBeGreaterThanOrEqual(40);
+			const [b0, b1] = visibleBeats(g, 40);
+			// vorne mindestens fünfmal so viel wie hinten
+			expect(b1 - 40, String(width)).toBeGreaterThan(5 * (40 - b0));
+		}
+		// Handy hochkant: mindestens zwei Takte voraus
+		const phone = computeGeometry(trp, { ...opts, width: 358 });
+		expect(visibleBeats(phone, 40)[1] - 40).toBeGreaterThanOrEqual(8);
+	});
+
+	it('Abstand: Pixel pro Schlag 36–140, Stufen enger/weiter', () => {
+		expect(computeGeometry(trp, { ...opts, width: 320 }).ppb).toBe(36);
+		expect(computeGeometry(trp, { ...opts, zoom: 2 }).ppb).toBe(140);
 		expect(zoomStep(1, 1)).toBe(1.25);
 		expect(zoomStep(1, -1)).toBe(0.8);
 		expect(zoomStep(2, 1)).toBe(2);

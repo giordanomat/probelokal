@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
+import { openMore } from './practice';
 
 // Belohnungen der Ränge: Bahn-Looks (»Stück üben«), Schränz-Groove (»Einblasen«) und Abzeichen
 // (Rangliste). Looks und Groove gelten mit dem höchsten Rang über alle Guuggen (my_best_points),
@@ -7,6 +8,7 @@ import { FakeSupabase } from './fake-supabase';
 
 test('ohne Konto: Looks und Schränz-Groove gesperrt', async ({ page }) => {
 	await page.goto('/ueben');
+	await openMore(page);
 	const look = page.getByLabel('Bahn-Look');
 	await expect(look).toHaveValue('std');
 	await expect(look.locator('option[value=fasnacht]')).toHaveJSProperty('disabled', true);
@@ -50,6 +52,7 @@ test('mit Punkten: Look wählen, Schränz-Groove üben, Abzeichen in der Ranglis
 	await fake.signIn(page, 'lea@test.ch');
 
 	await page.goto('/ueben');
+	await openMore(page);
 	const look = page.getByLabel('Bahn-Look');
 	await expect(look.locator('option[value=fasnacht]')).toHaveJSProperty('disabled', false);
 	await expect(look.locator('option[value=gold]')).toHaveJSProperty('disabled', true);
@@ -58,6 +61,7 @@ test('mit Punkten: Look wählen, Schränz-Groove üben, Abzeichen in der Ranglis
 	await expect(canvas).toHaveAttribute('data-look', 'fasnacht');
 	// Die Wahl bleibt auf dem Gerät
 	await page.reload();
+	await openMore(page);
 	await expect(page.getByLabel('Bahn-Look')).toHaveValue('fasnacht');
 
 	await page.goto('/einblasen');
@@ -81,6 +85,7 @@ test('mit Punkten: Look wählen, Schränz-Groove üben, Abzeichen in der Ranglis
 	await page.goto('/guugge');
 	await page.getByRole('button', { name: 'Abmelden' }).click();
 	await page.goto('/ueben');
+	await openMore(page);
 	await expect(page.getByLabel('Bahn-Look')).toHaveValue('std');
 	await expect(page.locator('.lane canvas').first()).toHaveAttribute('data-look', 'std');
 });

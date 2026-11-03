@@ -34,7 +34,6 @@ export interface LaneGeometry {
 	/** Oberkante der Tonbalken (darüber Taktnummern und Hinweise) */
 	laneTop: number;
 	laneHeight: number;
-	/** Griffspur; Höhe 0, wenn keine Griffe gezeigt werden */
 	/** Pixel pro Schlag */
 	ppb: number;
 	/** x der Spiellinie */
@@ -49,6 +48,14 @@ export function defaultLaneHeight(width: number): number {
 }
 
 const HEADER = 26;
+
+/**
+ * Pixel pro Schlag. Im Prototyp breite/8 und die Spiellinie bei 22 %; seit 03.11.2026 (Entscheid
+ * Matthias: »was gespielt wurde, ist sofort irrelevant, was kommt nicht«) die Linie bei 12 % und
+ * enger, damit auf dem Handy hochkant gut zwei Takte voraus zu sehen sind.
+ */
+const PPB_MIN = 36;
+const PPB_MAX = 140;
 
 export function computeGeometry(
 	track: { diaMin: number; diaMax: number },
@@ -67,8 +74,8 @@ export function computeGeometry(
 		height: o.height,
 		laneTop,
 		laneHeight,
-		ppb: Math.max(40, Math.min(160, (o.width / 8) * o.zoom)),
-		playX: Math.round(Math.max(56, o.width * 0.22)),
+		ppb: Math.max(PPB_MIN, Math.min(PPB_MAX, (o.width / 11) * o.zoom)),
+		playX: Math.round(Math.max(40, o.width * 0.12)),
 		diaLo,
 		diaHi
 	};
@@ -106,6 +113,32 @@ export function pillHeight(g: LaneGeometry): number {
 export function pillGripLabel(fing: string, kind: InstrumentKind): string {
 	if (!fing) return '';
 	return kind === 'slide' ? fing : fing.split('').join(' ');
+}
+
+/**
+ * Griffe, die nicht in den Balken passen und darüber stehen: Ein gleicher Griff direkt hinter dem
+ * vorigen wird nicht wiederholt, und was die vorige Beschriftung überlappen würde, fällt weg
+ * (sonst kleben bei Achteln »1 2« und »1 2« zu »1212« zusammen). Pro Bild neu anlegen; die Töne
+ * in Zeitfolge übergeben.
+ */
+export class AboveLabels {
+	private lastIndex = -2;
+	private lastLabel = '';
+	private lastRight = -Infinity;
+
+	/** true = Beschriftung zeichnen. i = Index des Tons, center/width in Pixeln. */
+	place(i: number, label: string, center: number, width: number): boolean {
+		const repeat = i === this.lastIndex + 1 && label === this.lastLabel;
+		if (repeat) {
+			this.lastIndex = i;
+			return false;
+		}
+		if (center - width / 2 < this.lastRight + 4) return false;
+		this.lastIndex = i;
+		this.lastLabel = label;
+		this.lastRight = center + width / 2;
+		return true;
+	}
 }
 
 /** Abstand-Stufen für »Enger« und »Weiter«. */

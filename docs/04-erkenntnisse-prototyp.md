@@ -24,6 +24,7 @@ Alles hier ist am Prototyp gemessen oder beobachtet; wo nicht, steht »ungeprüf
 - Minus-One-Mischungen per ffmpeg `amix=inputs=N:normalize=0,alimiter=limit=0.89:level=0` (ohne `level=0` zieht der Limiter den Pegel automatisch auf 0 dB hoch), MP3 128 kbit/s. Längen: Gesamtmischung 204,4 s, Einzelspuren 200,7 s (Schlagzeug länger) – unkritisch, Start gleich.
 - Die alten »Übungsfiles« (Fokus-Mischungen vom Juni) liefen bei ♩ ≈ 110 und passten nicht zur MusicXML; nicht mehr verwendet.
 - iOS: `element.volume` wird ignoriert → Lautstärke der eigenen Stimme über `GainNode` (umgesetzt). `AudioContext` erst bei einer Nutzergeste erzeugen.
+- iOS: Ton über Web Audio gilt ohne Angabe als »ambient« und verstummt mit dem Stummschalter (bekanntes Verhalten, für uns ungeprüft). Seit 03.11.2026 setzt die App `navigator.audioSession.type` auf »playback«, fürs Mikrofon auf »play-and-record« (`src/lib/audio/session.ts`).
 - Sieben gleichzeitige `<audio>`-Elemente (frühe Version) waren auf dem Desktop synchron; auf Handys nie getestet. Mit Minus-One sind es nur zwei.
 
 ## Tonerkennung (YIN)

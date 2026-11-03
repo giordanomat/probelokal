@@ -20,7 +20,7 @@ test('Durchgang in der Schleife wird angemeldet, abgeschlossen und neu gestartet
 	await fake.signIn(page, 'lea@test.ch');
 
 	await page.goto('/ueben');
-	await page.getByRole('button', { name: 'Rhythmus tippen' }).click();
+	await page.getByRole('button', { name: 'Rhythmus', exact: true }).click();
 	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();
 	await page.getByRole('button', { name: 'Abspielen' }).click();

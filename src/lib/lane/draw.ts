@@ -4,6 +4,7 @@
 import type { InstrumentKind, Section, Track } from '../music/types';
 import type { NoteVerdict } from '../pitch/classify';
 import {
+	AboveLabels,
 	STAFF_LINES,
 	noteLook,
 	pillGripLabel,
@@ -236,6 +237,7 @@ export function drawLane(
 
 		const ph = pillHeight(g);
 		const names = s.names && s.help !== 'rhythm';
+		const above = new AboveLabels();
 		s.track.notes.forEach((n, i) => {
 			if (n.b + n.d < b0 || n.b > b1) return;
 			const x = X(n.b) + 1;
@@ -287,11 +289,13 @@ export function drawLane(
 					cx.textAlign = 'left';
 					cx.globalAlpha = 1;
 				} else if (label) {
-					cx.fillStyle = look === 'upcoming' || look === 'active' ? c.ink : c.muted;
 					cx.font = `700 12px ${BODY}`;
-					cx.textAlign = 'center';
-					cx.fillText(label, x + w / 2, y - 4);
-					cx.textAlign = 'left';
+					if (above.place(i, label, x + w / 2, cx.measureText(label).width)) {
+						cx.fillStyle = look === 'upcoming' || look === 'active' ? c.ink : c.muted;
+						cx.textAlign = 'center';
+						cx.fillText(label, x + w / 2, y - 4);
+						cx.textAlign = 'left';
+					}
 				}
 				if (grip && names && fits) {
 					cx.fillStyle = c.muted;

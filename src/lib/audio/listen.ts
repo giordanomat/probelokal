@@ -12,6 +12,7 @@ import {
 	type LatencyEstimate
 } from './latency';
 import type { Instrument } from '../music/types';
+import { setAudioSession } from './session';
 import type { TrackerMessage } from '../pitch/tracker';
 
 const modules = new WeakMap<BaseAudioContext, Promise<void>>();
@@ -50,6 +51,7 @@ export class Listener {
 			if (!navigator.mediaDevices?.getUserMedia) {
 				throw Object.assign(new Error('kein Mikrofonzugriff'), { name: 'NoMedia' });
 			}
+			setAudioSession('play-and-record');
 			[stream] = await Promise.all([navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS), loading]);
 			source = ctx.createMediaStreamSource(stream);
 		} else {
@@ -84,6 +86,7 @@ export class Listener {
 		}
 		this.node.disconnect();
 		this.stream?.getTracks().forEach((t) => t.stop());
+		if (this.stream) setAudioSession('playback');
 	}
 
 	private send(cmd: PitchWorkletCommand) {

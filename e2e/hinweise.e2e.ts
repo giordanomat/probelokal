@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
+import { chooseView, chooseVoice } from './practice';
 
 // Hinweise der Leitung gegen den Supabase-Nachbau: eintragen, für wen sie gelten, »neu« bis
 // gelesen, »Hinhören« springt in »Stück üben« an die Stelle, Bahn und Noten zeigen sie.
@@ -76,15 +77,15 @@ test('Leitung trägt einen Hinweis ein, Trompete sieht ihn neu, hört hin, Bahn 
 	await expect(p2.locator('.transport .pos')).toContainText('Teil B');
 	await expect(p2.locator('.lane canvas')).toHaveAttribute('data-hints', '1');
 	// Notenansicht: dasselbe Band über den Takten, Text nur einmal
-	await p2.getByRole('button', { name: 'Noten', exact: true }).click();
+	await chooseView(p2, 'Noten');
 	const score = p2.getByTestId('noten');
 	await expect(score.locator('svg').first()).toBeVisible({ timeout: 20_000 });
 	await expect(score.getByTestId('noten-band')).toHaveText('pp');
-	await p2.getByRole('button', { name: 'Bahn', exact: true }).click();
+	await chooseView(p2, 'Bahn');
 	// Andere Stimme gewählt: der Trompeten-Hinweis gilt nicht mehr
-	await p2.getByRole('button', { name: 'Pos 1' }).click();
+	await chooseVoice(p2, 'Pos 1');
 	await expect(p2.locator('.lane canvas')).toHaveAttribute('data-hints', '1');
-	await p2.getByRole('button', { name: 'Euph' }).click();
+	await chooseVoice(p2, 'Euph');
 	await expect(p2.locator('.lane canvas')).toHaveAttribute('data-hints', '0');
 
 	// Gelesen

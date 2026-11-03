@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { chooseView, chooseVoice, closeSheet, openMore } from './practice';
 
 // Notenansicht, Vollbild und Baustellen. Die MusicXML kommt im Produkt aus dem privaten Bucket
 // (score.musicxml); hier liefert eine abgefangene Route die Datei aus dem Prototyp.
@@ -20,7 +21,7 @@ test('Noten: gewählte Stimme, aktueller Takt läuft mit, Antippen springt', asy
 	page.on('pageerror', (e) => errors.push(e.message));
 	await fakeScore(page);
 	await page.goto('/ueben');
-	await page.getByRole('button', { name: 'Noten', exact: true }).click();
+	await chooseView(page, 'Noten');
 	const score = page.getByTestId('noten');
 	await expect(score.locator('svg').first()).toBeVisible({ timeout: 20_000 });
 	// Start bei Teil A mit Anlauf: markiert ist Takt 0
@@ -32,8 +33,10 @@ test('Noten: gewählte Stimme, aktueller Takt läuft mit, Antippen springt', asy
 	await page.getByRole('button', { name: 'Anhalten' }).click();
 
 	// Andere Stimme und ohne Griffe: neu gezeichnet, ohne Fehler
-	await page.getByRole('button', { name: 'Pos 1' }).click();
+	await chooseVoice(page, 'Pos 1');
+	await openMore(page);
 	await page.getByLabel('Griffe und Zugpositionen').uncheck();
+	await closeSheet(page);
 	await expect(score.locator('svg').first()).toBeVisible();
 
 	// Antippen eines Takts springt dorthin (mit Anlauf: markiert ist der Takt davor)
@@ -43,14 +46,14 @@ test('Noten: gewählte Stimme, aktueller Takt läuft mit, Antippen springt', asy
 	await expect(score).not.toHaveAttribute('data-bar', '1');
 
 	// Zurück zur Bahn
-	await page.getByRole('button', { name: 'Bahn', exact: true }).click();
+	await chooseView(page, 'Bahn');
 	await expect(page.getByRole('figure', { name: /Bahn/ })).toBeVisible();
 	expect(errors).toEqual([]);
 });
 
 test('Noten ohne Testzugang: Hinweis mit Weg zum Code', async ({ page }) => {
 	await page.goto('/ueben');
-	await page.getByRole('button', { name: 'Noten', exact: true }).click();
+	await chooseView(page, 'Noten');
 	await expect(page.getByTestId('noten-hinweis')).toContainText('Testzugang');
 	await expect(page.getByTestId('noten-hinweis').getByRole('link')).toHaveAttribute(
 		'href',
@@ -58,20 +61,26 @@ test('Noten ohne Testzugang: Hinweis mit Weg zum Code', async ({ page }) => {
 	);
 });
 
-test('Vollbild: nur Bahn und Wiedergabe, Esc beendet', async ({ page }) => {
+test('Vollbild (hochkant): nur Bahn und Wiedergabe, Esc beendet', async ({ page }) => {
+	// Quer gibt es kein Vollbild: Die Bahn hat dort schon die ganze Höhe
+	await page.setViewportSize({ width: 420, height: 860 });
 	await page.goto('/ueben');
 	const lane = page.locator('.lane canvas');
+	await expect(lane).toBeVisible();
 	const before = (await lane.boundingBox())?.height ?? 0;
+	const heading = page.getByRole('heading', { level: 1, name: 'Bad Touch 2.0' });
+	await openMore(page);
 	await page.getByRole('button', { name: 'Vollbild', exact: true }).click();
-	await expect(page.locator('header.topbar')).toBeHidden();
-	await expect(page.getByRole('group', { name: 'Stimme', exact: true })).toBeHidden();
+	await expect(heading).toBeHidden();
+	await expect(page.getByRole('group', { name: 'Übe-Modus' })).toBeHidden();
 	await expect(page.getByRole('button', { name: 'Abspielen' })).toBeVisible();
 	await expect.poll(async () => (await lane.boundingBox())?.height ?? 0).toBeGreaterThan(before);
 	await page.keyboard.press('Escape');
-	await expect(page.locator('header.topbar')).toBeVisible();
+	await expect(heading).toBeVisible();
+	await openMore(page);
 	await page.getByRole('button', { name: 'Vollbild', exact: true }).click();
 	await page.getByRole('button', { name: 'Vollbild beenden' }).click();
-	await expect(page.getByRole('group', { name: 'Stimme', exact: true })).toBeVisible();
+	await expect(page.getByRole('group', { name: 'Übe-Modus' })).toBeVisible();
 });
 
 test('Baustellen: Liste, Üben bei 70 % in der Schleife, zurücksetzen', async ({ page }) => {
@@ -85,7 +94,9 @@ test('Baustellen: Liste, Üben bei 70 % in der Schleife, zurücksetzen', async (
 		}
 	});
 	await page.goto('/ueben');
-	const items = page.locator('.bau li');
+	// Nur ein kurzer Hinweis unter der Bahn; die Liste liegt im Blatt
+	await page.getByRole('button', { name: '2 Baustellen ›' }).click();
+	const items = page.getByRole('dialog', { name: 'Baustellen' }).getByRole('listitem');
 	// Takt 30 hat zu wenige Versuche
 	await expect(items).toHaveCount(2);
 	await expect(items.first()).toContainText('Takt 13–14');
@@ -103,8 +114,9 @@ test('Baustellen: Liste, Üben bei 70 % in der Schleife, zurücksetzen', async (
 	);
 	expect(await canvasBeat(page)).toBeCloseTo(48, 1);
 
+	await page.getByRole('button', { name: /Baustellen ›/ }).click();
 	await page.getByRole('button', { name: 'Baustellen zurücksetzen' }).click();
-	await expect(page.locator('.bau')).toContainText('Noch keine.');
+	await expect(page.getByRole('button', { name: /Baustelle/ })).toHaveCount(0);
 	await page.reload();
-	await expect(page.locator('.bau')).toContainText('Noch keine.');
+	await expect(page.getByRole('button', { name: /Baustelle/ })).toHaveCount(0);
 });

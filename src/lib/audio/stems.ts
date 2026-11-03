@@ -8,6 +8,7 @@
 // Ungeprüft: Gleichlauf und Speicherbedarf auf iPhone/iPad (Abnahme M1, Testprotokoll).
 
 import type { PracticeClock } from '../practice/clock';
+import { setAudioSession } from './session';
 
 export const SYNC_INTERVAL_MS = 500;
 export const MAX_DRIFT_SEC = 0.05;
@@ -50,6 +51,7 @@ export const webAudioGraph: GraphFactory = (band, own) => {
 	const Ctx =
 		window.AudioContext ??
 		(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+	setAudioSession('playback');
 	const ctx = new Ctx();
 	ctx.createMediaElementSource(band as HTMLMediaElement).connect(ctx.destination);
 	const gain = ctx.createGain();

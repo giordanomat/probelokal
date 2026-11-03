@@ -1,10 +1,13 @@
 <script lang="ts">
-	// Stück üben, Stand M1: Bahn und Griff-Anzeige für Bad Touch mit Ton (Band ohne mich und eigene
+	// Stück üben: Bahn für Bad Touch mit Ton (Band ohne mich und eigene
 	// Stimme, docs/02-architektur.md »Audio«). Die Band ist die Uhr der Bahn. Ohne Testzugang oder
 	// ohne Aufnahmen läuft die Bahn mit einer eigenen Uhr weiter, und ein Hinweis sagt warum.
 	// Modi Mitspielen, Echo und Rhythmus tippen: Ablauf in #lib/practice/session.ts.
 	// Mithören: AudioWorklet mit der Tonerkennung (#lib/audio/listen.ts), Bewertung in der session.
 	// Etappenprüfungen 3–5 (M2): ?pruefung=<guugge>&teil=…&etappe=…&art=mic|rhythm, siehe unten.
+	// Aufbau seit 03.11.2026 (Entscheid Matthias, docs/01 »Bedienung«): eine Kopfzeile, drei Reiter,
+	// die Bahn so gross wie möglich, unten Teil · Schleife · Tempo und Mithören · Abspielen · Mehr.
+	// Alles Seltene liegt im Blatt »Mehr«. Hochkant untereinander, quer die Bedienung rechts.
 	import { onDestroy, onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -23,8 +26,8 @@
 	} from '#lib/audio/latency.ts';
 	import { Listener, measureRoundTrip, micErrorText } from '#lib/audio/listen.ts';
 	import { StemPlayer } from '#lib/audio/stems.ts';
+	import { setAudioSession } from '#lib/audio/session.ts';
 	import type { TrackerMessage } from '#lib/pitch/tracker.ts';
-	import GripPanel from '#lib/lane/GripPanel.svelte';
 	import Lane from '#lib/lane/Lane.svelte';
 	import { HELP_LABELS, zoomStep, type HelpLevel } from '#lib/lane/geometry.ts';
 	import { panelState } from '#lib/lane/panel.ts';
@@ -47,11 +50,13 @@
 		type BarStats
 	} from '#lib/practice/baustellen.ts';
 	import ScoreView from '#lib/score/ScoreView.svelte';
-	import PracticeNav from '#lib/nav/PracticeNav.svelte';
+	import Sheet from '#lib/ui/Sheet.svelte';
+	import Mark from '#lib/brand/Mark.svelte';
+	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
 	import { cachedFile, storeFile, titleCacheName } from '#lib/offline/title-cache.ts';
 	import { FreeClock, type PracticeClock } from '#lib/practice/clock.ts';
 	import type { EchoPhase, PracticeMode } from '#lib/practice/echo.ts';
-	import { summarizePass, TEMPO_MAX, TEMPO_MIN } from '#lib/practice/pass.ts';
+	import { summarizePass, tempoSteps } from '#lib/practice/pass.ts';
 	import {
 		DEFAULT_PREFS,
 		OWN_LEVELS,
@@ -134,7 +139,10 @@
 	let scoreXml = $state<string | null>(null);
 	let scoreStatus = $state<AudioStatus | 'idle' | 'loading'>('idle');
 	let fokus = $state(false);
-	let innerHeight = $state(800);
+	/** Offenes Blatt: Mehr, Stimme wählen oder Baustellen */
+	let sheet = $state<'mehr' | 'stimme' | 'bau' | null>(null);
+	/** Höhe der Fläche für die Bahn (füllt, was Kopf und Bedienung übrig lassen) */
+	let laneBoxHeight = $state(0);
 	/** Übebereich aus der Baustellen-Liste statt eines Teils */
 	let customRange = $state<{ from: number; to: number } | null>(null);
 	let bauStats = $state<BarStats>({});
@@ -303,7 +311,10 @@
 	function audioContextForListening(): AudioContext | null {
 		const ctx = stems?.audioContext();
 		if (ctx) return ctx;
-		if (!spareCtx && typeof AudioContext !== 'undefined') spareCtx = new AudioContext();
+		if (!spareCtx && typeof AudioContext !== 'undefined') {
+			setAudioSession('playback');
+			spareCtx = new AudioContext();
+		}
 		void spareCtx?.resume();
 		return spareCtx;
 	}
@@ -335,7 +346,7 @@
 		feedback = {
 			text:
 				kind === 'mic'
-					? 'Ich höre zu. Play drücken und mitspielen.'
+					? 'Ich höre zu. Play drücken und mitspielen, am besten mit Kopfhörer.'
 					: 'Vorführung: Die Aufnahme deiner Stimme spielt, das Mithören bewertet sie.',
 			tone: ''
 		};
@@ -404,14 +415,6 @@
 		missing: 'Die Noten sind noch nicht hochgeladen.',
 		unavailable: 'Die Noten sind gerade nicht erreichbar.'
 	};
-
-	const listenHint = $derived(
-		listening === 'mic'
-			? 'Deine Stimme ist beim Mithören stumm, du spielst sie selbst. Kopfhörer empfohlen.'
-			: listening === 'demo'
-				? 'So sieht es aus, wenn jemand die Stimme fehlerfrei spielt.'
-				: 'Das Mikrofon hört, ob du die Töne triffst. Mit Kopfhörer, sonst hört es die Band mit.'
-	);
 
 	const latencyText = $derived.by(() => {
 		if (calibration === 'running')
@@ -497,9 +500,9 @@
 		session.loop = true;
 		tempo = BAUSTELLE_TEMPO;
 		view = 'bahn';
+		sheet = null;
 		jumpTo(from);
 		sync();
-		document.querySelector('.stage')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 	}
 
 	function chooseView(v: 'bahn' | 'noten') {
@@ -578,6 +581,10 @@
 	let driftMs = $state(0);
 	let resyncs = $state(0);
 	let outputMs = $state(0);
+	/** Zeile mit Hinweisen unter dem Kopf nur, wenn es etwas zu sagen gibt */
+	const hasNotes = $derived(
+		diag || (audio !== 'ok' && audio !== 'loading') || !!exam || !!examError || !!examNotice
+	);
 
 	/** Gespeicherte Spuren einer Stimme als blob:-Adressen, oder null. */
 	async function localStems(id: string): Promise<{ band: string; own: string } | null> {
@@ -642,6 +649,7 @@
 	}
 
 	function chooseVoice(id: string) {
+		sheet = null;
 		setPrefs({ voice: id });
 		session.setNotes(track.notes);
 		loadBaustellen();
@@ -908,241 +916,335 @@
 	<title>{title.name} üben · Probelokal</title>
 </svelte:head>
 
-<svelte:window onkeydown={onKey} bind:innerHeight />
+<svelte:window onkeydown={onKey} />
 
-<PracticeNav />
-
-<section class="head">
-	<p class="label">Stück üben</p>
-	<h1>{title.name}</h1>
-	<p class="hint">
-		Fassung {title.version} · ♩ {title.bpm}. Du hörst die Band ohne deine Stimme. Deine Stimme
-		kannst du laut, leise oder gar nicht dazunehmen.
-	</p>
-	{#if diag}
-		<p class="hint diag" data-testid="diag">
-			Messung: eigene Spur max. {driftMs} ms neben der Band ({resyncs} × nachgeführt) · Ausgabe-Latenz
-			{outputMs} ms · Verzögerung Mithören {Math.round(roundTrip * 1000)} ms{measured === null
-				? ' (geschätzt)'
-				: ''}
-		</p>
-	{/if}
-	{#if saved}
-		<p class="hint" data-testid="offline">Diese Stimme ist gespeichert und läuft auch ohne Netz.</p>
-	{/if}
-	{#if audio !== 'ok' && audio !== 'loading'}
-		<p class="notice" role="status" data-testid="ton-hinweis">
-			{AUDIO_NOTICE[audio]}
-			{#if audio === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
-		</p>
-	{/if}
-</section>
-
-{#if exam}
-	<p>
-		<a class="back" href={resolve('/guugge/[id]/plan', { id: exam.guugge })}>← Plan</a>
-	</p>
-	<section class="exambar" aria-label="Prüfung" data-testid="pruefung">
-		<b
-			>Prüfung · {sectionLabel(title.sections[exam.section])} · Etappe {exam.stage}: {STAGES[
-				exam.stage - 1
-			].name} · {exam.via === 'mic' ? 'Mithören' : 'Rhythmus tippen'}</b
-		>
-		<span class="hint"
-			>{exam.attempt
-				? 'Läuft – spiel den ganzen Teil durch.'
-				: `Drück auf Abspielen, wenn du bereit bist. Tempo ${tempo} %, ein Takt wird eingezählt.`}</span
-		>
-		<button type="button" class="mini" onclick={abortExam}>Abbrechen, zurück zum Plan</button>
-	</section>
-{/if}
-{#if examError}<p class="notice" role="alert">{examError}</p>{/if}
-{#if examNotice}<p class="notice" role="status">{examNotice}</p>{/if}
-{#if examDone}
-	{@const r = examDone.result}
-	{@const p = examDone.params}
-	<section class="examresult" data-testid="pruefung-ergebnis">
-		<p class="label">
-			Ergebnis · {sectionLabel(title.sections[p.section])} · Etappe {p.stage}: {STAGES[p.stage - 1]
-				.name}
-		</p>
-		<p class="score" class:ok={r.passed}>{Math.round(r.score * 100)} %</p>
-		<b>{r.passed ? 'Bestanden' : 'Noch nicht ganz'}</b>
-		<p>{examDone.message}</p>
-		{#if r.points}<p class="hint">+{r.points} Punkte · {r.reasons.join(' · ')}</p>{/if}
-		{#if r.week_goal}<p class="hint">+{r.week_goal} Punkte · Wochenziel: an 3 Tagen geübt</p>{/if}
-		<div class="row">
-			{#if r.passed && p.stage < 5}
-				<a
-					class="mini"
-					href="{resolve('/guugge/[id]/pruefung', {
-						id: p.guugge
-					})}?teil={p.section}&etappe={p.stage + 1}">Weiter zu Etappe {p.stage + 1}</a
-				>
-			{/if}
-			{#if !r.passed}
-				<a
-					class="mini"
-					href="{resolve('/guugge/[id]/pruefung', {
-						id: p.guugge
-					})}?teil={p.section}&etappe={p.stage}">Nochmals</a
-				>
-			{/if}
-			<a class="mini" href={resolve('/guugge/[id]/plan', { id: p.guugge })}>Zurück zum Plan</a>
-			<button type="button" class="mini" onclick={() => (examDone = null)}>Schliessen</button>
-		</div>
-	</section>
-{/if}
-
-{#if !exam}
-	<section class="row">
-		<div class="seg" role="group" aria-label="Stimme">
-			{#each title.voices as v (v.id)}
-				<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
-					>{v.short}</button
-				>
-			{/each}
-		</div>
-	</section>
-
-	<section class="row">
-		<div class="seg" role="group" aria-label="Übe-Modus">
-			{#each Object.entries(MODE_LABELS) as [m, label] (m)}
-				<button
-					type="button"
-					aria-pressed={m === mode}
-					onclick={() => chooseMode(m as PracticeMode)}>{label}</button
-				>
-			{/each}
-		</div>
-		<span class="hint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</span>
-	</section>
-
-	<section class="row">
-		<span class="toggle">Meine Stimme</span>
-		<div class="seg" role="group" aria-label="Meine Stimme im Kopfhörer">
-			{#each OWN_LEVELS as l (l.value)}
-				<button
-					type="button"
-					aria-pressed={l.value === prefs.own}
-					disabled={audio !== 'ok'}
-					onclick={() => chooseOwn(l.value)}>{l.label}</button
-				>
-			{/each}
-		</div>
-		<span class="hint">»Aus« heisst: Du spielst deine Stimme selbst.</span>
-	</section>
-
-	<section class="row listen">
-		<button
-			type="button"
-			class="micbtn"
-			aria-pressed={listening === 'mic'}
-			disabled={mode === 'rhythm' || calibration === 'running'}
-			onclick={() => toggleListening('mic')}
-		>
-			<svg viewBox="0 0 24 24" aria-hidden="true"
-				><path
-					d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"
-				/></svg
-			>
-			Mithören
-		</button>
-		<button
-			type="button"
-			class="mini"
-			aria-pressed={listening === 'demo'}
-			disabled={audio !== 'ok' || mode === 'rhythm' || calibration === 'running'}
-			onclick={() => toggleListening('demo')}
-			>{listening === 'demo' ? 'Vorführung beenden' : 'Vorführung mit Aufnahme'}</button
-		>
-		<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
-			>Verzögerung abgleichen</button
-		>
-		{#if listenError}
-			<span class="say" data-tone="bad" role="alert">{listenError}</span>
+<div class="practice" class:fokus>
+	<header class="bar">
+		<Mark class="mark" />
+		{#if exam}
+			<a class="back" href={resolve('/guugge/[id]/plan', { id: exam.guugge })}>‹ Plan</a>
 		{:else}
-			<span class="hint">{listenHint}</span>
+			<a class="back" href={resolve('/guugge')}>‹ Guugge</a>
 		{/if}
-		<span class="hint" data-testid="verzoegerung">{latencyText}</span>
-	</section>
-{/if}
+		<h1>{title.name}</h1>
+		{#if !exam}
+			<button
+				type="button"
+				class="chip"
+				aria-haspopup="dialog"
+				aria-label="Stimme: {voice.short}, ändern"
+				onclick={() => (sheet = 'stimme')}>{voice.short} ▾</button
+			>
+		{/if}
+	</header>
 
-<section class="row opts">
-	<div class="seg" role="group" aria-label="Ansicht">
-		<button type="button" aria-pressed={view === 'bahn'} onclick={() => chooseView('bahn')}
-			>Bahn</button
-		>
-		<button type="button" aria-pressed={view === 'noten'} onclick={() => chooseView('noten')}
-			>Noten</button
-		>
-	</div>
-	{#if view === 'noten'}
-		<label class="toggle"
-			><input type="checkbox" bind:checked={fingering} /> Griffe und Zugpositionen</label
-		>
-	{:else}
-		<label class="toggle"
-			><input
-				type="checkbox"
-				checked={prefs.names}
-				onchange={(e) => setPrefs({ names: e.currentTarget.checked })}
-			/> Notennamen</label
-		>
-		<label class="toggle"
-			><input
-				type="checkbox"
-				checked={prefs.staff}
-				onchange={(e) => setPrefs({ staff: e.currentTarget.checked })}
-			/> Notenlinien</label
-		>
-		<label class="toggle"
-			>Hilfen
-			<select
-				value={prefs.help}
-				disabled={!!exam}
-				onchange={(e) => setPrefs({ help: e.currentTarget.value as HelpLevel })}
-			>
-				{#each Object.entries(HELP_LABELS) as [k, label] (k)}
-					<option value={k}>{label}</option>
-				{/each}
-			</select>
-		</label>
-		<span class="toggle">
-			Abstand
-			<button
-				type="button"
-				class="mini"
-				aria-label="Enger"
-				onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, -1) })}>−</button
-			>
-			<button
-				type="button"
-				class="mini"
-				aria-label="Weiter"
-				onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, 1) })}>+</button
-			>
-		</span>
-		<label class="toggle"
-			>Bahn-Look
-			<select
-				value={activeLook(prefs.look, bestPoints)}
-				onchange={(e) => setPrefs({ look: e.currentTarget.value as LaneLook })}
-			>
-				{#each LANE_LOOKS as l (l.id)}
-					<option value={l.id} disabled={!lookUnlocked(l.id, bestPoints)}
-						>{l.label}{l.id !== 'std' && !lookUnlocked(l.id, bestPoints)
-							? ` (ab Level ${unlockLevel(l.id).n})`
-							: ''}</option
+	{#if hasNotes}
+		<div class="notes">
+			{#if diag}
+				<p class="hint diag" data-testid="diag">
+					Messung: eigene Spur max. {driftMs} ms neben der Band ({resyncs} × nachgeführt) · Ausgabe-Latenz
+					{outputMs} ms · Verzögerung Mithören {Math.round(roundTrip * 1000)} ms{measured === null
+						? ' (geschätzt)'
+						: ''}
+				</p>
+			{/if}
+			{#if audio !== 'ok' && audio !== 'loading'}
+				<p class="notice" role="status" data-testid="ton-hinweis">
+					{AUDIO_NOTICE[audio]}
+					{#if audio === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
+				</p>
+			{/if}
+			{#if exam}
+				<section class="exambar" aria-label="Prüfung" data-testid="pruefung">
+					<b
+						>Prüfung · {sectionLabel(title.sections[exam.section])} · Etappe {exam.stage}: {STAGES[
+							exam.stage - 1
+						].name} · {exam.via === 'mic' ? 'Mithören' : 'Rhythmus tippen'}</b
+					>
+					<span class="hint"
+						>{exam.attempt
+							? 'Läuft – spiel den ganzen Teil durch.'
+							: `Drück auf Abspielen, wenn du bereit bist. Tempo ${tempo} %, ein Takt wird eingezählt.`}</span
+					>
+					<button type="button" class="mini" onclick={abortExam}>Abbrechen, zurück zum Plan</button>
+				</section>
+			{/if}
+			{#if examError}<p class="notice" role="alert">{examError}</p>{/if}
+			{#if examNotice}<p class="notice" role="status">{examNotice}</p>{/if}
+		</div>
+	{/if}
+
+	{#if !exam}
+		<div class="modes">
+			<div class="tabs" role="group" aria-label="Übe-Modus">
+				{#each Object.entries(MODE_LABELS) as [m, label] (m)}
+					<button
+						type="button"
+						aria-pressed={m === mode}
+						onclick={() => chooseMode(m as PracticeMode)}>{label}</button
 					>
 				{/each}
-			</select>
-		</label>
-		<button type="button" class="mini" aria-pressed={fokus} onclick={() => setFokus(!fokus)}
-			>Vollbild</button
-		>
+			</div>
+			<p class="hint modehint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</p>
+		</div>
 	{/if}
-</section>
+
+	<section class="stage">
+		<div class="lanebox" bind:clientHeight={laneBoxHeight}>
+			{#if view === 'noten'}
+				<div class="scorebox">
+					{#if scoreStatus === 'ok' && scoreXml}
+						<ScoreView
+							xml={scoreXml}
+							partId={voice.part}
+							bar={Math.min(title.bars - 1, Math.floor(bar))}
+							{fingering}
+							hints={laneHints}
+							onpick={(b) => {
+								if (mode === 'echo') session.echoFrom(b);
+								jumpTo(b);
+								sync();
+							}}
+						/>
+					{:else}
+						<p class="notice scoremsg" data-testid="noten-hinweis">
+							{scoreStatus === 'loading' || scoreStatus === 'idle'
+								? 'Noten werden geladen …'
+								: SCORE_NOTICE[scoreStatus]}
+							{#if scoreStatus === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
+						</p>
+					{/if}
+				</div>
+			{:else}
+				<Lane
+					{scene}
+					zoom={prefs.zoom}
+					height={Math.max(160, laneBoxHeight)}
+					onpick={(b) => {
+						if (clock.playing || exam) return;
+						const toBar = Math.max(0, Math.floor(b / 4));
+						if (mode === 'echo') session.echoFrom(toBar);
+						jumpTo(toBar);
+						sync();
+					}}
+					onpress={() => {
+						if (mode !== 'rhythm' || !clock.playing) return false;
+						doTap();
+						return true;
+					}}
+				/>
+			{/if}
+			<!-- Die Bahn ist ein Bild; der Griff jetzt steht hier für Screenreader -->
+			<p class="sr" data-testid="griff">{panel.big}</p>
+
+			{#if mode === 'rhythm' && feedback}
+				<div class="overlay short">
+					<p
+						class="say"
+						data-tone={feedback.tone}
+						aria-live="polite"
+						data-testid="tipp-rueckmeldung"
+					>
+						{feedback.text}
+					</p>
+				</div>
+			{:else if mode !== 'rhythm' && listening !== 'off'}
+				<div class="overlay feedback" data-testid="mithoeren" data-heard={heard ?? ''}>
+					<p class="say" data-tone={feedback?.tone ?? ''} aria-live="polite">
+						{feedback?.text ?? ''}
+					</p>
+					<div class="tuner" aria-hidden="true">
+						<span class="lo">tief</span><span class="hi">hoch</span>
+						<div class="zero"></div>
+						{#if deviation !== null}
+							<div
+								class="needle"
+								style:left="{50 + Math.max(-100, Math.min(100, deviation * 100)) / 2}%"
+							></div>
+						{/if}
+					</div>
+				</div>
+			{/if}
+
+			{#if examDone}
+				{@const r = examDone.result}
+				{@const p = examDone.params}
+				<section class="examresult" data-testid="pruefung-ergebnis">
+					<p class="label">
+						Ergebnis · {sectionLabel(title.sections[p.section])} · Etappe {p.stage}: {STAGES[
+							p.stage - 1
+						].name}
+					</p>
+					<p class="score" class:ok={r.passed}>{Math.round(r.score * 100)} %</p>
+					<b>{r.passed ? 'Bestanden' : 'Noch nicht ganz'}</b>
+					<p>{examDone.message}</p>
+					{#if r.points}<p class="hint">+{r.points} Punkte · {r.reasons.join(' · ')}</p>{/if}
+					{#if r.week_goal}<p class="hint">
+							+{r.week_goal} Punkte · Wochenziel: an 3 Tagen geübt
+						</p>{/if}
+					<div class="row">
+						{#if r.passed && p.stage < 5}
+							<a
+								class="mini"
+								href="{resolve('/guugge/[id]/pruefung', {
+									id: p.guugge
+								})}?teil={p.section}&etappe={p.stage + 1}">Weiter zu Etappe {p.stage + 1}</a
+							>
+						{/if}
+						{#if !r.passed}
+							<a
+								class="mini"
+								href="{resolve('/guugge/[id]/pruefung', {
+									id: p.guugge
+								})}?teil={p.section}&etappe={p.stage}">Nochmals</a
+							>
+						{/if}
+						<a class="mini" href={resolve('/guugge/[id]/plan', { id: p.guugge })}>Zurück zum Plan</a
+						>
+						<button type="button" class="mini" onclick={() => (examDone = null)}>Schliessen</button>
+					</div>
+				</section>
+			{/if}
+		</div>
+
+		{#if mode === 'rhythm'}
+			<button
+				type="button"
+				class="tapbtn"
+				class:flash
+				onpointerdown={(e) => {
+					e.preventDefault();
+					doTap();
+				}}
+				onkeydown={(e) => {
+					if (e.code !== 'Space' && e.code !== 'Enter') return;
+					e.preventDefault();
+					if (!e.repeat) doTap();
+				}}>Tippen</button
+			>
+		{/if}
+
+		{#if listenError}
+			<p class="say" data-tone="bad" role="alert">{listenError}</p>
+		{/if}
+
+		{#if report}
+			<section class="result" role="status" data-testid="ergebnis">
+				<div class="txt">
+					<b>{report.headline}</b>
+					{#if report.detail}<span class="detail">{report.detail}</span>{/if}
+					{#if passPoints}<span class="detail" data-testid="durchgang-punkte">{passPoints}</span
+						>{/if}
+				</div>
+				{#if report.advice?.kind === 'faster' || report.advice?.kind === 'slower'}
+					{@const next = report.advice.tempo}
+					<button
+						type="button"
+						class="mini"
+						onclick={() => {
+							tempo = next;
+							report = null;
+						}}
+						>{report.advice.kind === 'faster'
+							? `Tempo auf ${next} %`
+							: `Langsamer: ${next} %`}</button
+					>
+				{:else if report.advice?.kind === 'done'}
+					<span>Originaltempo sitzt.</span>
+				{/if}
+				<button
+					type="button"
+					class="close"
+					aria-label="Ergebnis schliessen"
+					onclick={() => (report = null)}>×</button
+				>
+			</section>
+		{/if}
+	</section>
+
+	<section class="transport" aria-label="Wiedergabe">
+		<div class="where">
+			<div class="pos">
+				<b>Takt {Math.min(title.bars - 1, Math.floor(bar))}</b>
+				<span>{sectionLabel(section)}</span>
+			</div>
+			{#if baustellen.length && !exam}
+				<button type="button" class="baulink" onclick={() => (sheet = 'bau')}
+					>{baustellen.length === 1 ? '1 Baustelle' : `${baustellen.length} Baustellen`} ›</button
+				>
+			{/if}
+		</div>
+		<div class="row1">
+			<label class="pick">
+				<span class="sr">Teil</span>
+				<select
+					disabled={!!exam}
+					value={customRange ? 'c' : String(sectionIndex)}
+					onchange={(e) => {
+						if (e.currentTarget.value !== 'c') chooseSection(Number(e.currentTarget.value));
+					}}
+				>
+					{#each title.sections as s, i (i)}
+						<option value={String(i)}
+							>{sectionLabel(s)} · T. {s.from}{s.to > s.from ? '–' + s.to : ''}</option
+						>
+					{/each}
+					{#if customRange}
+						<option value="c">Baustelle · T. {customRange.from}–{customRange.to}</option>
+					{/if}
+				</select>
+			</label>
+			<button
+				type="button"
+				class="chip loop"
+				aria-pressed={loop}
+				disabled={!!exam}
+				onclick={toggleLoop}>⟲ Schleife</button
+			>
+			<label class="pick tempo">
+				<span class="sr">Tempo</span>
+				<select disabled={!!exam} bind:value={tempo}>
+					{#each tempoSteps(tempo) as t (t)}
+						<option value={t}>♩ {t} %</option>
+					{/each}
+				</select>
+			</label>
+		</div>
+		<div class="row2">
+			<button
+				type="button"
+				class="round"
+				class:on={listening !== 'off'}
+				aria-pressed={listening !== 'off'}
+				disabled={mode === 'rhythm' || calibration === 'running'}
+				onclick={() => (listening === 'demo' ? stopListening() : toggleListening('mic'))}
+			>
+				<i aria-hidden="true"
+					><svg viewBox="0 0 24 24"
+						><path
+							d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12z"
+						/></svg
+					></i
+				>
+				<span>{listening === 'demo' ? 'Vorführung' : 'Mithören'}</span>
+			</button>
+			<button
+				type="button"
+				class="play"
+				onclick={togglePlay}
+				aria-label={playing ? 'Anhalten' : 'Abspielen'}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					{#if playing}<path d="M6 4h4v16H6zM14 4h4v16h-4z" />{:else}<path d="M7 4v16l13-8z" />{/if}
+				</svg>
+			</button>
+			<button type="button" class="round" aria-haspopup="dialog" onclick={() => (sheet = 'mehr')}>
+				<i aria-hidden="true">⋯</i>
+				<span>Mehr</span>
+			</button>
+		</div>
+	</section>
+</div>
 
 {#if fokus}
 	<button type="button" class="mini fokusexit" onclick={() => setFokus(false)}
@@ -1150,198 +1252,191 @@
 	>
 {/if}
 
-<section class="stage">
-	{#if view === 'noten'}
-		{#if scoreStatus === 'ok' && scoreXml}
-			<ScoreView
-				xml={scoreXml}
-				partId={voice.part}
-				bar={Math.min(title.bars - 1, Math.floor(bar))}
-				{fingering}
-				hints={laneHints}
-				onpick={(b) => {
-					if (mode === 'echo') session.echoFrom(b);
-					jumpTo(b);
-					sync();
-				}}
-			/>
-		{:else}
-			<p class="notice scoremsg" data-testid="noten-hinweis">
-				{scoreStatus === 'loading' || scoreStatus === 'idle'
-					? 'Noten werden geladen …'
-					: SCORE_NOTICE[scoreStatus]}
-				{#if scoreStatus === 'locked'}<a href={resolve('/zugang')}>Code eingeben</a>{/if}
-			</p>
-		{/if}
-	{:else}
-		<Lane
-			{scene}
-			zoom={prefs.zoom}
-			height={fokus ? Math.max(240, innerHeight - 190) : undefined}
-			onpick={(b) => {
-				if (clock.playing || exam) return;
-				const toBar = Math.max(0, Math.floor(b / 4));
-				if (mode === 'echo') session.echoFrom(toBar);
-				jumpTo(toBar);
-				sync();
-			}}
-			onpress={() => {
-				if (mode !== 'rhythm' || !clock.playing) return false;
-				doTap();
-				return true;
-			}}
-		/>
-	{/if}
-	<div class="side">
-		<GripPanel state={panel} />
-		{#if mode === 'rhythm'}
-			<div class="tapbox">
-				<button
-					type="button"
-					class="tapbtn"
-					class:flash
-					onpointerdown={(e) => {
-						e.preventDefault();
-						doTap();
-					}}
-					onkeydown={(e) => {
-						if (e.code !== 'Space' && e.code !== 'Enter') return;
-						e.preventDefault();
-						if (!e.repeat) doTap();
-					}}>Tippen</button
-				>
-				<p class="hint">oder auf die Bahn tippen · Leertaste</p>
-				<p
-					class="say"
-					data-tone={feedback?.tone ?? ''}
-					aria-live="polite"
-					data-testid="tipp-rueckmeldung"
-				>
-					{feedback?.text ?? 'Tippe bei jedem Ton. Grün heisst: genau im Takt.'}
-				</p>
-			</div>
-		{:else if listening !== 'off'}
-			<div class="feedback" data-testid="mithoeren" data-heard={heard ?? ''}>
-				<p class="label">Rückmeldung</p>
-				<div class="tuner" aria-hidden="true">
-					<span class="lo">tief</span><span class="hi">hoch</span>
-					<div class="zero"></div>
-					{#if deviation !== null}
-						<div
-							class="needle"
-							style:left="{50 + Math.max(-100, Math.min(100, deviation * 100)) / 2}%"
-						></div>
-					{/if}
-				</div>
-				<p class="say" data-tone={feedback?.tone ?? ''} aria-live="polite">
-					{feedback?.text ?? ''}
-				</p>
-			</div>
-		{/if}
+<Sheet open={sheet === 'stimme'} label="Deine Stimme" onclose={() => (sheet = null)}>
+	<div class="voices" role="group" aria-label="Stimme">
+		{#each title.voices as v (v.id)}
+			<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
+				><b>{v.short}</b><span>{v.name}</span></button
+			>
+		{/each}
 	</div>
-</section>
+</Sheet>
 
-{#if report}
-	<section class="result" role="status" data-testid="ergebnis">
-		<b>{report.headline}</b>
-		{#if report.detail}<span class="detail">{report.detail}</span>{/if}
-		{#if passPoints}<span class="detail" data-testid="durchgang-punkte">{passPoints}</span>{/if}
-		{#if report.advice?.kind === 'faster' || report.advice?.kind === 'slower'}
-			{@const next = report.advice.tempo}
+<Sheet open={sheet === 'bau'} label="Baustellen" onclose={() => (sheet = null)}>
+	<p class="hint">Takte, die bei »Rhythmus« oder Mithören noch wackeln.</p>
+	<ul class="bau">
+		{#each baustellen as b (b.bar)}
+			<li>
+				<div>
+					<b>Takt {b.bar}–{Math.min(title.bars - 1, b.bar + 1)}</b>
+					<span
+						>{sectionLabel(title.sections[sectionIndexOf(title.sections, b.bar)])} · {Math.round(
+							b.ratio * 100
+						)} % der Töne wackeln ({b.tries} Versuche)</span
+					>
+				</div>
+				<button type="button" class="mini" onclick={() => practiceBars(b.bar)}
+					>Üben bei {BAUSTELLE_TEMPO} %</button
+				>
+			</li>
+		{/each}
+	</ul>
+	<button
+		type="button"
+		class="link"
+		onclick={() => {
+			resetBaustellen();
+			sheet = null;
+		}}>Baustellen zurücksetzen</button
+	>
+</Sheet>
+
+<Sheet open={sheet === 'mehr'} label="Mehr" onclose={() => (sheet = null)}>
+	<div class="group">
+		<p class="label">Hören</p>
+		<div class="line">
+			<span>Meine Stimme</span>
+			<div class="seg" role="group" aria-label="Meine Stimme im Kopfhörer">
+				{#each OWN_LEVELS as l (l.value)}
+					<button
+						type="button"
+						aria-pressed={l.value === prefs.own}
+						disabled={audio !== 'ok'}
+						onclick={() => chooseOwn(l.value)}>{l.label}</button
+					>
+				{/each}
+			</div>
+		</div>
+		<div class="line">
+			<span>Vorführung: deine Stimme fehlerfrei</span>
 			<button
 				type="button"
 				class="mini"
+				aria-label="Vorführung starten"
+				disabled={audio !== 'ok' || mode === 'rhythm' || calibration === 'running'}
 				onclick={() => {
-					tempo = next;
-					report = null;
-				}}
-				>{report.advice.kind === 'faster' ? `Tempo auf ${next} %` : `Langsamer: ${next} %`}</button
+					sheet = null;
+					void toggleListening('demo');
+				}}>Starten</button
 			>
-		{:else if report.advice?.kind === 'done'}
-			<span>Originaltempo sitzt.</span>
+		</div>
+		{#if saved}
+			<p class="hint" data-testid="offline">
+				Diese Stimme ist gespeichert und läuft auch ohne Netz.
+			</p>
 		{/if}
-	</section>
-{/if}
-
-<section class="bau" aria-labelledby="bau-titel">
-	<p class="label" id="bau-titel">Baustellen</p>
-	{#if baustellen.length}
-		<ul>
-			{#each baustellen as b (b.bar)}
-				<li>
-					<div>
-						<b>Takt {b.bar}–{Math.min(title.bars - 1, b.bar + 1)}</b>
-						<span
-							>{sectionLabel(title.sections[sectionIndexOf(title.sections, b.bar)])} · {Math.round(
-								b.ratio * 100
-							)} % der Töne wackeln ({b.tries} Versuche)</span
-						>
-					</div>
-					<button type="button" class="mini" onclick={() => practiceBars(b.bar)}
-						>Üben bei {BAUSTELLE_TEMPO} %</button
-					>
-				</li>
-			{/each}
-		</ul>
-		<button type="button" class="link" onclick={resetBaustellen}>Baustellen zurücksetzen</button>
-	{:else}
-		<p class="hint">
-			Noch keine. Nach Durchgängen mit »Rhythmus tippen« oder Mithören sammelt das Probelokal hier
-			die Takte, die noch wackeln.
-		</p>
-	{/if}
-</section>
-
-<section class="transport" aria-label="Wiedergabe">
-	<button
-		type="button"
-		class="play"
-		onclick={togglePlay}
-		aria-label={playing ? 'Anhalten' : 'Abspielen'}
-	>
-		<svg viewBox="0 0 24 24" aria-hidden="true">
-			{#if playing}<path d="M6 4h4v16H6zM14 4h4v16h-4z" />{:else}<path d="M7 4v16l13-8z" />{/if}
-		</svg>
-	</button>
-	<div class="pos">
-		<b>Takt {Math.min(title.bars - 1, Math.floor(bar))}</b>
-		<span>{sectionLabel(section)}</span>
 	</div>
-	<label class="toggle">
-		<span class="sr">Teil</span>
-		<select
-			disabled={!!exam}
-			value={customRange ? 'c' : String(sectionIndex)}
-			onchange={(e) => {
-				if (e.currentTarget.value !== 'c') chooseSection(Number(e.currentTarget.value));
-			}}
-		>
-			{#each title.sections as s, i (i)}
-				<option value={String(i)}
-					>{sectionLabel(s)} · T. {s.from}{s.to > s.from ? '–' + s.to : ''}</option
+
+	<div class="group">
+		<p class="label">Ansicht</p>
+		<div class="line">
+			<span>Zeigen</span>
+			<div class="seg" role="group" aria-label="Ansicht">
+				<button type="button" aria-pressed={view === 'bahn'} onclick={() => chooseView('bahn')}
+					>Bahn</button
 				>
-			{/each}
-			{#if customRange}
-				<option value="c">Baustelle · T. {customRange.from}–{customRange.to}</option>
-			{/if}
-		</select>
-	</label>
-	<button type="button" class="mini" aria-pressed={loop} disabled={!!exam} onclick={toggleLoop}
-		>Schleife</button
-	>
-	<label class="tempo">
-		Tempo
-		<input
-			type="range"
-			min={TEMPO_MIN}
-			max={TEMPO_MAX}
-			step="5"
-			disabled={!!exam}
-			bind:value={tempo}
-		/>
-		<output>{tempo} % · ♩ {Math.round((title.bpm * tempo) / 100)}</output>
-	</label>
-</section>
+				<button type="button" aria-pressed={view === 'noten'} onclick={() => chooseView('noten')}
+					>Noten</button
+				>
+			</div>
+		</div>
+		{#if view === 'noten'}
+			<label class="line"
+				><span>Griffe und Zugpositionen</span><input
+					type="checkbox"
+					bind:checked={fingering}
+				/></label
+			>
+		{:else}
+			<label class="line"
+				><span>Hilfen</span>
+				<select
+					value={prefs.help}
+					disabled={!!exam}
+					onchange={(e) => setPrefs({ help: e.currentTarget.value as HelpLevel })}
+				>
+					{#each Object.entries(HELP_LABELS) as [k, label] (k)}
+						<option value={k}>{label}</option>
+					{/each}
+				</select>
+			</label>
+			<label class="line"
+				><span>Notennamen</span><input
+					type="checkbox"
+					checked={prefs.names}
+					onchange={(e) => setPrefs({ names: e.currentTarget.checked })}
+				/></label
+			>
+			<label class="line"
+				><span>Notenlinien</span><input
+					type="checkbox"
+					checked={prefs.staff}
+					onchange={(e) => setPrefs({ staff: e.currentTarget.checked })}
+				/></label
+			>
+			<div class="line">
+				<span>Abstand</span>
+				<span class="seg">
+					<button
+						type="button"
+						class="mini"
+						aria-label="Enger"
+						onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, -1) })}>−</button
+					>
+					<button
+						type="button"
+						class="mini"
+						aria-label="Weiter"
+						onclick={() => setPrefs({ zoom: zoomStep(prefs.zoom, 1) })}>+</button
+					>
+				</span>
+			</div>
+			<label class="line"
+				><span>Bahn-Look</span>
+				<select
+					value={activeLook(prefs.look, bestPoints)}
+					onchange={(e) => setPrefs({ look: e.currentTarget.value as LaneLook })}
+				>
+					{#each LANE_LOOKS as l (l.id)}
+						<option value={l.id} disabled={!lookUnlocked(l.id, bestPoints)}
+							>{l.label}{l.id !== 'std' && !lookUnlocked(l.id, bestPoints)
+								? ` (ab Level ${unlockLevel(l.id).n})`
+								: ''}</option
+						>
+					{/each}
+				</select>
+			</label>
+			<div class="line fokusline">
+				<span>Nur Bahn und Wiedergabe</span>
+				<button
+					type="button"
+					class="mini"
+					onclick={() => {
+						sheet = null;
+						setFokus(true);
+					}}>Vollbild</button
+				>
+			</div>
+		{/if}
+		<div class="line"><span>Darstellung</span><ThemeSwitch /></div>
+	</div>
+
+	<div class="group">
+		<p class="label">Mikrofon</p>
+		<div class="line">
+			<span>Verzögerung</span>
+			<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
+				>Verzögerung abgleichen</button
+			>
+		</div>
+		<p class="hint" data-testid="verzoegerung">{latencyText}</p>
+	</div>
+
+	<div class="group links">
+		<a href={resolve('/einblasen')}>Einblasen →</a>
+		<a href={resolve('/guugge')}>Meine Guugge →</a>
+	</div>
+</Sheet>
 
 <!-- Band ohne mich und eigene Stimme; Quelle setzt StemPlayer. crossorigin, weil /audio/ auf
 	 Supabase weiterleitet: Ohne CORS liefert MediaElementSource nur Stille. -->
@@ -1349,10 +1444,81 @@
 <audio bind:this={ownEl} data-stem="own" crossorigin="anonymous" preload="auto"></audio>
 
 <style>
+	/* Ganze Höhe, nichts zum Scrollen: Kopf, Reiter, Bahn (füllt), Bedienung. */
+	.practice {
+		box-sizing: border-box;
+		height: 100vh;
+		height: 100dvh;
+		max-width: 1400px;
+		margin: 0 auto;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+		grid-template-areas: 'bar' 'notes' 'modes' 'stage' 'transport';
+		gap: 8px;
+		padding: max(10px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+			max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+	}
+	.bar {
+		grid-area: bar;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+	.bar :global(.mark) {
+		width: 30px;
+		height: 30px;
+		flex: none;
+	}
 	.back {
 		color: var(--muted);
 		font-weight: 600;
 		text-decoration: none;
+		white-space: nowrap;
+	}
+	.bar h1 {
+		flex: 1;
+		min-width: 0;
+		margin: 0;
+		font-size: 17px;
+		letter-spacing: -0.01em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.chip {
+		appearance: none;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: var(--ink);
+		font: 600 15px var(--font-body);
+		border-radius: 999px;
+		min-height: 40px;
+		padding: 6px 14px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.chip[aria-pressed='true'] {
+		background: var(--chip-on-bg);
+		color: var(--chip-on-fg);
+		border-color: var(--chip-on-bg);
+	}
+	.chip:disabled {
+		opacity: 0.45;
+		cursor: default;
+	}
+	.notes {
+		grid-area: notes;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.notes .notice {
+		margin: 0;
+	}
+	.diag {
+		font: 500 12px var(--font-mono);
 	}
 	.exambar,
 	.examresult {
@@ -1365,7 +1531,92 @@
 		padding: 10px 14px;
 		background: var(--surface);
 	}
+	.modes {
+		grid-area: modes;
+	}
+	.tabs {
+		display: flex;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 3px;
+	}
+	.tabs button {
+		flex: 1;
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font: 600 15px var(--font-body);
+		border-radius: 999px;
+		min-height: 38px;
+		cursor: pointer;
+	}
+	.tabs button[aria-pressed='true'] {
+		background: var(--chip-on-bg);
+		color: var(--chip-on-fg);
+	}
+	.modehint {
+		font-size: 13px;
+		margin: 4px 6px 0;
+	}
+
+	/* Bahn oder Noten; Rückmeldung und Prüfungsergebnis liegen darüber */
+	.stage {
+		grid-area: stage;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		min-height: 0;
+	}
+	.lanebox {
+		position: relative;
+		flex: 1;
+		min-height: 160px;
+	}
+	.lanebox > :global(.lane) {
+		position: absolute;
+		inset: 0;
+	}
+	.scorebox {
+		position: absolute;
+		inset: 0;
+		overflow: auto;
+	}
+	.scoremsg {
+		padding: 16px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+	}
+	.overlay {
+		position: absolute;
+		left: 10px;
+		right: 10px;
+		bottom: 10px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 8px 12px;
+		background: color-mix(in srgb, var(--bg) 90%, transparent);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		pointer-events: none;
+	}
+	.overlay .say {
+		font-size: 16px;
+	}
+	.overlay.short {
+		right: auto;
+	}
 	.examresult {
+		position: absolute;
+		left: 10px;
+		right: 10px;
+		bottom: 10px;
+		z-index: 2;
+		max-height: calc(100% - 20px);
+		overflow: auto;
 		flex-direction: column;
 		align-items: flex-start;
 	}
@@ -1386,24 +1637,356 @@
 		align-items: center;
 		text-decoration: none;
 	}
-	.head h1 {
-		margin: 2px 0 4px;
-		font-size: clamp(22px, 5vw, 30px);
-		letter-spacing: -0.02em;
-		line-height: 1.15;
-	}
-	.diag {
-		font: 500 12px var(--font-mono);
-	}
-	.scoremsg {
-		padding: 16px;
-		background: var(--surface);
-		border: 1px solid var(--line);
+	.tapbtn {
+		appearance: none;
+		flex: none;
+		width: 100%;
+		min-height: 64px;
 		border-radius: 14px;
+		border: 2px solid var(--ink);
+		background: var(--surface);
+		color: var(--ink);
+		font: 700 20px var(--font-body);
+		cursor: pointer;
+		touch-action: manipulation;
+		user-select: none;
+		-webkit-user-select: none;
 	}
-	.bau ul {
+	.tapbtn:active,
+	.tapbtn.flash {
+		background: var(--blau);
+		border-color: var(--blau);
+		color: #141619;
+	}
+	.result {
+		flex: none;
+		flex-wrap: nowrap;
+		padding: 8px 6px 8px 14px;
+	}
+	.result .txt {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+	}
+	.result .close {
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font-size: 22px;
+		width: 36px;
+		height: 36px;
+		flex: none;
+		cursor: pointer;
+	}
+
+	/* Bedienung für den Daumen */
+	.transport {
+		grid-area: transport;
+		position: static;
+		display: flex;
+		flex-direction: column;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		gap: 10px;
+		background: none;
+		border: 0;
+		border-radius: 0;
+		padding: 0;
+	}
+	.where {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 10px;
+		padding: 0 4px;
+		min-height: 24px;
+	}
+	.pos {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		color: var(--muted);
+		font-size: 14px;
+	}
+	.pos b {
+		color: var(--ink);
+		font-size: 16px;
+	}
+	.baulink {
+		appearance: none;
+		border: 0;
+		background: none;
+		padding: 4px 0;
+		color: var(--akzent);
+		font: 600 14px var(--font-body);
+		cursor: pointer;
+	}
+	.row1 {
+		display: flex;
+		gap: 8px;
+	}
+	.pick {
+		flex: 1 1 0;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.pick select {
+		width: 100%;
+		font-size: 15px;
+	}
+	.pick.tempo {
+		flex: 0 0 auto;
+		font-weight: 600;
+		color: var(--muted);
+	}
+	.pick.tempo select {
+		width: auto;
+	}
+	.loop {
+		flex: none;
+	}
+	.row2 {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 6px;
+	}
+	.round {
+		appearance: none;
+		border: 0;
+		background: none;
+		padding: 0;
+		width: 84px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		color: var(--muted);
+		font: 600 13px var(--font-body);
+		cursor: pointer;
+	}
+	.round i {
+		width: 52px;
+		height: 52px;
+		border-radius: 50%;
+		border: 2px solid var(--line);
+		background: var(--surface);
+		color: var(--ink);
+		display: grid;
+		place-items: center;
+		font-style: normal;
+		font-size: 24px;
+		line-height: 1;
+	}
+	.round svg {
+		width: 22px;
+		height: 22px;
+		fill: currentColor;
+	}
+	.round.on {
+		color: var(--gruen);
+	}
+	.round.on i {
+		border-color: var(--gruen);
+		color: var(--gruen);
+	}
+	.round:disabled {
+		opacity: 0.45;
+		cursor: default;
+	}
+	.play {
+		width: 76px;
+		height: 76px;
+	}
+	.play svg {
+		width: 32px;
+		height: 32px;
+	}
+
+	/* Vollbild: nur Bahn und Wiedergabe */
+	.practice.fokus .bar,
+	.practice.fokus .notes,
+	.practice.fokus .modes {
+		display: none;
+	}
+	.fokusexit {
+		position: fixed;
+		top: max(10px, env(safe-area-inset-top, 0px));
+		right: max(12px, env(safe-area-inset-right, 0px));
+		z-index: 20;
+	}
+
+	/* Querformat (iPhone, iPad, Computer): Bahn links über die ganze Höhe, Bedienung rechts */
+	@media (orientation: landscape) and (min-width: 640px) {
+		.practice {
+			grid-template-columns: minmax(0, 1fr) clamp(240px, 27vw, 320px);
+			grid-template-rows: auto auto auto minmax(0, 1fr);
+			grid-template-areas: 'stage bar' 'stage notes' 'stage modes' 'stage transport';
+			column-gap: 14px;
+		}
+		.transport {
+			align-self: end;
+		}
+		.row1 {
+			flex-wrap: wrap;
+		}
+		.row1 .pick:first-child {
+			flex: 1 1 100%;
+		}
+		.row1 .loop {
+			flex: 1;
+		}
+		.row2 {
+			padding: 0;
+		}
+		.tabs button {
+			font-size: 14px;
+		}
+		/* Quer hat die Bahn schon die ganze Höhe; Vollbild brächte nichts */
+		.fokusline {
+			display: none;
+		}
+	}
+	/* iPhone quer: wenig Höhe, darum alles etwas knapper */
+	@media (orientation: landscape) and (min-width: 640px) and (max-height: 520px) {
+		.practice {
+			gap: 6px;
+			padding-top: max(8px, env(safe-area-inset-top, 0px));
+			padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+		}
+		.bar :global(.mark),
+		.modehint {
+			display: none;
+		}
+		.where {
+			min-height: 0;
+		}
+		.round {
+			width: 64px;
+			font-size: 12px;
+		}
+		.round i {
+			width: 42px;
+			height: 42px;
+			font-size: 20px;
+		}
+		.play {
+			width: 60px;
+			height: 60px;
+		}
+		.play svg {
+			width: 26px;
+			height: 26px;
+		}
+		.chip,
+		.pick select,
+		.tabs button {
+			min-height: 34px;
+		}
+		.tabs button {
+			min-height: 32px;
+		}
+	}
+
+	/* Blätter */
+	.voices {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		gap: 8px;
+		margin-top: 8px;
+	}
+	.voices button {
+		appearance: none;
+		text-align: left;
+		border: 1px solid var(--line);
+		background: var(--surface2);
+		color: var(--ink);
+		border-radius: 14px;
+		padding: 10px 12px;
+		display: flex;
+		flex-direction: column;
+		font: 600 15px var(--font-body);
+		cursor: pointer;
+	}
+	.voices button span {
+		color: var(--muted);
+		font-size: 13px;
+		font-weight: 400;
+	}
+	.voices button[aria-pressed='true'] {
+		background: var(--chip-on-bg);
+		color: var(--chip-on-fg);
+		border-color: var(--chip-on-bg);
+	}
+	.voices button[aria-pressed='true'] span {
+		color: inherit;
+		opacity: 0.75;
+	}
+	.group {
+		padding: 10px 0;
+	}
+	.group + .group {
+		border-top: 1px solid var(--line);
+	}
+	.group > .label {
+		margin: 4px 0 4px;
+	}
+	.line {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		min-height: 46px;
+		font-size: 15px;
+	}
+	.line .seg {
+		flex-wrap: nowrap;
+	}
+	/* Schalter statt Häkchen */
+	.line input[type='checkbox'] {
+		appearance: none;
+		flex: none;
+		position: relative;
+		width: 46px;
+		height: 28px;
+		margin: 0;
+		border-radius: 14px;
+		background: var(--line);
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.line input[type='checkbox']::after {
+		content: '';
+		position: absolute;
+		top: 3px;
+		left: 3px;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: #f2efe9;
+		transition: left 0.15s;
+	}
+	.line input[type='checkbox']:checked {
+		background: var(--gruen);
+	}
+	.line input[type='checkbox']:checked::after {
+		left: 21px;
+	}
+	.links {
+		display: flex;
+		gap: 18px;
+	}
+	.links a {
+		color: var(--ink);
+		font-weight: 600;
+	}
+	.bau {
 		list-style: none;
-		margin: 6px 0 8px;
+		margin: 10px 0;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
@@ -1415,7 +1998,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px 14px;
-		background: var(--surface);
+		background: var(--surface2);
 		border: 1px solid var(--line);
 		border-radius: 14px;
 		padding: 10px 14px;
@@ -1437,64 +2020,5 @@
 		font: 600 13px var(--font-body);
 		text-decoration: underline;
 		cursor: pointer;
-	}
-	.fokusexit {
-		position: fixed;
-		top: max(10px, env(safe-area-inset-top, 0px));
-		right: max(12px, env(safe-area-inset-right, 0px));
-		z-index: 20;
-	}
-	/* Vollbild: nur Bahn (mit Griff-Anzeige) und Wiedergabe */
-	:global(html.fokus .topbar),
-	:global(html.fokus nav),
-	:global(html.fokus) .head,
-	:global(html.fokus) .row,
-	:global(html.fokus) .result,
-	:global(html.fokus) .bau {
-		display: none;
-	}
-	@media (max-width: 760px) {
-		:global(html.fokus) .side {
-			display: none;
-		}
-	}
-	.tapbox {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-	.tapbox .hint {
-		text-align: center;
-		font-size: 13px;
-	}
-	.tapbtn {
-		appearance: none;
-		width: 100%;
-		min-height: 72px;
-		border-radius: 14px;
-		border: 2px solid var(--ink);
-		background: var(--surface);
-		color: var(--ink);
-		font: 700 20px var(--font-body);
-		cursor: pointer;
-		touch-action: manipulation;
-		user-select: none;
-	}
-	.tapbtn:active,
-	.tapbtn.flash {
-		background: var(--blau);
-		border-color: var(--blau);
-		color: #141619;
-	}
-	.pos {
-		display: flex;
-		flex-direction: column;
-		font-size: 13px;
-		color: var(--muted);
-		min-width: 70px;
-	}
-	.pos b {
-		color: var(--ink);
-		font-size: 15px;
 	}
 </style>

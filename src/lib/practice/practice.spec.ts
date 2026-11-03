@@ -11,7 +11,7 @@ import {
 	topBaustellen
 } from './baustellen';
 import { echoStep, ownVoiceVolume, type EchoState } from './echo';
-import { meanDeviationText, passHeadline, summarizePass, tempoAdvice } from './pass';
+import { meanDeviationText, passHeadline, summarizePass, tempoAdvice, tempoSteps } from './pass';
 
 describe('Durchgang auswerten', () => {
 	it('zählt getroffen und halbe, Prozent gerundet; unter 3 Tönen kein Ergebnis', () => {
@@ -149,5 +149,16 @@ describe('Echo', () => {
 		expect(ownVoiceVolume({ ...o, micListening: true })).toBe(0);
 		expect(ownVoiceVolume({ ...o, mode: 'echo' })).toBe(1);
 		expect(ownVoiceVolume({ ...o, mode: 'echo', echoPhase: 'play' })).toBe(0);
+	});
+});
+
+describe('Tempo-Auswahl', () => {
+	it('50–100 % in 5er-Schritten, ein Wert dazwischen bleibt wählbar', () => {
+		const t = tempoSteps();
+		expect(t[0]).toBe(50);
+		expect(t.at(-1)).toBe(100);
+		expect(t).toHaveLength(11);
+		expect(tempoSteps(70)).toHaveLength(11);
+		expect(tempoSteps(72)).toContain(72);
 	});
 });
