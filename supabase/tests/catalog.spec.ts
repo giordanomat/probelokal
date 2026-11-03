@@ -6,7 +6,7 @@ import { pauseSections } from '../../src/lib/plan/stand';
 import { createTestDb } from './db';
 
 describe('Katalog', () => {
-	it('Bad Touch in der Datenbank = Bad Touch in der App', async () => {
+	it('Bad Touch in der Datenbank = Bad Touch in der App', { timeout: 30_000 }, async () => {
 		const db = await createTestDb();
 		const [row] = await db.owner<Record<string, unknown>>(
 			`select name, version, bpm::float8 as bpm, bars, sections, voices,

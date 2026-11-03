@@ -202,7 +202,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - Etappe 3: kein Ton auf der Bahn. Ursache offen (Testzugang in der Home-Bildschirm-App oder Mischungen nicht im Storage). Mit Konto sollte kein Testcode nötig sein: umbauen, sobald es Lizenzen gibt.
     - Unklar, ob das Mikrofon die richtigen Töne hört. Prüfen mit Einblasen → Lange Töne → Mithören (wie M1-Abnahme).
     - Kein Weg zurück aus der Prüfung auf der Bahn (in der App auf dem Home-Bildschirm fehlt der Zurück-Knopf des Browsers). **Behoben 02.11.2026:** Link »← Plan« und »Abbrechen, zurück zum Plan«.
-    - Zwei Spuren (Töne oben, Griffe unten) lassen sich nicht gleichzeitig lesen. **Entscheid Matthias 02.11.2026:** Griff als Ziffern im Ton-Balken, Griffspur unten nur noch bei Hilfen »alles« (Vorschläge a + b). Vorher Entwurf zeigen.
+    - Zwei Spuren (Töne oben, Griffe unten) lassen sich nicht gleichzeitig lesen. **Entscheid Matthias 02.11.2026 nach Entwurf:** nur noch eine Spur, Griff als Ziffern im Ton-Balken (»1 2«, »0« = offen, Posaune die Zugposition); die Griffspur entfällt ganz. Gebaut 02.11.2026 (`pillGripLabel` in `src/lib/lane/geometry.ts`). Zu kurze Töne: Ziffern kleiner, sonst über dem Balken. Bei »Ohne Griffe« steht wie bisher Notenname bzw. Vorzeichen im Balken.
     - Seiten wirken unübersichtlich und unattraktiv (Plan). Gestaltungsrunde nach der Abnahme, zuerst »Mein Plan«.
 16. Rest der Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Eigener Mailversand (SMTP) über Brevo seit 31.10.2026 eingerichtet und mit einer Einladungsmail geprüft (docs/02).
 

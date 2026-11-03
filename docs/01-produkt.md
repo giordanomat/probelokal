@@ -11,7 +11,7 @@ Geschäftsmodell (aus dem Produktkonzept in Drive): Kauf = Lizenz einer Guugge f
 ## Bereiche
 
 ### Stück üben
-- **Bahn:** Töne laufen als Balken zur Spiellinie. Höhe = Tonhöhe nach Notenlinien (Linie/Zwischenraum, nicht chromatisch), Länge = Dauer. Darunter die **Griffspur**: drei Zeilen für Ventil 1/2/3 (Trompete, Euphonium, Sousaphon) bzw. sieben Zeilen für die Zugpositionen (Posaune). Teilbuchstaben und Taktnummern oben, Atemzeichen bei Pausen ab ¾ Schlag.
+- **Bahn:** Töne laufen als Balken zur Spiellinie. Höhe = Tonhöhe nach Notenlinien (Linie/Zwischenraum, nicht chromatisch), Länge = Dauer. Der **Griff steht im Balken**: gedrückte Ventile als Ziffern (»1 2«, »0« = offen) bzw. die Zugposition (Posaune). Eine eigene Griffspur darunter gibt es seit 02.11.2026 nicht mehr (Entscheid Matthias: eine Spur, die man auf einen Blick liest). Teilbuchstaben und Taktnummern oben, Atemzeichen bei Pausen ab ¾ Schlag.
 - **Hilfen-Stufen:** Alles · Ohne Griffe · Nur Rhythmus (alle Töne auf einer Höhe) · Auswendig (nur Takte und Einsätze).
 - **Brücke zum Notenlesen:** »Notenlinien« blendet das System über die Bahn, »Notennamen« schreibt deutsche Namen in die Balken (H und B). Zusätzlich echte Notenansicht (OpenSheetMusicDisplay).
 - **Griff-Anzeige:** grosser aktueller Griff (Ventilkreise bzw. Zugskala), Tonname und Länge, nächster Griff, Schläge im Takt, Einzählen vor jedem Einsatz (ein Takt Anlauf).
@@ -45,6 +45,9 @@ Ein KI-Übebegleiter **von giordanomat**, nicht die musikalische Leitung der Guu
 5. **Auswendig** – Hilfen »Auswendig«, sonst wie 4.
 
 Bewertung: getroffen = 1, knapp/falsche Stufe = 0,5. Der Stand eines Teils zählt **nur über bestandene Prüfungen**, nicht über Selbsteinschätzung. Teile ohne Noten für eine Stimme gelten als »Pause für dich«.
+
+### Grundsatz Bedienung (Entscheid Matthias, 02.11.2026)
+- Fürs Erste maximal einfach, intuitiv und übersichtlich: wenige Bedienmöglichkeiten, klares, visuell ansprechendes und abwechslungsreiches, aber einfaches UI. Weitere Einstellungen erst, wenn sie gebraucht werden.
 
 ### Punkte, Ränge, Belohnungen
 - Punkte nur für nachgewiesene Leistung, **nicht für Zeit**, **keine täglichen Serien** (bestraft Leute mit wenig Zeit). Ein Übetag (für das Wochenziel) zählt erst, wenn bei einer Prüfung, einem bewerteten Durchgang oder einer Übung beim Einblasen mindestens ein Ton getroffen ist (Vorschlag 29.10.2026, sonst brächte Nichtstun das Wochenziel). Prototyp-Werte: Etappe 40 (+20 ab 95 %, +15 rechtzeitig, ohne Mikrofon bei 4/5 halbiert), bewerteter Durchgang bis 15 (max. 15 pro Tag), Übung 5 (max. 6 pro Tag), Wochenziel »an 3 Tagen geübt« 25.
