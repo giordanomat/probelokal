@@ -221,7 +221,7 @@
 			</div>
 			<p class="golinks">
 				<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
-				<a class="go" href={resolve('/einblasen')}>Einblasen →</a>
+				<a class="go" href={resolve('/aufwaermen')}>Aufwärmen →</a>
 			</p>
 		</section>
 

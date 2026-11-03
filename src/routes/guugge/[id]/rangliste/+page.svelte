@@ -201,7 +201,7 @@
 			</ul>
 			<p class="hint">
 				Die Bahn-Looks wählst du in »Stück üben« unter »Bahn-Look«, den Schränz-Groove findest du
-				beim Einblasen. Dafür zählt der höchste Rang aus all deinen Guuggen.
+				beim Aufwärmen. Dafür zählt der höchste Rang aus all deinen Guuggen.
 			</p>
 		</section>
 

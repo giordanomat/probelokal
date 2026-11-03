@@ -31,7 +31,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
   - Ohne Abgleich gilt wie im Prototyp 80 ms + Ausgabe-Latenz. Ab 150 ms erscheint der Hinweis auf Bluetooth; erkennen lässt sich Bluetooth im Browser nicht.
   - Der Tipp-Abgleich für Rhythmus fehlt noch.
   - **Ungeprüft auf echten Geräten:** ob der Abgleich über Lautsprecher klappt und ob der Wert für Kopfhörer mit Kabel passt (der Lautsprecher-Weg kann anders sein).
-- **Klick und Vorspielton** beim Einblasen: Web Audio, vorausgeplant (25-ms-Takt, 0,5 s Vorlauf). Vorspielton ist im Prototyp synthetisch; im Produkt echte Aufnahmen pro Instrument. Umgesetzt in M1 (`src/lib/warmup/player.ts`) noch mit dem synthetischen Ton des Prototyps; die Uhr der Übung ist der AudioContext.
+- **Klick und Vorspielton** beim Aufwärmen: Web Audio, vorausgeplant (25-ms-Takt, 0,5 s Vorlauf). Vorspielton ist im Prototyp synthetisch; im Produkt echte Aufnahmen pro Instrument. Umgesetzt in M1 (`src/lib/warmup/player.ts`) noch mit dem synthetischen Ton des Prototyps; die Uhr der Übung ist der AudioContext.
 
 ## Sicherheit und Datenschutz
 
@@ -45,7 +45,7 @@ Vorschlag vom 25.10.2026. Begründungen stehen dabei, damit Änderungen bewusst 
   - Nicht geprüft: die Anzahl bewerteter Töne. Die Noten liegen nicht in der Datenbank.
   - Clients haben keine Schreibrechte auf `points_ledger`, `exam_results`, `practice_days` und keinen Zugriff auf `exam_attempts`.
   - Bewertete Durchgänge ausserhalb von Prüfungen laufen nach demselben Muster (`start_pass`, `finish_pass`): Mindestdauer 90 % des Bereichs beim gewählten Tempo, höchstens 15 Durchgänge mit Punkten pro Tag und Guugge.
-  - Übungen beim Einblasen ebenso (`start_exercise`, `finish_exercise`): Mindestdauer 90 % der Übung beim gewählten Tempo, höchstens 6 Übungen mit Punkten pro Tag und Guugge; den Schränz-Groove nimmt der Server erst ab Level 3 an.
+  - Übungen beim Aufwärmen ebenso (`start_exercise`, `finish_exercise`): Mindestdauer 90 % der Übung beim gewählten Tempo, höchstens 6 Übungen mit Punkten pro Tag und Guugge; den Schränz-Groove nimmt der Server erst ab Level 3 an.
   - **Ehrlich:** Weil die Tonerkennung im Browser läuft, lässt sich Betrug nicht ausschliessen, nur erschweren. Für eine freiwillige Rangliste unter Bekannten reicht das; keine Geldpreise an Ranglisten koppeln.
 - Kein Audio verlässt das Gerät. Keine Aufnahmen speichern.
 - **Realtime für Hinweise (M2):** Postgres Changes auf `hints` (`src/lib/hints/live.ts`). Die Meldung ist nur ein Anstoss; danach holt die App die Liste über `list_hints`. Wird die App wieder sichtbar (Hintergrund, Netz weg), holt sie ebenfalls neu, falls Meldungen verloren gingen.

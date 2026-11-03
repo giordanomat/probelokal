@@ -1,5 +1,5 @@
 // Konto-Code und Supabase nur laden, wenn jemand angemeldet ist (Sitzung von supabase-js im
-// Speicher des Browsers) oder eine Prüfung läuft; ohne Konto bleiben »Stück üben« und »Einblasen«
+// Speicher des Browsers) oder eine Prüfung läuft; ohne Konto bleiben »Stück üben« und »Aufwärmen«
 // schlank. Nur im Browser aufrufen.
 
 import type { SupabaseClient } from '@supabase/supabase-js';

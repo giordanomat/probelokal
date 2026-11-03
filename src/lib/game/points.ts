@@ -26,7 +26,7 @@ export const LEVELS: readonly Level[] = [
 		n: 3,
 		name: 'Schränzer',
 		min: 250,
-		reward: 'Bonusübung »Schränz-Groove« beim Einblasen',
+		reward: 'Bonusübung »Schränz-Groove« beim Aufwärmen',
 		unlock: 'groove'
 	},
 	{ n: 4, name: 'Gassenhauer', min: 500, reward: 'Bahn-Look »Gold«', unlock: 'gold' },
@@ -63,7 +63,7 @@ export const POINTS = {
 
 /** Wofür es Punkte gibt, für die Oberfläche (ein Ort für alle Seiten). */
 export const POINTS_RULE =
-	'Punkte gibt es für bestandene Etappen, bewertete Durchgänge, Einblasen mit Mithören und das Wochenziel (an 3 Tagen geübt), nicht für Zeit.';
+	'Punkte gibt es für bestandene Etappen, bewertete Durchgänge, Aufwärmen mit Mithören und das Wochenziel (an 3 Tagen geübt), nicht für Zeit.';
 
 /** Höchstens so viele Punkte-Vergaben pro Tag (Übungen 6, bewertete Durchgänge 15). */
 export const DAILY_CAP = { exercise: 6, pass: 15 } as const;
@@ -146,7 +146,7 @@ export function passAward(pct: number, tempo: number): number {
 }
 
 /**
- * Übung beim Einblasen: 5 Punkte, wenn mit Mithören mindestens die Hälfte der nachgespielten Töne
+ * Übung beim Aufwärmen: 5 Punkte, wenn mit Mithören mindestens die Hälfte der nachgespielten Töne
  * getroffen ist (Vorschlag, docs/01; im Prototyp gab es sie fürs Durchspielen). Unter 3 bewerteten
  * Tönen nichts.
  */

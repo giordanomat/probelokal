@@ -140,6 +140,8 @@
 	let scoreXml = $state<string | null>(null);
 	let scoreStatus = $state<AudioStatus | 'idle' | 'loading'>('idle');
 	let fokus = $state(false);
+	/** Seite eingehängt (Knöpfe reagieren); für die Browser-Tests als data-ready */
+	let ready = $state(false);
 	/** Offenes Blatt: Mehr, Stimme wählen oder Baustellen */
 	let sheet = $state<'mehr' | 'stimme' | 'bau' | null>(null);
 	/** Höhe der Fläche für die Bahn (füllt, was Kopf und Bedienung übrig lassen) */
@@ -881,6 +883,7 @@
 	}
 
 	onMount(() => {
+		ready = true;
 		prefs = loadPrefs(localStorage, voiceIds);
 		// Aus der Guugge oder dem Plan kommt die dort gewählte Stimme mit (?stimme=trp1)
 		const fromLink = voiceFromQuery(new URLSearchParams(location.search), voiceIds);
@@ -922,7 +925,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="practice" class:fokus>
+<div class="practice" class:fokus data-ready={ready ? '' : undefined}>
 	<header class="bar">
 		<Mark class="mark" />
 		{#if exam}
@@ -1437,7 +1440,7 @@
 	</div>
 
 	<div class="group links">
-		<a href={resolve('/einblasen')}>Einblasen →</a>
+		<a href={resolve('/aufwaermen')}>Aufwärmen →</a>
 		<a href={resolve('/guugge')}>Meine Guugge →</a>
 	</div>
 </Sheet>

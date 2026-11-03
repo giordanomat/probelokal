@@ -111,9 +111,9 @@ Vorher die App ganz schliessen und neu öffnen, damit die neue Fassung lädt.
 | Prüfung | Soll | Ist | OK? |
 |---|---|---|---|
 | »Stück üben«, Teil A in der Schleife, Mithören, sauber | nach jedem Durchgang ab 50 % »+… Punkte« | | |
-| »Einblasen«, Lange Töne, Mithören, sauber | »+5 Punkte«. **Erstmals mit echtem Instrument** | | |
+| »Aufwärmen«, Lange Töne, Mithören, sauber | »+5 Punkte«. **Erstmals mit echtem Instrument** | | |
 | Lange Töne ohne Mithören | keine Punkte | | |
-| »Punkte und Rangliste →«: »Letzte Punkte« | Etappen, Durchgänge und Einblasen mit Datum | | |
+| »Punkte und Rangliste →«: »Letzte Punkte« | Etappen, Durchgänge und Aufwärmen mit Datum | | |
 | Wochenziel (über die Woche): an drei verschiedenen Tagen geübt | am dritten Tag +25 »Wochenziel«. Datum der drei Tage notieren | | |
 
 ## 6 · Rangliste und Datenschutz (L, T1, T2, T3)
@@ -152,7 +152,7 @@ Gerät B hat die Seite »Hinweise« der Testguugge offen.
 |---|---|---|---|
 | Ab Level 2: »Stück üben« → »Mehr« → »Bahn-Look« »Fasnacht« | jeder Griff in eigener Farbe; gespielte und bewertete Töne wie immer | | |
 | Wirkt »Fasnacht« beim Spielen verwirrend? (Rot, Gelb, Blau bedeuten sonst Bewertung) | Eindruck notieren | | |
-| Ab Level 3 (250 Punkte): »Einblasen« → »Schränz-Groove« | spielbar, vorher »ab Level 3« | | |
+| Ab Level 3 (250 Punkte): »Aufwärmen« → »Schränz-Groove« | spielbar, vorher »ab Level 3« | | |
 | Abmelden, dann »Stück üben« | Look wieder Standard | | |
 
 ## 9 · Rechte im echten Projekt (Matthias, Supabase → SQL Editor)
@@ -187,7 +187,7 @@ Ungeprüft: Die Abfrage lief bisher nur im Nachbau, nicht im SQL Editor von Supa
 Diese Vorschläge sind gebaut und warten auf deinen Entscheid. Abweichungen hier notieren, dann zieht Claude `docs/01` und `docs/02` nach.
 
 - [ ] Ein Übetag zählt erst ab einem getroffenen Ton.
-- [ ] Einblasen gibt Punkte nur mit Mithören und ab 50 % getroffen.
+- [ ] Aufwärmen gibt Punkte nur mit Mithören und ab 50 % getroffen.
 - [ ] Bahn-Looks und Schränz-Groove gelten mit dem höchsten Rang aus allen eigenen Guuggen.
 - [ ] Die Leitung sieht ein Register erst ab drei Personen.
 - [ ] Mindestdauer: Quiz 4 s, Griffe 3 s, auf der Bahn 90 % der Spieldauer.
