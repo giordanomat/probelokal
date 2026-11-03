@@ -317,7 +317,7 @@ describe('Übe-Ablauf: Mithören', () => {
 	});
 });
 
-describe('Übe-Ablauf: Einblasen', () => {
+describe('Übe-Ablauf: Aufwärmen', () => {
 	it('bewertet nur, was du nachspielst, nicht was der Dirigent vorspielt', () => {
 		const ex = EXERCISES.find((e) => e.id === 'lang')!;
 		const { notes, total } = buildExercise(ex, 0, 'valve');

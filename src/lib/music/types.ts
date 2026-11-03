@@ -25,7 +25,7 @@ export interface RawNote {
 	fing: string;
 	/** Griff fehlte in der MusicXML und wurde aus der Standardtabelle ergänzt (--fill-missing). */
 	fing_auto?: boolean;
-	/** Einblasen: spielt der Dirigent vor; wird gestrichelt gezeigt und nicht bewertet. */
+	/** Aufwärmen: spielt der Dirigent vor; wird gestrichelt gezeigt und nicht bewertet. */
 	call?: boolean;
 }
 

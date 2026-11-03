@@ -12,7 +12,7 @@ import {
 
 const ex = (id: string) => EXERCISES.find((e) => e.id === id)!;
 
-describe('Einblasen: Übungen', () => {
+describe('Aufwärmen: Übungen', () => {
 	it('Lange Töne Einstieg: acht Runden, je vorspielen und nachspielen, drei Schläge lang', () => {
 		const { notes, total } = buildExercise(ex('lang'), 0, 'valve');
 		expect(notes).toHaveLength(16);

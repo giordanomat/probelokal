@@ -18,7 +18,7 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 ## M1 · Üben ohne Konto, ein Titel, Mikrofon-Test  ← in Arbeit
 
 - `tools/extract_notes.py` und `tools/make_mixes.sh` für Bad Touch laufen lassen; Audio und Noten-JSON in Supabase Storage, **hinter einem Testzugang** (Entscheid Matthias, 26.10.2026; siehe docs/02-architektur.md).
-- Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen, Einblasen (für »Lange Töne« in der Abnahme) – aus `prototype/v7` portiert, mit Tests.
+- Bahn, Griff-Anzeige, Hilfen-Stufen, Notenansicht, Mitspielen, Echo, Rhythmus tippen, Tempo, Schleife, Baustellen, Aufwärmen (für »Lange Töne« in der Abnahme) – aus `prototype/v7` portiert, mit Tests.
 - Mithören als AudioWorklet; Latenz-Abgleich pro Gerät; Vorführung mit eigener Spur.
 - Dunkel/Hell, Vollbild, Offline-Cache für diesen einen Titel.
 
@@ -77,13 +77,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
      - Getestet mit Playwright im Flugmodus von Chromium: Stimme und Noten laufen, eine nicht gespeicherte Stimme meldet »nicht erreichbar«.
      - **Ungeprüft:** ob Safari auf iPhone/iPad den Speicher behält (`navigator.storage.persist()` wird angefragt).
   7. ~~Testprotokoll für die Abnahme~~ Vorlage am 28.10.2026: `docs/testprotokolle/m1-abnahme.md`. Dazu die Messanzeige `/ueben?diag` (grösste Abweichung der eigenen Spur, Latenzen).
-  8. ~~**Einblasen**~~ (Entscheid Matthias, 28.10.2026: gehört in M1, weil die Abnahme »Lange Töne« verlangt) erledigt am 28.10.2026 unter `/einblasen`:
+  8. ~~**Aufwärmen**~~ (Entscheid Matthias, 28.10.2026: gehört in M1, weil die Abnahme »Lange Töne« verlangt) erledigt am 28.10.2026 unter `/aufwaermen`:
      - Übungen Lange Töne, Lippenbindungen, Zungenstoss und Tonleiter-Häppchen aus dem Prototyp, je in den Stufen Einstieg und Weiter (`src/lib/warmup/exercises.ts`).
      - Der Dirigent spielt einen Takt vor (gestrichelt, synthetischer Ton), du spielst ihn nach. Klick und Vorspielton werden in Web Audio vorausgeplant (`src/lib/warmup/player.ts`).
      - Mithören bewertet nur das Nachspielen (`PracticeSession`, vorgespielte Töne tragen `call`).
      - Noch nicht dabei: Tagesvorschlag, Fragen an den Dirigenten (KI). Der Schränz-Groove kam mit M2 (Punkt 11).
      - **Ungeprüft:** wie der synthetische Vorspielton auf Handy-Lautsprecher und Kopfhörer klingt; echte Aufnahmen pro Instrument sind geplant (docs/02).
-- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Einblasen) ist mit PR #3 gemergt und live (`/einblasen`, geprüft 28.10.2026). Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
+- **Stand 28.10.2026:** PR #1 (Punkte 2–5) und PR #2 (Punkte 6 und 7) sind gemergt und live. Punkt 8 (Aufwärmen) ist mit PR #3 gemergt und live (`/aufwaermen`, geprüft 28.10.2026). Offen sind die Uploads (13 Mischungen und `score.musicxml`) und der Gerätetest nach dem Protokoll.
 - **Nebenbei offen:**
   - Sousaphon-Griffe in Takt 84 und 89 in Logic auf `0` nachtragen. In `prototype/v7/badtouch.xml` ist das schon korrigiert.
   - Cloudflare-Builds für Branches schlugen fehl (Ursache ungeprüft). Matthias hat die Preview-Builds am 28.10.2026 abgeschaltet; Branches prüft nur noch GitHub Actions.
@@ -172,19 +172,19 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - **Neu (Vorschlag, docs/01):** Ein Übetag zählt erst ab einem getroffenen Ton, sonst brächte ein Durchgang ohne Spielen das Wochenziel. Gilt auch für Prüfungen.
     - Migration `20261029180000_m2_durchgaenge.sql`. Die Punkteregel in SQL und TypeScript stimmt für alle 1111 Kombinationen überein.
     - Getestet mit Playwright: Ein Durchgang wird angemeldet, abgeschlossen und neu gestartet; 0 % gibt keine Punkte und keinen Übetag.
-    - Punkte fürs Einblasen kamen am 29.10.2026 dazu (Punkt 12).
+    - Punkte fürs Aufwärmen kamen am 29.10.2026 dazu (Punkt 12).
 11. ~~Belohnungen der Ränge~~ erledigt am 29.10.2026:
-    - Bahn-Look »Fasnacht« (ab Level 2, eigene Farbe je Griff bzw. Zugposition) und »Gold« (ab Level 4) in »Stück üben« unter »Bahn-Look«, gilt auch beim Einblasen. Gefärbt werden nur die kommenden Töne; gespielt, aktuell und bewertet bleiben wie immer.
-    - Bonusübung »Schränz-Groove« beim Einblasen ab Level 3, vorher mit »ab Level 3« gesperrt.
+    - Bahn-Look »Fasnacht« (ab Level 2, eigene Farbe je Griff bzw. Zugposition) und »Gold« (ab Level 4) in »Stück üben« unter »Bahn-Look«, gilt auch beim Aufwärmen. Gefärbt werden nur die kommenden Töne; gespielt, aktuell und bewertet bleiben wie immer.
+    - Bonusübung »Schränz-Groove« beim Aufwärmen ab Level 3, vorher mit »ab Level 3« gesperrt.
     - Abzeichen »Guuggen-Ass« (Level 6) und »Fasnachtslegende« (Level 7) beim eigenen Rang und in der Rangliste.
     - Looks und Groove gelten mit dem höchsten Rang aus allen eigenen Guuggen, auf dem Gerät gemerkt bis zum Abmelden (Vorschlag, docs/01). Migration `20261029200000_m2_belohnungen.sql` mit `my_best_points`.
     - Getestet mit Vitest (Farben, Freischaltung, Groove-Runden, Höchstwert über Guuggen) und Playwright (ohne Konto gesperrt; mit Punkten Look wählen, Groove üben, Abzeichen; nach dem Abmelden wieder Standard).
     - **Ungeprüft:** wie die Farben beim Spielen wirken. »Fasnacht« nutzt wie im Prototyp auch Rot, Gelb und Blau, die sonst »falsch«, »knapp« und den aktuellen Ton bedeuten. Bewertete Töne stehen links der Spiellinie, gefärbte rechts; ob das reicht, zeigt der Pilot.
-12. ~~Punkte fürs Einblasen~~ erledigt am 29.10.2026:
-    - Mit »Mithören« meldet »Einblasen« jede Übung beim Server an (`start_exercise`) und schickt am Ende das Ergebnis (`finish_exercise`). 5 Punkte ab 50 % getroffen, höchstens 6 Übungen mit Punkten pro Tag und Guugge. Ohne Mithören gibt es keine Punkte.
+12. ~~Punkte fürs Aufwärmen~~ erledigt am 29.10.2026:
+    - Mit »Mithören« meldet »Aufwärmen« jede Übung beim Server an (`start_exercise`) und schickt am Ende das Ergebnis (`finish_exercise`). 5 Punkte ab 50 % getroffen, höchstens 6 Übungen mit Punkten pro Tag und Guugge. Ohne Mithören gibt es keine Punkte.
     - **Neu (Vorschlag, docs/01):** Im Prototyp gab es die Punkte fürs Durchspielen; das wären Punkte für Zeit.
     - Der Server prüft Übung, Stufe, Tempo und Mindestdauer und nimmt den Schränz-Groove erst ab Level 3 an. Migration `20261029210000_m2_einblasen.sql`.
-    - Die Liste, wofür es Punkte gibt, steht jetzt an einem Ort (`POINTS_RULE` in `src/lib/game/points.ts`) und nennt das Einblasen.
+    - Die Liste, wofür es Punkte gibt, steht jetzt an einem Ort (`POINTS_RULE` in `src/lib/game/points.ts`) und nennt das Aufwärmen.
     - Getestet mit Vitest (Länge und Namen der Übungen wie in der App, Regel SQL = TypeScript, Dauer, Tageslimit, Groove-Sperre) und Playwright (Übung mit Mithören wird an- und abgemeldet, 0 % gibt keine Punkte).
     - **Ungeprüft:** eine Übung mit echtem Instrument über 50 %; das künstliche Mikrofon hört nur ein A. Gehört in den Gerätetest.
 13. ~~Hinweise in der Notenansicht~~ erledigt am 29.10.2026:
@@ -200,12 +200,13 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
     - **Ungeprüft:** gegen das echte Realtime, und wie zuverlässig die Verbindung auf dem iPhone im Hintergrund bleibt (dafür das Neuholen beim Zurückkehren).
 15. **Abnahme läuft seit 02.11.2026** (Matthias, iPhone und Computer). Bisher: Abschnitte 1–3 bestanden (Anmelden mit 6-stelligem Code, falscher Code »Der Code stimmt nicht oder ist abgelaufen.«, Einladung, Plan mit Pausen), Etappen 1 und 2 bestanden, Level 2 erreicht. Befunde:
     - Etappe 3: kein Ton auf der Bahn, ohne Meldung (03.11.2026: es steht nichts über der Bahn, also hat die Vorabprüfung von `/audio/…` »ok« ergeben). Ursache offen. Verdacht 1: Stummschalter am iPhone, der Ton über Web Audio abschaltet; seit 03.11.2026 meldet die App den Ton als Wiedergabe an (`navigator.audioSession`, Safari 17+, `src/lib/audio/session.ts`). Verdacht 2: Mischungen nicht im Storage. **Ungeprüft:** Gerätetest mit Stummschalter an und aus. Mit Konto sollte kein Testcode nötig sein: umbauen, sobald es Lizenzen gibt.
-    - Unklar, ob das Mikrofon die richtigen Töne hört. Prüfen mit Einblasen → Lange Töne → Mithören (wie M1-Abnahme).
+    - Unklar, ob das Mikrofon die richtigen Töne hört. Prüfen mit Aufwärmen → Lange Töne → Mithören (wie M1-Abnahme).
     - Kein Weg zurück aus der Prüfung auf der Bahn (in der App auf dem Home-Bildschirm fehlt der Zurück-Knopf des Browsers). **Behoben 02.11.2026:** Link »← Plan« und »Abbrechen, zurück zum Plan«.
     - Zwei Spuren (Töne oben, Griffe unten) lassen sich nicht gleichzeitig lesen. **Entscheid Matthias 02.11.2026 nach Entwurf:** nur noch eine Spur, Griff als Ziffern im Ton-Balken (»1 2«, »0« = offen, Posaune die Zugposition); die Griffspur entfällt ganz. Gebaut 02.11.2026 (`pillGripLabel` in `src/lib/lane/geometry.ts`). Zu kurze Töne: Ziffern kleiner, sonst über dem Balken. Bei »Ohne Griffe« steht wie bisher Notenname bzw. Vorzeichen im Balken.
     - Seiten wirken unübersichtlich und unattraktiv (Plan). Gestaltungsrunde nach der Abnahme, zuerst »Mein Plan«.
     - »Stück üben« zu viele Bedienelemente, Spiellinie zu weit in der Mitte (man sieht wenig von dem, was kommt), Querformat fehlt. **Entscheid Matthias 03.11.2026 nach Entwurf, gebaut 03.11.2026:** Aufbau wie in docs/01 »Aufbau der Seite« und »Querformat«; Spiellinie bei 12 % statt 22 %, enger (`computeGeometry`). Griffe über kurzen Balken überlappen nicht mehr (`AboveLabels`). Getestet mit Vitest und Playwright (Handy hochkant und quer, iPad quer, kein Scrollen). **Ungeprüft:** auf echtem iPhone und iPad, besonders Safe-Area quer (Notch) und die Blätter (`<dialog>`) in Safari.
-    - Kein Weg von der Guugge oder dem Plan zu »Stück üben« (Matthias 03.11.2026). **Behoben 03.11.2026:** »Stück üben →« und »Einblasen →« auf der Guugge-Seite und im Plan, mit der Stimme aus der Guugge.
+    - Kein Weg von der Guugge oder dem Plan zu »Stück üben« (Matthias 03.11.2026). **Behoben 03.11.2026:** »Stück üben →« und »Aufwärmen →« auf der Guugge-Seite und im Plan, mit der Stimme aus der Guugge.
+    - »Einblasen« heisst jetzt »Aufwärmen« (Entscheid Matthias 03.11.2026): Seite `/aufwaermen` (alte Adresse leitet weiter), Texte, Doku; Migration `20261103140000_m2_aufwaermen.sql` schreibt neue Punkte-Einträge als »Aufwärmen: …« und benennt bestehende um (Tagesgrenze zählt weiter alle). Wird beim Merge über die Supabase-Anbindung angewendet. **Ungeprüft** gegen das echte Projekt: nach dem Merge in »Punkte und Rangliste« → »Letzte Punkte« nachsehen.
 16. Rest der Abnahme nach `docs/testprotokolle/m2-abnahme.md`, nach dem Anwenden der Migrationen. Eigener Mailversand (SMTP) über Brevo seit 31.10.2026 eingerichtet und mit einer Einladungsmail geprüft (docs/02).
 
 **Abnahme:**

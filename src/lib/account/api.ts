@@ -290,7 +290,7 @@ export const startPass = (
 export const finishPass = (sb: SupabaseClient, attempt: string, pct: number, judged: number) =>
 	call<PassResult>(sb, 'finish_pass', { p_attempt: attempt, p_pct: pct, p_judged: judged });
 
-/** Übung beim Einblasen anmelden (#lib/warmup/exercises.ts: id, Stufe 0/1, Tempo in BPM) */
+/** Übung beim Aufwärmen anmelden (#lib/warmup/exercises.ts: id, Stufe 0/1, Tempo in BPM) */
 export const startExercise = (sb: SupabaseClient, exercise: string, level: number, bpm: number) =>
 	call<string>(sb, 'start_exercise', { p_exercise: exercise, p_level: level, p_bpm: bpm });
 

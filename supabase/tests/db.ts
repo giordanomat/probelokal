@@ -27,15 +27,26 @@ export function migrationFiles(): string[] {
 		.sort();
 }
 
-export async function createTestDb(): Promise<TestDb> {
+async function apply(pg: PGlite, f: string) {
+	try {
+		await pg.exec(readFileSync(join(ROOT, 'migrations', f), 'utf8'));
+	} catch (e) {
+		throw new Error(`Migration ${f}: ${(e as Error).message}`, { cause: e });
+	}
+}
+
+/** Eine Migration nachträglich anwenden (nach createTestDb({ before })), für Datenänderungen. */
+export function applyMigration(db: TestDb, file: string): Promise<void> {
+	return apply(db.pg, file);
+}
+
+/** before: nur die Migrationen davor anwenden (um zu prüfen, was eine Migration mit Daten macht). */
+export async function createTestDb(opts: { before?: string } = {}): Promise<TestDb> {
 	const pg = new PGlite();
 	await pg.exec(readFileSync(join(ROOT, 'tests', 'supabase-stub.sql'), 'utf8'));
 	for (const f of migrationFiles()) {
-		try {
-			await pg.exec(readFileSync(join(ROOT, 'migrations', f), 'utf8'));
-		} catch (e) {
-			throw new Error(`Migration ${f}: ${(e as Error).message}`, { cause: e });
-		}
+		if (opts.before && f >= opts.before) break;
+		await apply(pg, f);
 	}
 
 	// Eine Verbindung für alle: Anfragen der Reihe nach, jede als eigene Transaktion mit Rolle und

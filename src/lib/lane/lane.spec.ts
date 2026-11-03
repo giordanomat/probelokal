@@ -121,7 +121,7 @@ describe('Geometrie der Bahn', () => {
 		expect(noteLook(n, 9, 'wrong')).toBe('wrong');
 	});
 
-	it('vorgespielte Töne (Einblasen) gestrichelt, ausser wenn sie gerade klingen', () => {
+	it('vorgespielte Töne (Aufwärmen) gestrichelt, ausser wenn sie gerade klingen', () => {
 		const call = { b: 8, d: 1, call: true };
 		expect(noteLook(call, 7, undefined)).toBe('ghost');
 		expect(noteLook(call, 9, undefined)).toBe('ghost');

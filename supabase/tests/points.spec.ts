@@ -1,5 +1,5 @@
 // Punkte auf dem Server: Etappenprüfungen (20261029120000), Durchgänge (20261029180000),
-// höchster Rang (20261029200000) und Einblasen (20261029210000). Regeln gleich wie in
+// höchster Rang (20261029200000) und Aufwärmen (20261029210000, umbenannt 20261103140000). Regeln gleich wie in
 // src/lib/game/points.ts, src/lib/exams/exams.ts und src/lib/warmup/exercises.ts; Abläufe start → finish
 // mit Prüfung von Reihenfolge, Dauer und Wertebereich.
 
@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { examAward, exerciseAward, passAward, unlockLevel } from '../../src/lib/game/points';
 import { passMark } from '../../src/lib/exams/exams';
 import { buildExercise, EXERCISES } from '../../src/lib/warmup/exercises';
-import { createTestDb } from './db';
+import { applyMigration, createTestDb } from './db';
 import { DENIED, fixture, type Fixture } from './fixture';
 
 describe('Punkteregeln: SQL = TypeScript', () => {
@@ -313,7 +313,7 @@ describe('Höchster Rang über alle Guuggen (Bahn-Looks, Schränz-Groove)', () =
 	});
 });
 
-describe('Punkte fürs Einblasen', () => {
+describe('Punkte fürs Aufwärmen', () => {
 	let f: Fixture;
 	const start = (who: { id: string }, ex: string, level: number, bpm: number) =>
 		f.db
@@ -370,7 +370,7 @@ describe('Punkte fürs Einblasen', () => {
 		await expect(finish(p, a, 90, 8)).rejects.toThrow('schon abgeschlossen');
 		expect(
 			await f.db.owner(`select points, reason from points_ledger where ref = $1`, [a])
-		).toEqual([{ points: 5, reason: 'Einblasen: Lange Töne' }]);
+		).toEqual([{ points: 5, reason: 'Aufwärmen: Lange Töne' }]);
 		await expect(finish(f.trp[1], a, 90, 8)).rejects.toThrow('Diese Übung gibt es nicht.');
 	});
 
@@ -403,5 +403,24 @@ describe('Punkte fürs Einblasen', () => {
 		expect(await start(p, 'groove', 1, 70)).toMatch(/^[0-9a-f-]{36}$/);
 		await expect(f.db.as(p, `select * from exercise_attempts`)).rejects.toThrow(DENIED);
 		await expect(f.db.as('anon', `select start_exercise('lang', 0, 70)`)).rejects.toThrow(DENIED);
+	});
+});
+
+describe('Umbenennung »Einblasen« → »Aufwärmen« (Entscheid Matthias 03.11.2026)', () => {
+	const MIGRATION = '20261103140000_m2_aufwaermen.sql';
+	it('alte Einträge heissen danach »Aufwärmen: …«, andere bleiben', { timeout: 30_000 }, async () => {
+		const db = await createTestDb({ before: MIGRATION });
+		const id = await db.user('a@test.ch', 'A');
+		const [{ g }] = await db.as<{ g: string }>({ id }, `select create_guugge('X') as g`);
+		await db.owner(
+			`insert into points_ledger (user_id, guugge_id, points, reason)
+			 values ($1, $2, 5, 'Einblasen: Lange Töne'), ($1, $2, 40, 'Etappe 1 bestanden')`,
+			[id, g]
+		);
+		await applyMigration(db, MIGRATION);
+		expect(await db.owner(`select reason from points_ledger order by points`)).toEqual([
+			{ reason: 'Aufwärmen: Lange Töne' },
+			{ reason: 'Etappe 1 bestanden' }
+		]);
 	});
 });

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
 import { openMore } from './practice';
 
-// Belohnungen der Ränge: Bahn-Looks (»Stück üben«), Schränz-Groove (»Einblasen«) und Abzeichen
+// Belohnungen der Ränge: Bahn-Looks (»Stück üben«), Schränz-Groove (»Aufwärmen«) und Abzeichen
 // (Rangliste). Looks und Groove gelten mit dem höchsten Rang über alle Guuggen (my_best_points),
 // gemerkt auf dem Gerät. Wie die Farben auf der Bahn aussehen, prüft nur der Blick aufs Gerät.
 
@@ -15,7 +15,7 @@ test('ohne Konto: Looks und Schränz-Groove gesperrt', async ({ page }) => {
 	await expect(look.locator('option[value=fasnacht]')).toHaveText('Fasnacht (ab Level 2)');
 	await expect(look.locator('option[value=gold]')).toHaveText('Gold (ab Level 4)');
 
-	await page.goto('/einblasen');
+	await page.goto('/aufwaermen');
 	const groove = page.getByRole('button', { name: /Schränz-Groove/ });
 	await expect(groove).toContainText('ab Level 3');
 	await groove.click();
@@ -64,7 +64,7 @@ test('mit Punkten: Look wählen, Schränz-Groove üben, Abzeichen in der Ranglis
 	await openMore(page);
 	await expect(page.getByLabel('Bahn-Look')).toHaveValue('fasnacht');
 
-	await page.goto('/einblasen');
+	await page.goto('/aufwaermen');
 	await expect(page.locator('.lane canvas')).toHaveAttribute('data-look', 'fasnacht');
 	const groove = page.getByRole('button', { name: 'Schränz-Groove' });
 	await expect(groove).not.toContainText('ab Level');

@@ -239,7 +239,7 @@ export class PracticeSession {
 				const sinceStart = (b - n.b) / bps;
 				const untilEnd = (n.b + n.d - b) / bps;
 				inWindow = inJudgingWindow(sinceStart, untilEnd, n.d / bps);
-				// Vorgespielte Töne (Einblasen) werden nicht bewertet
+				// Vorgespielte Töne (Aufwärmen) werden nicht bewertet
 				if (active && !n.call && this.passFrom !== null && n.b >= this.passFrom - EPS && inWindow) {
 					this.tallies.set(i, addToTally(this.tallies.get(i) ?? emptyTally(), info));
 				}

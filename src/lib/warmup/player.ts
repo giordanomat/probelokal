@@ -1,4 +1,4 @@
-// Wiedergabe beim Einblasen, portiert aus prototype/v7 (exPlay, exSchedule, click, tone):
+// Wiedergabe beim Aufwärmen, portiert aus prototype/v7 (exPlay, exSchedule, click, tone):
 // Klick und vorgespielte Töne in Web Audio vorausgeplant (25-ms-Takt, 0,5 s Vorlauf, docs/02).
 // Die Uhr ist der AudioContext: Schlag = Startschlag + (jetzt − Start) × Tempo.
 // Der Vorspielton ist wie im Prototyp synthetisch; im Produkt kommen echte Aufnahmen pro

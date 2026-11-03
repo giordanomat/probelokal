@@ -159,7 +159,7 @@ export type NoteLook =
 	| 'half'
 	| 'wrong'
 	| 'missed'
-	/** vom Dirigenten vorgespielt (Einblasen): gestrichelt */
+	/** vom Dirigenten vorgespielt (Aufwärmen): gestrichelt */
 	| 'ghost';
 
 export function noteLook(

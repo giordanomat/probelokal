@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test';
 import { FakeSupabase } from './fake-supabase';
 import { openMore } from './practice';
 
-// Einblasen: Navigation, Vorspielen/Nachspielen und Bewertung mit dem künstlichen Mikrofon
+// Aufwärmen: Navigation, Vorspielen/Nachspielen und Bewertung mit dem künstlichen Mikrofon
 // (klingendes G4 = notiert A4 für Trompete, siehe e2e/global-setup.ts). Tonleiter-Häppchen
 // Einstieg bei ♩ 120: vier Runden, 13 Töne zum Nachspielen, gut 18 s.
 
-test('Einblasen: Dirigent spielt vor, du spielst nach, Mithören bewertet nur dein Nachspielen', async ({
+test('Aufwärmen: Dirigent spielt vor, du spielst nach, Mithören bewertet nur dein Nachspielen', async ({
 	page
 }) => {
 	test.setTimeout(60_000);
@@ -14,12 +14,12 @@ test('Einblasen: Dirigent spielt vor, du spielst nach, Mithören bewertet nur de
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/ueben');
 	await openMore(page);
-	await page.getByRole('link', { name: 'Einblasen →' }).click();
-	await expect(page).toHaveURL(/\/einblasen$/);
+	await page.getByRole('link', { name: 'Aufwärmen →' }).click();
+	await expect(page).toHaveURL(/\/aufwaermen$/);
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
 		'Mit dem giordanomat-Dirigenten'
 	);
-	await expect(page.getByRole('link', { name: 'Einblasen' })).toHaveAttribute(
+	await expect(page.getByRole('link', { name: 'Aufwärmen' })).toHaveAttribute(
 		'aria-current',
 		'page'
 	);
@@ -54,8 +54,8 @@ test('Einblasen: Dirigent spielt vor, du spielst nach, Mithören bewertet nur de
 	expect(errors).toEqual([]);
 });
 
-test('Einblasen ohne Mithören: Stufe und Stimme wechseln, anhalten', async ({ page }) => {
-	await page.goto('/einblasen');
+test('Aufwärmen ohne Mithören: Stufe und Stimme wechseln, anhalten', async ({ page }) => {
+	await page.goto('/aufwaermen');
 	await page.getByRole('button', { name: 'Weiter' }).click();
 	await page.getByRole('button', { name: 'Pos 1' }).click();
 	await page.getByRole('button', { name: 'Übung starten' }).click();
@@ -66,7 +66,7 @@ test('Einblasen ohne Mithören: Stufe und Stimme wechseln, anhalten', async ({ p
 	await expect(page.getByTestId('ergebnis')).toHaveCount(0);
 });
 
-test('Einblasen angemeldet: Übung mit Mithören wird beim Server an- und abgemeldet', async ({
+test('Aufwärmen angemeldet: Übung mit Mithören wird beim Server an- und abgemeldet', async ({
 	page
 }) => {
 	// Das Mikrofon hört nur ein A, die Tonleiter hat keins: 0 % und keine Punkte. Die Punkteregel
@@ -78,7 +78,7 @@ test('Einblasen angemeldet: Übung mit Mithören wird beim Server an- und abgeme
 	await fake.db.as(lea, `select create_guugge('Schuegu')`);
 	await fake.signIn(page, 'lea@test.ch');
 
-	await page.goto('/einblasen');
+	await page.goto('/aufwaermen');
 	await expect(page.getByText('Mit Mithören gibt es 5 Punkte pro Übung')).toBeVisible();
 	await page.getByRole('button', { name: 'Tonleiter-Häppchen' }).click();
 	await page.getByLabel('Tempo').fill('120');
@@ -86,7 +86,7 @@ test('Einblasen angemeldet: Übung mit Mithören wird beim Server an- und abgeme
 	await expect(page.getByTestId('mithoeren')).toContainText('Ich höre zu');
 	await page.getByRole('button', { name: 'Übung starten' }).click();
 	await expect(page.getByTestId('ergebnis')).toContainText('Geschafft:', { timeout: 30_000 });
-	await expect(page.getByTestId('einblasen-punkte')).toHaveText(
+	await expect(page.getByTestId('aufwaermen-punkte')).toHaveText(
 		'Punkte gibt es ab 50 % getroffen.'
 	);
 	expect(
@@ -97,4 +97,13 @@ test('Einblasen angemeldet: Übung mit Mithören wird beim Server an- und abgeme
 	expect(
 		await fake.db.owner(`select count(*)::int as n from points_ledger where user_id = $1`, [lea.id])
 	).toEqual([{ n: 0 }]);
+});
+
+test('alte Adresse /einblasen führt zum Aufwärmen', async ({ page }) => {
+	await page.goto('/einblasen');
+	await expect(page).toHaveURL(/\/aufwaermen$/);
+	await expect(page.getByRole('link', { name: 'Aufwärmen' })).toHaveAttribute(
+		'aria-current',
+		'page'
+	);
 });

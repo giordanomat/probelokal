@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Einblasen mit dem giordanomat-Dirigenten (Übungen in #lib/warmup/exercises.ts), portiert aus
+	// Aufwärmen mit dem giordanomat-Dirigenten (Übungen in #lib/warmup/exercises.ts), portiert aus
 	// prototype/v7 (Reiter »Einblasen«). Der Dirigent spielt einen Takt vor, du spielst ihn nach.
 	// Mit Mithören wird jeder nachgespielte Ton bewertet (Abnahme M1: Lange Töne ≥ 90 %).
 	// Der Schränz-Groove ist ab Level 3 freigeschaltet (höchster Rang über alle Guuggen, auf dem
@@ -160,7 +160,7 @@
 		const e = EXERCISES.find((x) => x.id === patch.ex);
 		if (e?.unlock && locked(e)) {
 			const l = unlockLevel(e.unlock);
-			lockNote = `${e.name} wird mit Level ${l.n} (${l.name}) freigeschaltet. Punkte sammelst du in deiner Guugge, z. B. mit Etappen und beim Einblasen mit Mithören.`;
+			lockNote = `${e.name} wird mit Level ${l.n} (${l.name}) freigeschaltet. Punkte sammelst du in deiner Guugge, z. B. mit Etappen und beim Aufwärmen mit Mithören.`;
 			return;
 		}
 		if (patch.ex) exId = patch.ex;
@@ -217,7 +217,7 @@
 			exPoints = res.points
 				? `+${res.points} Punkte${res.week_goal ? ` · +${res.week_goal} Wochenziel` : ''}`
 				: res.capped
-					? 'Heute gibt es fürs Einblasen keine Punkte mehr.'
+					? 'Heute gibt es fürs Aufwärmen keine Punkte mehr.'
 					: summary.pct < 50
 						? 'Punkte gibt es ab 50 % getroffen.'
 						: '';
@@ -339,7 +339,7 @@
 </script>
 
 <svelte:head>
-	<title>Einblasen · Probelokal</title>
+	<title>Aufwärmen · Probelokal</title>
 </svelte:head>
 
 <svelte:window onkeydown={onKey} />
@@ -347,7 +347,7 @@
 <PracticeNav />
 
 <section class="head">
-	<p class="label">Einblasen</p>
+	<p class="label">Aufwärmen</p>
 	<h1>Mit dem giordanomat-Dirigenten</h1>
 	<p class="hint">
 		Der Dirigent spielt einen Takt vor (gestrichelt), du spielst ihn nach. Mit »Mithören« sagt er
@@ -442,7 +442,7 @@
 	<section class="result" role="status" data-testid="ergebnis">
 		<b>{report.headline.replace(/^Durchgang \d+: /, 'Geschafft: ')}</b>
 		{#if report.detail}<span class="detail">{report.detail}</span>{/if}
-		{#if exPoints}<span class="detail" data-testid="einblasen-punkte">{exPoints}</span>{/if}
+		{#if exPoints}<span class="detail" data-testid="aufwaermen-punkte">{exPoints}</span>{/if}
 	</section>
 {/if}
 

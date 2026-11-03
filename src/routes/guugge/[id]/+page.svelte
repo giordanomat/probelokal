@@ -179,7 +179,7 @@
 			<p class="hint">Üben mit der Band, Gesamtplan der Leitung und dein Stand pro Teil.</p>
 			<p class="golinks">
 				<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
-				<a class="go" href={resolve('/einblasen')}>Einblasen →</a>
+				<a class="go" href={resolve('/aufwaermen')}>Aufwärmen →</a>
 				<a class="go" href={resolve('/guugge/[id]/plan', { id })}>Plan ansehen →</a>
 			</p>
 		</section>

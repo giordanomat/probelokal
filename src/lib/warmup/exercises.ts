@@ -1,10 +1,10 @@
-// Einblasen mit dem giordanomat-Dirigenten, portiert aus prototype/v7 (EXERCISES, exBuild).
+// Aufwärmen mit dem giordanomat-Dirigenten, portiert aus prototype/v7 (EXERCISES, exBuild).
 // Pro Runde spielt der Dirigent einen Takt vor (»Hör zu«), dann spielst du denselben Takt nach
 // (»Jetzt du«). Vorne ein Takt Einzählen. Alle Töne notiert im Violinschlüssel in B wie die
 // Stimmen von Bad Touch; klingend = notiert + shift der Stimme.
 //
 // Der »Schränz-Groove« ist eine Belohnung ab Level 3 (#lib/game/points.ts); gesperrt zeigt
-// »Einblasen« ihn mit »ab Level 3«.
+// »Aufwärmen« ihn mit »ab Level 3«.
 //
 // Für die Punkte kennt auch die Datenbank Länge und Namen jeder Übung (exercise_beats,
 // exercise_name, Migration 20261029210000); supabase/tests/points.spec.ts prüft, dass beide passen.

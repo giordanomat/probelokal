@@ -1,11 +1,11 @@
 <script lang="ts">
-	// Wechsel zwischen den Übe-Bereichen (wie die Reiter im Prototyp: Stück · Einblasen).
+	// Wechsel zwischen den Übe-Bereichen (wie die Reiter im Prototyp: Stück · Aufwärmen).
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	const items = [
 		{ href: resolve('/ueben'), label: 'Stück üben' },
-		{ href: resolve('/einblasen'), label: 'Einblasen' }
+		{ href: resolve('/aufwaermen'), label: 'Aufwärmen' }
 	];
 </script>
 

@@ -1437,7 +1437,7 @@
 	</div>
 
 	<div class="group links">
-		<a href={resolve('/einblasen')}>Einblasen →</a>
+		<a href={resolve('/aufwaermen')}>Aufwärmen →</a>
 		<a href={resolve('/guugge')}>Meine Guugge →</a>
 	</div>
 </Sheet>
