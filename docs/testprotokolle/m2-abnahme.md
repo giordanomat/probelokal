@@ -96,6 +96,7 @@ Vorher die App ganz schliessen und neu öffnen, damit die neue Fassung lädt.
 
 | Prüfung | Soll | Ist | OK? |
 |---|---|---|---|
+| Guugge-Seite oder Plan → »Stück üben →« | »Stück üben« öffnet mit deiner Stimme aus der Guugge | | |
 | iPhone auf **stumm** (Schalter an der Seite), »Abspielen« | Band klingt trotzdem. Kein Ton: notieren, ob über der Bahn ein Hinweis steht | | |
 | Stummschalter aus, nochmals | Band klingt | | |
 | Hochkant | alles auf einem Bildschirm, nichts zum Scrollen; rote Linie weit links, gut zwei Takte voraus sichtbar | | |

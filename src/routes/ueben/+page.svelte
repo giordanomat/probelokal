@@ -62,6 +62,7 @@
 		OWN_LEVELS,
 		loadPrefs,
 		savePrefs,
+		voiceFromQuery,
 		type LanePrefs
 	} from '#lib/practice/prefs.ts';
 	import { tapFeedback } from '#lib/practice/rhythm.ts';
@@ -881,6 +882,9 @@
 
 	onMount(() => {
 		prefs = loadPrefs(localStorage, voiceIds);
+		// Aus der Guugge oder dem Plan kommt die dort gewählte Stimme mit (?stimme=trp1)
+		const fromLink = voiceFromQuery(new URLSearchParams(location.search), voiceIds);
+		if (fromLink && fromLink !== prefs.voice) setPrefs({ voice: fromLink });
 		bestPoints = loadBestPoints(localStorage);
 		measured = loadLatency(localStorage);
 		diag = new URLSearchParams(location.search).has('diag');

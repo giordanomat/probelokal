@@ -82,3 +82,17 @@ export function savePrefs(storage: StorageLike | undefined, prefs: LanePrefs): v
 		// absichtlich leer: gilt dann nur bis zum Neuladen
 	}
 }
+
+/**
+ * Stimme aus der Adresse (»?stimme=trp1«): Links aus der Guugge und dem Plan geben die dort
+ * gewählte Stimme mit, damit »Stück üben« gleich mit ihr startet. Unbekannte Werte zählen nicht.
+ */
+export function voiceFromQuery(query: URLSearchParams, voiceIds: readonly string[]): string | null {
+	const id = query.get('stimme');
+	return id && voiceIds.includes(id) ? id : null;
+}
+
+/** Zusatz für den Link zu »Stück üben« mit der Stimme aus der Guugge (falls gewählt). */
+export function voiceQuery(voice: string | null | undefined): string {
+	return voice ? `?stimme=${encodeURIComponent(voice)}` : '';
+}

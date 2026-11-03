@@ -31,6 +31,7 @@
 	} from '#lib/plan/dates.ts';
 	import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
 	import { levelOf, nextLevel, POINTS_RULE } from '#lib/game/points.ts';
+	import { voiceQuery } from '#lib/practice/prefs.ts';
 	import {
 		nextExams,
 		pauseSections,
@@ -218,6 +219,10 @@
 					>Gesamtplan</button
 				>
 			</div>
+			<p class="golinks">
+				<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
+				<a class="go" href={resolve('/einblasen')}>Einblasen →</a>
+			</p>
 		</section>
 
 		{#if notice}<p class="ok" role="status">{notice}</p>{/if}
