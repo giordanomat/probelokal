@@ -84,3 +84,12 @@ test('Aufbau: hochkant untereinander, quer die Bedienung rechts, nichts zum Scro
 		}
 	}
 });
+
+test('Link aus der Guugge gibt die Stimme mit', async ({ page }) => {
+	await page.goto('/ueben?stimme=pos1');
+	await expect(page.getByRole('button', { name: /^Stimme:/ })).toHaveText(/Pos 1/);
+	await expect(page.getByTestId('griff')).toHaveText(/^Zug \d$/);
+	// Unbekannte Stimme: bleibt bei der gespeicherten
+	await page.goto('/ueben?stimme=tuba');
+	await expect(page.getByRole('button', { name: /^Stimme:/ })).toHaveText(/Pos 1/);
+});

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { FreeClock } from './clock';
-import { DEFAULT_PREFS, PREFS_KEY, loadPrefs, parsePrefs, savePrefs } from './prefs';
+import {
+	DEFAULT_PREFS,
+	PREFS_KEY,
+	loadPrefs,
+	parsePrefs,
+	voiceQuery,
+	savePrefs,
+	voiceFromQuery
+} from './prefs';
 
 describe('Übe-Uhr ohne Audio', () => {
 	it('läuft nur beim Spielen, im gewählten Tempo', () => {
@@ -80,5 +88,18 @@ describe('Einstellungen der Bahn', () => {
 		};
 		expect(loadPrefs(broken, voices)).toEqual(DEFAULT_PREFS);
 		expect(() => savePrefs(broken, DEFAULT_PREFS)).not.toThrow();
+	});
+});
+
+describe('Stimme aus der Guugge mitgeben', () => {
+	const voices = ['trp1', 'trp2', 'pos1'];
+	it('?stimme= wählt eine bekannte Stimme, sonst nichts', () => {
+		expect(voiceFromQuery(new URLSearchParams('stimme=pos1'), voices)).toBe('pos1');
+		expect(voiceFromQuery(new URLSearchParams('stimme=tuba'), voices)).toBeNull();
+		expect(voiceFromQuery(new URLSearchParams(''), voices)).toBeNull();
+	});
+	it('Link mit Stimme, ohne Stimme ohne Zusatz', () => {
+		expect(voiceQuery('trp1')).toBe('?stimme=trp1');
+		expect(voiceQuery(null)).toBe('');
 	});
 });

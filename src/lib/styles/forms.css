@@ -84,3 +84,9 @@
 	font-weight: 700;
 	color: var(--akzent);
 }
+/* Mehrere Wege nebeneinander (Guugge, Plan) */
+.golinks {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 20px;
+}

@@ -70,5 +70,10 @@ test('Leitung legt den Gesamtplan an, Mitglied sieht ihn und seinen Stand', asyn
 	await p2.getByRole('button', { name: 'Gesamtplan' }).click();
 	await expect(p2.getByRole('heading', { name: 'Meilensteine' })).toBeVisible();
 	await expect(p2.getByRole('heading', { name: /Plan (anlegen|ändern)/ })).toHaveCount(0);
+
+	// Vom Plan direkt üben, mit der Stimme aus der Guugge
+	await p2.getByRole('link', { name: 'Stück üben →' }).click();
+	await expect(p2).toHaveURL(/\/ueben\?stimme=trp1$/);
+	await expect(p2.getByRole('button', { name: /^Stimme:/ })).toHaveText(/Trp 1/);
 	await other.close();
 });

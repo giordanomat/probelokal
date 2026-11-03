@@ -24,6 +24,7 @@
 	} from '#lib/account/api.ts';
 	import { inviteUrl } from '#lib/account/invite.ts';
 	import { BAD_TOUCH_SLUG, BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
+	import { voiceQuery } from '#lib/practice/prefs.ts';
 	import { hintsFor } from '#lib/hints/hints.ts';
 	import { watchHints } from '#lib/hints/live.ts';
 
@@ -175,8 +176,12 @@
 
 		<section class="card">
 			<h2>Bad Touch 2.0</h2>
-			<p class="hint">Gesamtplan der Leitung und dein Stand pro Teil.</p>
-			<p><a class="go" href={resolve('/guugge/[id]/plan', { id })}>Plan ansehen →</a></p>
+			<p class="hint">Üben mit der Band, Gesamtplan der Leitung und dein Stand pro Teil.</p>
+			<p class="golinks">
+				<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
+				<a class="go" href={resolve('/einblasen')}>Einblasen →</a>
+				<a class="go" href={resolve('/guugge/[id]/plan', { id })}>Plan ansehen →</a>
+			</p>
 		</section>
 
 		<section class="card">
