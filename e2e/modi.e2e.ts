@@ -16,7 +16,7 @@ test('Rhythmus tippen: Rückmeldung, Durchgang in der Schleife, Tempo-Vorschlag,
 	const tap = page.getByRole('button', { name: 'Tippen', exact: true });
 	await expect(tap).toBeVisible();
 
-	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
+	await page.getByLabel('Teil').selectOption({ label: 'Teil C · 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 

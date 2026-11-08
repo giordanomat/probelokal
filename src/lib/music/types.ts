@@ -105,4 +105,9 @@ export interface Title {
 	voices: Voice[];
 	/** Sekunden in den Audiodateien vor Takt 0 (Versatz Einzelspuren/Mischungen). */
 	stem_offset_sec: number;
+	/**
+	 * Teile, die ff gespielt werden (Namen wie in sections). Steht nicht in der Partitur, darum von
+	 * Hand; für den Zuruf »Volle Lotte!« (#lib/practice/cues.ts).
+	 */
+	ff?: string[];
 }

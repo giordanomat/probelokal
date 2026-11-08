@@ -27,5 +27,7 @@ export const BAD_TOUCH: Title = {
 	voices: BAD_TOUCH_VOICES,
 	// Einzelspuren beginnen genau 3 Takte vor Takt 0 (am ersten Einsatz gemessen, docs/04).
 	// Die früheren 6,237 s kamen vom MP3-Vorlauf des Tutti-Bounce.
-	stem_offset_sec: (3 * 4 * 60) / 115
+	stem_offset_sec: (3 * 4 * 60) / 115,
+	// ff-Teile (Matthias 08.11.2026); die Partitur hat keine Dynamik
+	ff: ['G', 'P', 'Q']
 };

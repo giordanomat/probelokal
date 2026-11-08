@@ -15,6 +15,8 @@ export interface LanePrefs {
 	own: number;
 	/** Bahn-Look (Belohnung); gilt nur, solange er freigeschaltet ist (activeLook) */
 	look: LaneLook;
+	/** Zurufe über der Bahn (#lib/practice/cues.ts) */
+	cues: boolean;
 }
 
 export const OWN_LEVELS = [
@@ -32,7 +34,8 @@ export const DEFAULT_PREFS: LanePrefs = {
 	staff: false,
 	zoom: 1,
 	own: 1,
-	look: 'std'
+	look: 'std',
+	cues: true
 };
 
 const HELP: readonly HelpLevel[] = ['all', 'nogrip', 'rhythm', 'memo'];
@@ -60,7 +63,8 @@ export function parsePrefs(raw: string | null | undefined, voiceIds: readonly st
 			? (data.zoom as number)
 			: d.zoom,
 		own: OWN_LEVELS.some((l) => l.value === data.own) ? (data.own as number) : d.own,
-		look: LANE_LOOKS.some((l) => l.id === data.look) ? (data.look as LaneLook) : d.look
+		look: LANE_LOOKS.some((l) => l.id === data.look) ? (data.look as LaneLook) : d.look,
+		cues: typeof data.cues === 'boolean' ? data.cues : d.cues
 	};
 }
 

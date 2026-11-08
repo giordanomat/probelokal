@@ -21,7 +21,7 @@ test('Durchgang in der Schleife wird angemeldet, abgeschlossen und neu gestartet
 
 	await page.goto('/ueben');
 	await page.getByRole('button', { name: 'Rhythmus', exact: true }).click();
-	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
+	await page.getByLabel('Teil').selectOption({ label: 'Teil C · 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 	await expect(page.getByTestId('ergebnis')).toContainText('Durchgang 1', { timeout: 25_000 });

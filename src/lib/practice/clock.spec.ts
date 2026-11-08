@@ -50,7 +50,7 @@ describe('Einstellungen der Bahn', () => {
 		expect(parsePrefs('kaputt', voices)).toEqual(DEFAULT_PREFS);
 		expect(
 			parsePrefs(
-				'{"voice":"tuba","help":"x","zoom":3,"names":"ja","own":0.5,"look":"pink"}',
+				'{"voice":"tuba","help":"x","zoom":3,"names":"ja","own":0.5,"look":"pink","cues":"ja"}',
 				voices
 			)
 		).toEqual(DEFAULT_PREFS);
@@ -64,7 +64,8 @@ describe('Einstellungen der Bahn', () => {
 			staff: true,
 			zoom: 1.6,
 			own: 0.35,
-			look: 'fasnacht' as const
+			look: 'fasnacht' as const,
+			cues: false
 		};
 		expect(parsePrefs(JSON.stringify(p), voices)).toEqual(p);
 	});

@@ -66,6 +66,7 @@
 		type LanePrefs
 	} from '#lib/practice/prefs.ts';
 	import { tapFeedback } from '#lib/practice/rhythm.ts';
+	import { CUE_TEXTS, cueAt, planCues, praiseDue } from '#lib/practice/cues.ts';
 	import {
 		MODE_HINTS,
 		MODE_LABELS,
@@ -294,12 +295,52 @@
 				: null
 	});
 
+	// Zurufe über der Bahn (#lib/practice/cues.ts): aus den Noten der Stimme, den ff-Teilen des
+	// Titels und den Dynamik-Hinweisen der Leitung; dazu Lob für getroffene Töne am Stück.
+	const cues = $derived(
+		prefs.cues
+			? planCues({
+					notes: track.notes,
+					sections: title.sections,
+					ff: title.ff ?? [],
+					hints: hintsFor(hints, voice)
+				})
+			: []
+	);
+	let praise = $state<{ text: string; until: number } | null>(null);
+	let lastPraised = -1;
+	let praiseCount = 0;
+	const call = $derived.by(() => {
+		const c = cueAt(cues, beat);
+		if (c) {
+			const now = c.count.findLastIndex((x) => x.at <= beat + 1e-6);
+			return { ...c, now };
+		}
+		if (praise && beat < praise.until) {
+			return { kind: 'praise', kicker: '', text: praise.text, count: [], now: -1 };
+		}
+		return null;
+	});
+
+	function checkPraise() {
+		if (session.judged.size === 0) lastPraised = -1;
+		if (!prefs.cues) return;
+		const at = praiseDue(session.judged, lastPraised);
+		if (at === null) return;
+		lastPraised = at;
+		praise = {
+			text: CUE_TEXTS.praise[praiseCount++ % CUE_TEXTS.praise.length],
+			until: beatAtTime(title, clock.time()) + 4
+		};
+	}
+
 	/** Anzeige und Lautstärke der eigenen Stimme nach jeder Änderung am Übe-Ablauf nachziehen. */
 	function sync() {
 		mode = session.mode;
 		echoPhase = session.echo.phase;
 		judged = new Map(session.judged);
 		if (stems) stems.ownGain = session.ownVolume(prefs.own);
+		checkPraise();
 	}
 
 	function frameInfo(atBeat = beat): FrameInfo {
@@ -996,6 +1037,23 @@
 		</div>
 	{/if}
 
+	<!-- Zuruf über den Reitern (beim Spielen nicht gebraucht), damit er keine Töne verdeckt -->
+	<div class="callslot">
+		{#if call}
+			<div class="call" data-kind={call.kind} data-testid="zuruf">
+				{#if call.kicker}<div class="kick">{call.kicker}</div>{/if}
+				<div class="big" role="status">{call.text}</div>
+				{#if call.count.length}
+					<div class="count" aria-hidden="true">
+						{#each call.count as x, i (x.at)}
+							<span class:on={i === call.now} class:done={i < call.now}>{x.label}</span>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</div>
+
 	<section class="stage">
 		<div class="lanebox" bind:clientHeight={laneBoxHeight}>
 			{#if view === 'noten'}
@@ -1193,11 +1251,11 @@
 				>
 					{#each title.sections as s, i (i)}
 						<option value={String(i)}
-							>{sectionLabel(s)} · T. {s.from}{s.to > s.from ? '–' + s.to : ''}</option
+							>{sectionLabel(s)} · {s.from}{s.to > s.from ? '–' + s.to : ''}</option
 						>
 					{/each}
 					{#if customRange}
-						<option value="c">Baustelle · T. {customRange.from}–{customRange.to}</option>
+						<option value="c">Baustelle · {customRange.from}–{customRange.to}</option>
 					{/if}
 				</select>
 			</label>
@@ -1372,6 +1430,13 @@
 					type="checkbox"
 					checked={prefs.names}
 					onchange={(e) => setPrefs({ names: e.currentTarget.checked })}
+				/></label
+			>
+			<label class="line"
+				><span>Zurufe (»Gleich du!«, »Volle Lotte!«)</span><input
+					type="checkbox"
+					checked={prefs.cues}
+					onchange={(e) => setPrefs({ cues: e.currentTarget.checked })}
 				/></label
 			>
 			<label class="line"
@@ -1615,6 +1680,90 @@
 	}
 	.overlay.short {
 		right: auto;
+	}
+	/* Zuruf: oben über der Bahn, gross, zählt bis zum Einsatz */
+	.callslot {
+		grid-area: modes;
+		position: relative;
+		z-index: 3;
+		pointer-events: none;
+	}
+	.call {
+		position: absolute;
+		left: 0;
+		right: 0;
+		max-width: 460px;
+		margin: 0 auto;
+		top: 0;
+		padding: 8px 14px 10px;
+		border-radius: 16px;
+		background: var(--surface);
+		border: 2px solid var(--blau);
+		text-align: center;
+		pointer-events: none;
+		box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+		animation: call-in 0.18s ease-out;
+	}
+	.call[data-kind='loud'],
+	.call[data-kind='soft'] {
+		border-color: var(--gelb);
+	}
+	.call[data-kind='praise'] {
+		border-color: var(--gruen);
+	}
+	.call[data-kind='praise'] .big {
+		color: var(--gruen);
+	}
+	.call .kick {
+		font: 500 11px var(--font-mono);
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+	.call .big {
+		font-size: clamp(24px, 7vw, 32px);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+	.call .count {
+		margin-top: 6px;
+		display: flex;
+		justify-content: center;
+		gap: 10px;
+		font: 600 19px var(--font-mono);
+		color: var(--muted);
+	}
+	.call .count .done {
+		color: var(--ink);
+	}
+	/* der Einsatz selbst: unterstrichen, damit man sieht, wo es losgeht */
+	.call .count span:last-child {
+		color: var(--ink);
+		text-decoration: underline;
+		text-decoration-thickness: 2px;
+		text-underline-offset: 4px;
+	}
+	.call .count .on {
+		color: #141619;
+		background: var(--blau);
+		border-radius: 8px;
+		padding: 0 6px;
+	}
+	.call[data-kind='loud'] .count .on,
+	.call[data-kind='soft'] .count .on {
+		background: var(--gelb);
+	}
+	@keyframes call-in {
+		from {
+			opacity: 0;
+			transform: translateY(-6px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.call {
+			animation: none;
+		}
 	}
 	.examresult {
 		position: absolute;
@@ -1896,6 +2045,16 @@
 		}
 		.tabs button {
 			min-height: 32px;
+		}
+		.call {
+			padding: 4px 12px 6px;
+		}
+		.call .big {
+			font-size: 22px;
+		}
+		.call .count {
+			margin-top: 2px;
+			font-size: 15px;
 		}
 	}
 
