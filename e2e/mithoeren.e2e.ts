@@ -27,7 +27,7 @@ test('Mikrofon: gehörter Ton, Rückmeldung, Bewertung in der Schleife, eigene S
 	// Mithören und Rhythmus tippen schliessen sich aus
 	await expect(page.getByRole('button', { name: 'Rhythmus', exact: true })).toBeEnabled();
 
-	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
+	await page.getByLabel('Teil').selectOption({ label: 'Teil C · 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();
 	await page.getByRole('button', { name: 'Abspielen' }).click();
 	// Die Rückmeldung wechselt auf eine Bewertung oder »Pause. Atmen.«

@@ -109,9 +109,7 @@ test('Baustellen: Liste, Üben bei 70 % in der Schleife, zurücksetzen', async (
 		'true'
 	);
 	await expect(page.getByLabel('Teil')).toHaveValue('c');
-	await expect(page.getByLabel('Teil').locator('option:checked')).toHaveText(
-		'Baustelle · T. 13–14'
-	);
+	await expect(page.getByLabel('Teil').locator('option:checked')).toHaveText('Baustelle · 13–14');
 	expect(await canvasBeat(page)).toBeCloseTo(48, 1);
 
 	await page.getByRole('button', { name: /Baustellen ›/ }).click();

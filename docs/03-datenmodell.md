@@ -61,6 +61,8 @@ Der Ablauf ist **ungeprüft**, bis er zum ersten Mal läuft: Die CLI liess sich 
 
 ## Angewendet (Stand 25.10.2026, im Supabase-Projekt `qieunfhizsxsyzmrrvci` nachgesehen)
 
+**Stand 05.11.2026:** 14 Migrationen im Verlauf, zuletzt `20261103140000_m2_aufwaermen` (von der GitHub-Anbindung beim Merge von PR #9 angewendet; Bildschirm Matthias).
+
 **Stand 02.11.2026:** PR #4 ist gemergt; die GitHub-Anbindung von Supabase hat die M2-Migrationen angewendet. Von aussen geprüft (anonyme Aufrufe über die API): `my_account`, `list_hints`, `my_best_points` und `start_exercise` existieren und lehnen anonyme Aufrufe mit »permission denied« ab. Migrationsverlauf (Bildschirmfoto Matthias): 13 Zeilen bis `20261029220000_m2_hinweise_live`. Security Advisor: 0 Fehler, 36 Warnungen, 5 Hinweise. Die sichtbaren Warnungen sind alle »SECURITY DEFINER-Funktion für angemeldete Personen aufrufbar« (gewollt, die Funktionen prüfen selbst) und `signup` für alle (gewollt). Nicht einzeln angesehen: der Rest der 36 Warnungen und die 5 Hinweise (vermutlich »RLS ohne Regel« für die Versuchs-Tabellen, gewollt, weil kein Client sie liest). Die Lücke aus 0001 ist damit geschlossen.
 
 

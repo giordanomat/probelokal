@@ -103,6 +103,9 @@ Vorher die App ganz schliessen und neu öffnen, damit die neue Fassung lädt.
 | Quer (iPhone und iPad) | Bahn links über die ganze Höhe, Bedienung rechts; nichts von der Notch verdeckt | | |
 | Stimme-Knopf oben rechts | Auswahl aller Stimmen, Wahl schliesst das Blatt | | |
 | »Mehr« | Meine Stimme, Vorführung, Ansicht, Hilfen, Look, Darstellung, Verzögerung; »Fertig« oder daneben tippen schliesst | | |
+| Zurufe: Trompete 1 ab Takt 66 abspielen (lange Pause bis Takt 70) | »Gleich du!«, zählt »1 2 3 und«, Einsatz passt | | |
+| Zurufe: Teil G (Takt 28), Teil C (Takt 12) | »Volle Lotte!« vor G, »Die 1 ist Pause!« vor C; keine anderen »Volle Lotte!« vor gewöhnlichen Teilen | | |
+| Zurufe: Mithören, 8 Töne am Stück sauber | »Sehr gut!« o. ä. kurz eingeblendet | | |
 | Achtel mit gleichem Griff | Griff steht einmal darüber, nichts klebt zusammen (kein »1212«) | | |
 | Gefühl insgesamt | übersichtlich? Was fehlt, was stört? (unter »Bemerkungen«) | | |
 

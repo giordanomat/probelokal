@@ -46,7 +46,7 @@ test('Bahn: Stimme, Griff, Hilfen und Wiedergabe', async ({ page }) => {
 	expect(await canvasBeat(page)).toBe(stopped);
 
 	// Teil wählen springt mit Anlauf (Teil C beginnt in Takt 13 → Bahn steht bei Takt 12)
-	await page.getByLabel('Teil').selectOption({ label: 'Teil C · T. 13–16' });
+	await page.getByLabel('Teil').selectOption({ label: 'Teil C · 13–16' });
 	expect(await canvasBeat(page)).toBeCloseTo(48, 1);
 
 	expect(errors).toEqual([]);
@@ -92,4 +92,30 @@ test('Link aus der Guugge gibt die Stimme mit', async ({ page }) => {
 	// Unbekannte Stimme: bleibt bei der gespeicherten
 	await page.goto('/ueben?stimme=tuba');
 	await expect(page.getByRole('button', { name: /^Stimme:/ })).toHaveText(/Pos 1/);
+});
+
+test('Zurufe: »Die 1 ist Pause!« vor Teil C, zählt mit, lassen sich ausschalten', async ({
+	page
+}) => {
+	// Takt 13 mit einem Takt Anlauf: Trompete 1 setzt auf »1 und« ein
+	await page.goto('/ueben?takt=13');
+	const call = page.getByTestId('zuruf');
+	await expect(call).toContainText('Die 1 ist Pause!');
+	await expect(call).toContainText('Teil C');
+	await expect(call.locator('.count span')).toHaveText(['3', '4', '1 und']);
+	await page.getByRole('button', { name: 'Abspielen' }).click();
+	// leuchtet beim Mitzählen, verschwindet nach dem Einsatz
+	await expect(call.locator('.count .on')).toHaveText('3', { timeout: 5000 });
+	await expect(call).toHaveCount(0, { timeout: 8000 });
+	await page.getByRole('button', { name: 'Anhalten' }).click();
+
+	// ausschalten im Blatt »Mehr«, bleibt pro Gerät
+	await page.goto('/ueben?takt=13');
+	await openMore(page);
+	await page.getByLabel(/^Zurufe/).uncheck();
+	await closeSheet(page);
+	await expect(page.getByTestId('zuruf')).toHaveCount(0);
+	await page.reload();
+	await expect(page.locator('.practice[data-ready]')).toBeVisible();
+	await expect(page.getByTestId('zuruf')).toHaveCount(0);
 });
