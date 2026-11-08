@@ -61,7 +61,7 @@ test('Quiz und Griffe: bestanden, Punkte, Rang steigt; Reihenfolge wird eingehal
 
 	// Vom Plan aus zur Prüfung
 	await page.goto(`/guugge/${g}/plan`);
-	await page.getByRole('link', { name: 'Prüfung Teil A, Etappe 1' }).click();
+	await page.getByRole('link', { name: 'Prüfung starten: Teil A, Etappe 1' }).click();
 	await expect(page.getByRole('heading', { name: 'Etappe 1: Gehört' })).toBeVisible();
 	await page.getByRole('button', { name: 'Los' }).click();
 
@@ -106,12 +106,10 @@ test('Quiz und Griffe: bestanden, Punkte, Rang steigt; Reihenfolge wird eingehal
 	// Zurück im Plan: Stand und Rang
 	await page.getByRole('link', { name: 'Zurück zum Plan' }).click();
 	await expect(page.getByRole('heading', { name: 'Level 2 · Lehrling' })).toBeVisible();
-	await expect(page.getByText(/^100 Punkte · diese Woche 100/)).toBeVisible();
-	await expect(
-		page.locator('.sec').filter({ hasText: 'Teil A' }).getByText('Griffe sitzen')
-	).toBeVisible();
+	await expect(page.getByText('100 Punkte · noch 150 bis Schränzer')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Teil A: Griffe sitzen' })).toBeVisible();
 	// Etappe 3 läuft auf der Bahn
-	await page.getByRole('link', { name: 'Prüfung Teil A, Etappe 3' }).click();
+	await page.getByRole('link', { name: 'Prüfung starten: Teil A, Etappe 3' }).click();
 	await expect(page.getByRole('link', { name: 'Vorspielen mit Mikrofon' })).toHaveAttribute(
 		'href',
 		`/ueben?pruefung=${g}&teil=1&etappe=3&art=mic`

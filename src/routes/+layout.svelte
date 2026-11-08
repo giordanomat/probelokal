@@ -13,9 +13,12 @@
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
-	// »Stück üben« hat eine eigene, schmale Kopfzeile und braucht die ganze Höhe für die Bahn
-	// (Entscheid Matthias 03.11.2026); Darstellung und »Meine Guugge« liegen dort unter »Mehr«.
-	const bare = $derived(page.url.pathname === resolve('/ueben'));
+	// »Stück üben« und »Mein Plan« haben eine eigene, schmale Kopfzeile (Entscheide Matthias
+	// 03.11. und 08.11.2026); Darstellung und »Meine Guugge« liegen bei »Stück üben« unter »Mehr«,
+	// beim Plan führt »‹ Guugge« zurück.
+	const bare = $derived(
+		page.url.pathname === resolve('/ueben') || page.route.id === '/guugge/[id]/plan'
+	);
 </script>
 
 {#if bare}

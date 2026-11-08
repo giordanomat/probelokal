@@ -69,7 +69,7 @@ Drei Trompeten braucht es, weil die Leitung ein Register erst ab drei Personen s
 | Prüfung | Soll | Ist | OK? |
 |---|---|---|---|
 | L: »Plan ansehen →«, Start heute, Auftritt in etwa 6 Wochen, Gesamtprobe und Registerprobe wählen, Minuten pro Woche, »Plan speichern« | Wochen und Meilensteine erscheinen | | |
-| T1: »Mein Plan« | Stand in %, voraus oder hinterher, »Als Nächstes« mit Fälligkeit, Wochenziele | | |
+| T1: »Mein Plan« | »Heute dran« mit einer Etappe und »Prüfung starten«, Countdown in Tagen, voraus oder hinterher, Übetage der Woche, Karte des Stücks; Teil antippen zeigt Etappen und Termine | | |
 | T1: Teile, in denen Trp 1 nichts spielt | als Pause, zählen als erledigt | | |
 | T1: »Gesamtplan« | sichtbar, aber nicht änderbar | | |
 
@@ -88,7 +88,7 @@ Bestehen: Etappe 1 ab 75 %, sonst ab 80 %. Punkte beim ersten Bestehen 40, ab 95
 | Etappe 3 absichtlich schlecht | nicht bestanden, Ermutigung, kein Punkt | | |
 | Etappe 4 (Originaltempo) und 5 (Auswendig: die Bahn zeigt nur die Einsätze) | wie Etappe 3. Treffer notieren | | |
 | Etappe 4 mit »Ohne Mikrofon: Rhythmus tippen« | zählt, aber halbe Punkte | | |
-| »Mein Plan« danach | Etappen und Stand nachgeführt, »Als Nächstes« weiter | | |
+| »Mein Plan« danach | Etappen auf der Karte nachgeführt, »Heute dran« zeigt die nächste | | |
 
 ## 4a · »Stück üben« neu (seit 03.11.2026, T1 auf B, iPhone und iPad)
 

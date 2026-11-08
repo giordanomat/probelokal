@@ -4,12 +4,14 @@ import type { RawNote, Section } from '../music/types';
 import { addDays, longDate, mondayOf, shortDate, todayInZurich, weekdayOf } from './dates';
 import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights, type PlanParams } from './plan';
 import {
+	countdown,
 	nextExams,
 	pauseSections,
 	planStatus,
 	playedSections,
 	standPercent,
 	statusText,
+	todayFocus,
 	weekGoals
 } from './stand';
 
@@ -209,5 +211,53 @@ describe('Mein Plan', () => {
 		const goals = weekGoals([1], { 1: 1 }, PLAN, '2026-11-09', '2026-11-15');
 		expect(goals).toEqual([{ section: 1, stage: 2, done: false }]);
 		expect(weekGoals([1], { 1: 2 }, PLAN, '2026-11-09', '2026-11-15')[0].done).toBe(true);
+	});
+});
+
+describe('Mein Plan: Heute dran und Countdown (Entwurf 08.11.2026)', () => {
+	const st = (diff: number) => ({ sum: 0, expected: 0, max: 10, diff });
+	const ex = (section: number, stage: number, due: string | null) => ({ section, stage, due });
+
+	it('Heute dran: das Fälligste, überfällig markiert, danach die nächsten zwei', () => {
+		const next = [
+			ex(2, 1, '2026-11-01'),
+			ex(3, 1, '2026-11-08'),
+			ex(4, 1, '2026-11-08'),
+			ex(5, 1, '2026-11-15')
+		];
+		const f = todayFocus(next, st(-1), true, '2026-11-08', '2026-11-08');
+		expect(f).toEqual({ kind: 'exam', exam: next[0], late: true, then: [next[1], next[2]] });
+		// fällig heute ist nicht überfällig
+		expect(todayFocus(next.slice(1), st(0), true, '2026-11-08', '2026-11-08')).toMatchObject({
+			kind: 'exam',
+			late: false
+		});
+	});
+
+	it('alles im Plan: nichts fällig bis Ende Woche → »Alles im Plan« mit der nächsten Etappe', () => {
+		const next = [ex(5, 2, '2026-11-16')];
+		expect(todayFocus(next, st(2), true, '2026-11-10', '2026-11-15')).toEqual({
+			kind: 'ahead',
+			next: next[0]
+		});
+		// hinterher bleibt es eine Prüfung, auch wenn erst später fällig
+		expect(todayFocus(next, st(-1), true, '2026-11-10', '2026-11-15').kind).toBe('exam');
+		// ohne Plan gibt es kein »im Plan«
+		expect(todayFocus([ex(1, 1, null)], st(0), false, '2026-11-10', '2026-11-15').kind).toBe(
+			'exam'
+		);
+	});
+
+	it('alles geschafft', () => {
+		expect(todayFocus([], st(0), true, '2026-11-10', '2026-11-15')).toEqual({ kind: 'done' });
+	});
+
+	it('Countdown: Tage bis zum Auftritt, Anteil der verstrichenen Zeit (ohne Prozent-Stand)', () => {
+		expect(countdown('2026-11-01', '2027-02-15', '2026-11-08')).toEqual({
+			days: 99,
+			share: 7 / 106
+		});
+		expect(countdown('2026-11-01', '2027-02-15', '2026-10-20')).toMatchObject({ share: 0 });
+		expect(countdown('2026-11-01', '2027-02-15', '2027-03-01')).toEqual({ days: 0, share: 1 });
 	});
 });

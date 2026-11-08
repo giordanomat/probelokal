@@ -96,7 +96,11 @@ export function voiceFromQuery(query: URLSearchParams, voiceIds: readonly string
 	return id && voiceIds.includes(id) ? id : null;
 }
 
-/** Zusatz für den Link zu »Stück üben« mit der Stimme aus der Guugge (falls gewählt). */
-export function voiceQuery(voice: string | null | undefined): string {
-	return voice ? `?stimme=${encodeURIComponent(voice)}` : '';
+/** Zusatz für den Link zu »Stück üben«: Stimme aus der Guugge (falls gewählt), wahlweise ein Takt. */
+export function voiceQuery(voice: string | null | undefined, takt?: number): string {
+	const q = new URLSearchParams();
+	if (voice) q.set('stimme', voice);
+	if (takt !== undefined) q.set('takt', String(takt));
+	const s = q.toString();
+	return s ? `?${s}` : '';
 }
