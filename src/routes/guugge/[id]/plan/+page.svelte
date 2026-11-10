@@ -30,17 +30,19 @@
 		WEEKDAYS
 	} from '#lib/plan/dates.ts';
 	import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
-	import { levelOf, nextLevel, POINTS_RULE } from '#lib/game/points.ts';
+	import { levelOf, levelShare, nextLevel } from '#lib/game/points.ts';
+	import Mark from '#lib/brand/Mark.svelte';
+	import Sheet from '#lib/ui/Sheet.svelte';
 	import { voiceQuery } from '#lib/practice/prefs.ts';
 	import {
+		countdown,
 		nextExams,
 		pauseSections,
 		planStatus,
 		playedSections,
 		STAGES,
-		standPercent,
 		statusText,
-		weekGoals,
+		todayFocus,
 		type Stages
 	} from '#lib/plan/stand.ts';
 
@@ -102,10 +104,16 @@
 		new Map(rows.filter((r) => r.voice === voice?.id).map((r) => [r.section, r.rhythm_only]))
 	);
 	const status = $derived(planStatus(played, stages, plan, today));
-	const pct = $derived(standPercent(played, stages));
-	const next = $derived(nextExams(played, stages, plan).slice(0, 5));
+	const next = $derived(nextExams(played, stages, plan));
 	const monday = mondayOf(today);
-	const goals = $derived(plan ? weekGoals(played, stages, plan, monday, addDays(monday, 6)) : []);
+	/** »Heute dran« (Entwurf Matthias 08.11.2026): eine Etappe, sonst »im Plan« oder »geschafft« */
+	const focus = $derived(todayFocus(next, status, !!plan, today, addDays(monday, 6)));
+	/** Countdown zum Auftritt; der Ring zeigt die verstrichene Planzeit, keinen Prozent-Stand */
+	const cd = $derived(stored ? countdown(stored.start, stored.perf, today) : { days: 0, share: 0 });
+	/** Teil, dessen Etappen im Blatt offen sind */
+	let openSection = $state<number | null>(null);
+	const sectionState = (i: number) =>
+		pauses.has(i) ? 'Pause für dich' : stages[i] ? STAGES[stages[i] - 1].name : 'noch offen';
 	const nowWeek = $derived(plan ? plan.weeks.findIndex((w) => w.monday === monday) : -1);
 	const firstShown = $derived(
 		plan ? Math.max(0, Math.min(nowWeek < 0 ? 0 : nowWeek, plan.weeks.length - 3)) : 0
@@ -193,37 +201,40 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<p><a class="back" href={resolve('/guugge/[id]', { id })}>← {me?.name ?? 'Guugge'}</a></p>
+<div class="planpage">
+	<header class="top">
+		<Mark class="mark" />
+		<a class="back" href={resolve('/guugge/[id]', { id })}>‹ {me?.name ?? 'Guugge'}</a>
+		<h1>{title.name}</h1>
+		{#if voice}
+			<a
+				class="chip"
+				href={resolve('/guugge/[id]', { id })}
+				aria-label="Stimme: {voice.short}, in der Guugge ändern">{voice.short}</a
+			>
+		{/if}
+	</header>
 
-{#if !sb || (auth.ready && !auth.user)}
-	<section class="card">
-		<h1>Melde dich an.</h1>
-		<p><a class="go" href={resolve('/anmelden')}>Anmelden →</a></p>
-	</section>
-{:else if missing}
-	<section class="card">
-		<h1>Diese Guugge findest du hier nicht.</h1>
-	</section>
-{:else if !me}
-	<p class="hint">Einen Moment …</p>
-{:else}
-	<div class="stack">
+	{#if !sb || (auth.ready && !auth.user)}
 		<section class="card">
-			<p class="label">Plan</p>
-			<h1>{title.name}</h1>
-			<div class="seg" role="group" aria-label="Ansicht">
-				<button type="button" aria-pressed={view === 'mine'} onclick={() => (view = 'mine')}
-					>Mein Plan</button
-				>
-				<button type="button" aria-pressed={view === 'all'} onclick={() => (view = 'all')}
-					>Gesamtplan</button
-				>
-			</div>
-			<p class="golinks">
-				<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
-				<a class="go" href={resolve('/aufwaermen')}>Aufwärmen →</a>
-			</p>
+			<h2>Melde dich an.</h2>
+			<p><a class="go" href={resolve('/anmelden')}>Anmelden →</a></p>
 		</section>
+	{:else if missing}
+		<section class="card">
+			<h2>Diese Guugge findest du hier nicht.</h2>
+		</section>
+	{:else if !me}
+		<p class="hint">Einen Moment …</p>
+	{:else}
+		<div class="tabs" role="group" aria-label="Ansicht">
+			<button type="button" aria-pressed={view === 'mine'} onclick={() => (view = 'mine')}
+				>Mein Plan</button
+			>
+			<button type="button" aria-pressed={view === 'all'} onclick={() => (view = 'all')}
+				>Gesamtplan</button
+			>
+		</div>
 
 		{#if notice}<p class="ok" role="status">{notice}</p>{/if}
 		{#if error}<p class="err" role="alert">{error}</p>{/if}
@@ -235,134 +246,211 @@
 					<p><a class="go" href={resolve('/guugge/[id]', { id })}>Zur Stimmwahl →</a></p>
 				</section>
 			{:else}
-				<section class="card">
-					<p class="label">{voice.name}</p>
-					<h2
-						class="big"
-						class:ahead={plan && status.diff > 0}
-						class:behind={plan && status.diff < 0}
-					>
-						{statusText(status, !!plan)}
-					</h2>
-					{#if plan}
-						<p class="hint">
-							Erwartet bis heute: {status.expected} von {status.max} Etappen · geschafft: {status.sum}
-						</p>
+				<!-- Heute dran: eine Sache, ein grosser Knopf (Entwurf Matthias 08.11.2026) -->
+				<section class="card today" class:calm={focus.kind !== 'exam'} data-testid="heute">
+					<p class="label">Heute dran</p>
+					{#if focus.kind === 'exam'}
+						{@const x = focus.exam}
+						<h2>Teil {sectionName(x.section)} · Etappe {x.stage}: {STAGES[x.stage - 1].name}</h2>
+						{#if x.due}
+							<p class="why" class:late={focus.late}>
+								{focus.late
+									? `überfällig seit ${shortDate(x.due)}`
+									: `fällig bis ${shortDate(x.due)}`}
+							</p>
+						{/if}
+						<div class="btns">
+							<a
+								class="btn ghost"
+								href="{resolve('/ueben')}{voiceQuery(me.voice, title.sections[x.section].from)}"
+								>Erst üben</a
+							>
+							<a
+								class="btn"
+								href="{resolve('/guugge/[id]/pruefung', {
+									id
+								})}?teil={x.section}&etappe={x.stage}"
+								aria-label="Prüfung starten: Teil {sectionName(x.section)}, Etappe {x.stage}"
+								>Prüfung starten</a
+							>
+						</div>
+						{#if focus.then.length}
+							<p class="then">
+								Danach: <b
+									>{focus.then
+										.map((t) => `Teil ${sectionName(t.section)} · Etappe ${t.stage}`)
+										.join('  ·  ')}</b
+								>
+							</p>
+						{/if}
 					{:else}
-						<p class="hint">Noch kein Gesamtplan. Den legt die Leitung an.</p>
+						<h2>{focus.kind === 'done' ? 'Alles geschafft' : 'Alles im Plan'}</h2>
+						<p class="sub">
+							{#if focus.kind === 'done'}
+								Auftrittsreif – jetzt nur noch Spass.
+							{:else}
+								Nächste Etappe ab {shortDate(focus.next.due ?? today)}: Teil {sectionName(
+									focus.next.section
+								)} · Etappe {focus.next.stage}
+							{/if}
+						</p>
+						<div class="btns">
+							<a class="btn ghost" href={resolve('/aufwaermen')}>Aufwärmen</a>
+							<a class="btn green" href="{resolve('/ueben')}{voiceQuery(me.voice)}"
+								>Einmal durchs Stück</a
+							>
+						</div>
+						{#if focus.kind === 'ahead'}
+							<p class="then">
+								<a
+									class="go"
+									href="{resolve('/guugge/[id]/pruefung', {
+										id
+									})}?teil={focus.next.section}&etappe={focus.next.stage}"
+									>Schon jetzt prüfen: Teil {sectionName(focus.next.section)} · Etappe {focus.next
+										.stage} →</a
+								>
+							</p>
+						{/if}
 					{/if}
-					<div class="bar" aria-hidden="true"><i style:width="{pct}%"></i></div>
-					<p class="hint">
-						{pct} % bis auftrittsreif{stored ? ` · Auftritt am ${longDate(stored.perf)}` : ''}
-					</p>
+				</section>
+
+				<!-- Countdown zum Auftritt: Ring füllt sich mit der Zeit, kein Prozent-Stand -->
+				<section class="card count">
+					{#if plan && stored}
+						<div class="ring" style:--share={cd.share} aria-hidden="true">
+							<div><b>{shortDate(stored.perf)}</b><small>Auftritt</small></div>
+						</div>
+					{/if}
+					<div>
+						{#if plan && stored}
+							<h2 class="days">{cd.days === 1 ? '1 Tag' : `${cd.days} Tage`}</h2>
+							<p class="sub">bis zum Auftritt am {longDate(stored.perf)}</p>
+						{:else}
+							<h2 class="days">Noch kein Gesamtplan</h2>
+							<p class="sub">Den legt die Leitung an. Üben kannst du trotzdem.</p>
+						{/if}
+						<p
+							class="status"
+							class:ahead={plan && status.diff > 0}
+							class:behind={plan && status.diff < 0}
+						>
+							{statusText(status, !!plan)}{plan ? ` · ${status.sum} von ${status.max} Etappen` : ''}
+						</p>
+					</div>
 				</section>
 
 				{#if points}
 					{@const lv = levelOf(points.points)}
 					{@const nx = nextLevel(points.points)}
-					<section class="card">
-						<p class="label">Punkte</p>
-						<h2>Level {lv.n} · {lv.name}</h2>
-						<p>
-							{points.points} Punkte · diese Woche {points.week_points}{nx
-								? ` · noch ${nx.min - points.points} bis ${nx.name}`
-								: ''}
-						</p>
-						<p class="hint">
-							An {Math.min(points.days_this_week, 3)} von 3 Tagen geübt diese Woche{points.days_this_week >=
-							3
-								? ' – Wochenziel erreicht.'
-								: '.'}
-							{POINTS_RULE}
-						</p>
-					</section>
+					{@const days = Math.min(3, points.days_this_week)}
+					<div class="pair">
+						<section class="card">
+							<p class="label">Diese Woche</p>
+							<div class="dots" aria-hidden="true">
+								{#each [0, 1, 2] as d (d)}<i class:on={d < days}></i>{/each}
+							</div>
+							<p class="small">
+								{days >= 3
+									? 'Wochenziel geschafft · +25'
+									: `${days} von 3 Übetagen · +25 Punkte bei 3`}
+							</p>
+						</section>
+						<section class="card">
+							<h2 class="lvl">
+								<span class="label">Level {lv.n}</span><span class="sr"> · </span>{lv.name}
+							</h2>
+							<div class="pbar" aria-hidden="true">
+								<i style:width="{Math.round(levelShare(points.points) * 100)}%"></i>
+							</div>
+							<p class="small">
+								{points.points} Punkte{nx ? ` · noch ${nx.min - points.points} bis ${nx.name}` : ''}
+							</p>
+						</section>
+					</div>
 				{/if}
 
+				<!-- Karte des Stücks: alle Teile, 5 Etappen übereinander; antippen zeigt Einzelheiten -->
 				<section class="card">
-					<h2>Als Nächstes</h2>
-					{#if next.length}
-						<ul class="list">
-							{#each next as x (x.section)}
-								<li class="next">
-									<span class="what">
-										<strong
-											>Teil {sectionName(x.section)} · Etappe {x.stage}: {STAGES[x.stage - 1]
-												.name}</strong
-										>
-										<span class:over={x.due && x.due < today}>
-											{#if !x.due}ohne Termin{:else if x.due < today}überfällig seit {shortDate(
-													x.due
-												)}{:else}fällig bis {shortDate(x.due)}{/if}
-										</span>
-									</span>
-									<a
-										class="btn ghost small"
-										href="{resolve('/guugge/[id]/pruefung', {
-											id
-										})}?teil={x.section}&etappe={x.stage}"
-										aria-label="Prüfung Teil {sectionName(x.section)}, Etappe {x.stage}">Prüfung</a
-									>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<p><strong>Alles geschafft.</strong> Auftrittsreif – jetzt nur noch Spass.</p>
-					{/if}
+					<p class="label">Dein Weg durchs Stück</p>
+					<div class="map" style:--cols={sectionNos.length}>
+						{#each sectionNos as i (i)}
+							<button
+								type="button"
+								class="col"
+								class:pause={pauses.has(i)}
+								aria-haspopup="dialog"
+								aria-label="Teil {sectionName(i)}: {sectionState(i)}"
+								onclick={() => (openSection = i)}
+							>
+								{#each [5, 4, 3, 2, 1] as k (k)}
+									{@const done = !pauses.has(i) && (stages[i] ?? 0) >= k}
+									<span
+										class:on={done}
+										class:nomic={done && rhythmOnly.get(i)?.includes(k)}
+										class:late={!done && !pauses.has(i) && plan && dueOf(plan, i, k) < today}
+										class:exp={!pauses.has(i) && plan && expectedStage(plan, i, today) === k}
+									></span>
+								{/each}
+								<b>{sectionName(i)}</b>
+							</button>
+						{/each}
+					</div>
+					<p class="legend">
+						<span><i class="lg on"></i>geschafft</span>
+						<span><i class="lg exp"></i>laut Plan bis heute</span>
+						<span><i class="lg late"></i>überfällig</span>
+						<span><i class="lg pause"></i>Pause für dich</span>
+					</p>
 				</section>
 
-				{#if plan}
-					<section class="card">
-						<h2>
-							Diese Woche <span class="hint"
-								>{shortDate(monday)}–{shortDate(addDays(monday, 6))}</span
-							>
-						</h2>
-						{#if goals.length}
-							<ul class="list">
-								{#each goals as g (`${g.section}-${g.stage}`)}
-									<li class:done={g.done}>
-										Teil {sectionName(g.section)}: Etappe {g.stage} ({STAGES[g.stage - 1].name})
+				<p class="golinks">
+					<a class="go" href="{resolve('/ueben')}{voiceQuery(me.voice)}">Stück üben →</a>
+					<a class="go" href={resolve('/aufwaermen')}>Aufwärmen →</a>
+				</p>
+
+				{#if openSection !== null}
+					{@const i = openSection}
+					{@const s = title.sections[i]}
+					{@const nextK = (stages[i] ?? 0) + 1}
+					<Sheet
+						open
+						label="Teil {s.name} · Takt {s.from}–{s.to}"
+						onclose={() => (openSection = null)}
+					>
+						<h2 class="sheet-h">{sectionState(i)}</h2>
+						{#if pauses.has(i)}
+							<p class="hint">In diesem Teil spielt deine Stimme nicht.</p>
+						{:else}
+							<ul class="stagelist">
+								{#each STAGES as st (st.k)}
+									{@const done = (stages[i] ?? 0) >= st.k}
+									{@const due = plan ? dueOf(plan, i, st.k) : null}
+									<li class:done class:now={st.k === nextK}>
+										<i>{done ? '✓' : st.k}</i>
+										<span
+											>{st.name}{#if !done && due}<small class:late={due < today}
+													>{` · ${due < today ? 'überfällig seit' : 'fällig'} ${shortDate(due)}`}</small
+												>{/if}</span
+										>
 									</li>
 								{/each}
 							</ul>
-						{:else}
-							<p class="hint">Diese Woche wird keine Etappe fällig.</p>
+							<div class="btns">
+								<a class="btn ghost" href="{resolve('/ueben')}{voiceQuery(me.voice, s.from)}"
+									>Teil {s.name} üben</a
+								>
+								{#if nextK <= 5}
+									<a
+										class="btn"
+										href="{resolve('/guugge/[id]/pruefung', { id })}?teil={i}&etappe={nextK}"
+										aria-label="Prüfung Etappe {nextK}: Teil {s.name}">Prüfung Etappe {nextK}</a
+									>
+								{/if}
+							</div>
 						{/if}
-					</section>
+					</Sheet>
 				{/if}
-
-				<section class="card">
-					<h2>Alle Teile</h2>
-					<div class="grid">
-						{#each title.sections as s, i (i)}
-							{#if i > 0}
-								<div class="sec" class:pause={pauses.has(i)}>
-									<strong>Teil {s.name}</strong>
-									<small>
-										{#if pauses.has(i)}Pause für dich{:else if stages[i]}{STAGES[stages[i] - 1]
-												.name}{:else}noch offen{/if}
-									</small>
-									<div class="steps" aria-label="Etappen Teil {s.name}">
-										{#each STAGES as st (st.k)}
-											{@const done = pauses.has(i) || (stages[i] ?? 0) >= st.k}
-											<span
-												class:on={done}
-												class:nomic={done && rhythmOnly.get(i)?.includes(st.k)}
-												class:late={!done && plan && dueOf(plan, i, st.k) < today}
-												class:exp={!pauses.has(i) && plan && expectedStage(plan, i, today) === st.k}
-												title="Etappe {st.k}: {st.name}"
-											></span>
-										{/each}
-									</div>
-								</div>
-							{/if}
-						{/each}
-					</div>
-					<p class="hint">
-						Gefüllt = geschafft · Rand = laut Plan bis heute · rot = überfällig · halb = ohne
-						Mikrofon
-					</p>
-				</section>
 			{/if}
 		{:else}
 			{#if plan}
@@ -511,29 +599,375 @@
 				</section>
 			{/if}
 		{/if}
-	</div>
-{/if}
+	{/if}
+</div>
 
 <style>
-	.stack {
+	/* Seite ohne globalen Kopf (wie »Stück üben«), schmal und mittig */
+	.planpage {
+		box-sizing: border-box;
+		max-width: 620px;
+		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
+		gap: 12px;
+		padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+			max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+	}
+	.top {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+	.top :global(.mark) {
+		width: 30px;
+		height: 30px;
+		flex: none;
 	}
 	.back {
 		color: var(--muted);
 		font-weight: 600;
 		text-decoration: none;
+		white-space: nowrap;
 	}
-	.big {
-		font-size: 24px;
+	.top h1 {
+		flex: 1;
+		min-width: 0;
+		margin: 0;
+		font-size: 17px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.big.ahead {
-		color: var(--gruen);
+	.chip {
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: var(--ink);
+		border-radius: 999px;
+		padding: 7px 13px;
+		font-weight: 600;
+		font-size: 15px;
+		text-decoration: none;
+		white-space: nowrap;
 	}
-	.big.behind {
+	.tabs {
+		display: flex;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 3px;
+	}
+	.tabs button {
+		flex: 1;
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font: 600 15px var(--font-body);
+		border-radius: 999px;
+		min-height: 38px;
+		cursor: pointer;
+	}
+	.tabs button[aria-pressed='true'] {
+		background: var(--chip-on-bg);
+		color: var(--chip-on-fg);
+	}
+	.planpage .card {
+		max-width: none;
+		gap: 6px;
+	}
+	.card h2 {
+		margin: 2px 0;
+	}
+	/* Heute dran */
+	.today {
+		border: 2px solid var(--gelb);
+	}
+	.today.calm {
+		border-color: var(--gruen);
+	}
+	.today h2 {
+		font-size: 22px;
+		letter-spacing: -0.01em;
+	}
+	.why {
+		margin: 0;
+		font-weight: 600;
+		font-size: 14px;
+		color: var(--muted);
+	}
+	.why.late,
+	small.late {
 		color: var(--rot);
 	}
+	.btns {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+	}
+	.btns .btn {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		text-decoration: none;
+		min-height: 48px;
+		font-size: 16px;
+	}
+	/* Hauptknopf gelb wie im Entwurf; »ghost« und »green« behalten ihre Farbe */
+	.btns .btn:not(.ghost):not(.green) {
+		background: var(--gelb);
+		color: #141619;
+	}
+	.btn.green {
+		background: var(--gruen);
+		border-color: var(--gruen);
+		color: #141619;
+	}
+	.then {
+		margin: 12px 0 0;
+		font-size: 14px;
+		color: var(--muted);
+	}
+	.then b {
+		color: var(--ink);
+		font-weight: 600;
+	}
+	.sub {
+		margin: 2px 0 0;
+		color: var(--muted);
+		font-size: 14px;
+	}
+	/* Countdown */
+	.card.count {
+		flex-direction: row;
+		align-items: center;
+		gap: 16px;
+	}
+	.ring {
+		--share: 0;
+		width: 84px;
+		height: 84px;
+		flex: none;
+		border-radius: 50%;
+		background: conic-gradient(
+			var(--gelb) calc(var(--share) * 360deg),
+			var(--surface2) calc(var(--share) * 360deg)
+		);
+		display: grid;
+		place-items: center;
+	}
+	.ring div {
+		width: 66px;
+		height: 66px;
+		border-radius: 50%;
+		background: var(--surface);
+		display: grid;
+		place-content: center;
+		text-align: center;
+		line-height: 1.1;
+	}
+	.ring b {
+		font-size: 16px;
+	}
+	.ring small {
+		font-size: 10px;
+		color: var(--muted);
+	}
+	.days {
+		font-size: 28px;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+	.status {
+		margin: 4px 0 0;
+		font-weight: 700;
+		font-size: 14px;
+	}
+	.status.ahead {
+		color: var(--gruen);
+	}
+	.status.behind {
+		color: var(--rot);
+	}
+	/* Woche und Level */
+	.pair {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+	.pair .card {
+		padding: 14px;
+	}
+	.dots {
+		display: flex;
+		gap: 6px;
+		margin: 8px 0 4px;
+	}
+	.dots i {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		border: 2px solid var(--line);
+	}
+	.dots i.on {
+		background: var(--gruen);
+		border-color: var(--gruen);
+	}
+	.lvl {
+		display: flex;
+		flex-direction: column;
+		font-size: 17px;
+	}
+	.pbar {
+		height: 8px;
+		border-radius: 4px;
+		background: var(--surface2);
+		margin: 8px 0 4px;
+		overflow: hidden;
+	}
+	.pbar i {
+		display: block;
+		height: 100%;
+		background: var(--gelb);
+	}
+	.small {
+		margin: 0;
+		font-size: 13px;
+		color: var(--muted);
+	}
+	/* Karte des Stücks */
+	.map {
+		display: grid;
+		grid-template-columns: repeat(var(--cols), 1fr);
+		gap: 3px;
+		margin-top: 10px;
+	}
+	.col {
+		appearance: none;
+		border: 0;
+		background: none;
+		padding: 2px 0;
+		border-radius: 6px;
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		cursor: pointer;
+		min-width: 0;
+	}
+	.col:hover {
+		background: color-mix(in srgb, var(--ink) 6%, transparent);
+	}
+	.col span {
+		height: 14px;
+		border-radius: 4px;
+		background: var(--surface2);
+	}
+	.col span.on {
+		background: var(--gruen);
+	}
+	.col span.nomic {
+		background: linear-gradient(90deg, var(--gruen) 50%, var(--surface2) 50%);
+	}
+	.col span.late {
+		background: color-mix(in srgb, var(--rot) 45%, var(--surface2));
+	}
+	.col span.exp {
+		outline: 2px solid var(--blau);
+		outline-offset: -2px;
+	}
+	.col.pause span {
+		background: repeating-linear-gradient(
+			45deg,
+			var(--surface2) 0 3px,
+			color-mix(in srgb, var(--ink) 8%, var(--surface2)) 3px 6px
+		);
+	}
+	.col b {
+		text-align: center;
+		font-size: 11px;
+		color: var(--muted);
+	}
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 12px;
+		margin: 10px 0 0;
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.lg {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		border-radius: 3px;
+		vertical-align: -2px;
+		margin-right: 4px;
+		background: var(--surface2);
+	}
+	.lg.on {
+		background: var(--gruen);
+	}
+	.lg.exp {
+		outline: 2px solid var(--blau);
+		outline-offset: -2px;
+	}
+	.lg.late {
+		background: color-mix(in srgb, var(--rot) 45%, var(--surface2));
+	}
+	.lg.pause {
+		background: repeating-linear-gradient(
+			45deg,
+			var(--surface2) 0 3px,
+			color-mix(in srgb, var(--ink) 8%, var(--surface2)) 3px 6px
+		);
+	}
+	/* Blatt eines Teils */
+	.sheet-h {
+		margin: 4px 0 8px;
+		font-size: 22px;
+	}
+	.stagelist {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.stagelist li {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 15px;
+	}
+	.stagelist i {
+		width: 26px;
+		height: 26px;
+		flex: none;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		font-style: normal;
+		font-weight: 700;
+		font-size: 13px;
+		border: 2px solid var(--line);
+	}
+	.stagelist li.done i {
+		background: var(--gruen);
+		border-color: var(--gruen);
+		color: #141619;
+	}
+	.stagelist li.now i {
+		border-color: var(--gelb);
+		color: var(--gelb);
+	}
+	.stagelist small {
+		color: var(--muted);
+	}
+	/* Gesamtplan */
 	.bar {
 		height: 8px;
 		border-radius: 999px;
@@ -553,83 +987,8 @@
 		flex-direction: column;
 		gap: 6px;
 	}
-	.list li {
-		display: flex;
-		flex-direction: column;
-	}
 	.list.plain li {
 		display: list-item;
-	}
-	.list li.next {
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-		gap: 10px;
-	}
-	.what {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.small {
-		min-height: 36px;
-		display: inline-flex;
-		align-items: center;
-		text-decoration: none;
-		font-size: 14px;
-	}
-	.list .over {
-		color: var(--rot);
-		font-weight: 600;
-	}
-	.list li.done {
-		color: var(--muted);
-		text-decoration: line-through;
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-		gap: 8px;
-	}
-	.sec {
-		border: 1px solid var(--line);
-		border-radius: 12px;
-		padding: 8px 10px;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.sec small {
-		color: var(--muted);
-	}
-	.sec.pause {
-		opacity: 0.6;
-	}
-	.steps {
-		display: flex;
-		gap: 4px;
-		margin-top: 4px;
-	}
-	.steps span {
-		width: 16px;
-		height: 10px;
-		border-radius: 999px;
-		border: 1px solid var(--line);
-		background: var(--surface2);
-	}
-	.steps span.on {
-		background: var(--gruen);
-		border-color: var(--gruen);
-	}
-	.steps span.nomic {
-		background: linear-gradient(90deg, var(--gruen) 50%, var(--surface2) 50%);
-	}
-	.steps span.late {
-		border-color: var(--rot);
-	}
-	.steps span.exp {
-		outline: 2px solid var(--blau);
-		outline-offset: 1px;
 	}
 	.week {
 		border-top: 1px solid var(--line);

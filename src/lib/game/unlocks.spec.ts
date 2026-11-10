@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEST_POINTS_KEY, clearBestPoints, loadBestPoints, saveBestPoints } from './unlocks';
+import { levelShare } from './points';
 
 describe('Rang auf dem Gerät', () => {
 	const store = () => {
@@ -39,5 +40,15 @@ describe('Rang auf dem Gerät', () => {
 		expect(loadBestPoints(broken)).toBe(0);
 		expect(() => saveBestPoints(broken, 5)).not.toThrow();
 		expect(() => clearBestPoints(broken)).not.toThrow();
+	});
+});
+
+describe('Level-Balken in »Mein Plan«', () => {
+	it('Anteil vom aktuellen bis zum nächsten Level, ganz oben voll', () => {
+		// Lehrling ab 100, Schränzer ab 250
+		expect(levelShare(100)).toBe(0);
+		expect(levelShare(175)).toBeCloseTo(0.5);
+		expect(levelShare(0)).toBe(0);
+		expect(levelShare(100_000)).toBe(1);
 	});
 });

@@ -4,7 +4,7 @@
 
 import type { RawNote, Section } from '../music/types';
 import { isRestInBars } from '../music/track';
-import { type Day } from './dates';
+import { daysBetween, type Day } from './dates';
 import { dueOf, expectedStage, type Plan } from './plan';
 
 export const STAGES = [
@@ -119,4 +119,43 @@ export function weekGoals(
 		}
 	}
 	return out;
+}
+
+/**
+ * »Heute dran« in »Mein Plan« (Entwurf Matthias 08.11.2026): eine Etappe statt einer Liste.
+ * exam: die fälligste (überfällig, wenn vor heute), dazu die nächsten zwei; ahead: im Plan und bis
+ * Ende Woche nichts fällig, dann ein Vorschlag fürs freie Üben; done: alles geschafft.
+ */
+export type Focus =
+	| { kind: 'exam'; exam: NextExam; late: boolean; then: NextExam[] }
+	| { kind: 'ahead'; next: NextExam }
+	| { kind: 'done' };
+
+export function todayFocus(
+	next: readonly NextExam[],
+	status: PlanStatus,
+	hasPlan: boolean,
+	today: Day,
+	sunday: Day
+): Focus {
+	if (!next.length) return { kind: 'done' };
+	const first = next[0];
+	if (hasPlan && status.diff >= 0 && first.due && first.due > sunday) {
+		return { kind: 'ahead', next: first };
+	}
+	return {
+		kind: 'exam',
+		exam: first,
+		late: !!first.due && first.due < today,
+		then: next.slice(1, 3)
+	};
+}
+
+/** Countdown zum Auftritt: Tage bis dahin und Anteil der verstrichenen Planzeit (0–1). */
+export function countdown(start: Day, perf: Day, today: Day): { days: number; share: number } {
+	const total = Math.max(1, daysBetween(start, perf));
+	return {
+		days: Math.max(0, daysBetween(today, perf)),
+		share: Math.min(1, Math.max(0, daysBetween(start, today) / total))
+	};
 }

@@ -102,5 +102,7 @@ describe('Stimme aus der Guugge mitgeben', () => {
 	it('Link mit Stimme, ohne Stimme ohne Zusatz', () => {
 		expect(voiceQuery('trp1')).toBe('?stimme=trp1');
 		expect(voiceQuery(null)).toBe('');
+		expect(voiceQuery('trp1', 9)).toBe('?stimme=trp1&takt=9');
+		expect(voiceQuery(null, 9)).toBe('?takt=9');
 	});
 });

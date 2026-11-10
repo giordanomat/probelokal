@@ -62,16 +62,40 @@ test('Leitung legt den Gesamtplan an, Mitglied sieht ihn und seinen Stand', asyn
 	const p2 = await other.newPage();
 	await fake.signIn(p2, 'toni@test.ch');
 	await p2.goto(`/guugge/${guugge}/plan`);
-	await expect(p2.locator('.card .label').nth(1)).toHaveText('Trompete 1');
-	await expect(p2.getByRole('heading', { name: /Etappen? hinterher$/ })).toBeVisible();
-	const first = p2.getByRole('listitem').filter({ hasText: 'Teil A · Etappe 1: Gehört' });
-	await expect(first).toContainText('überfällig seit');
-	await expect(p2.getByText('0 % bis auftrittsreif')).toBeVisible();
+	await expect(p2.getByRole('link', { name: /^Stimme: Trp 1/ })).toBeVisible();
+	await expect(p2.getByText(/Etappen? hinterher · 0 von \d+ Etappen$/)).toBeVisible();
+	// Heute dran: die fälligste Etappe, überfällig, mit Prüfung und »Erst üben« am richtigen Teil
+	const today = p2.getByTestId('heute');
+	await expect(today.getByRole('heading')).toHaveText('Teil A · Etappe 1: Gehört');
+	await expect(today).toContainText('überfällig seit');
+	await expect(today.getByRole('link', { name: 'Erst üben' })).toHaveAttribute(
+		'href',
+		'/ueben?stimme=trp1&takt=1'
+	);
+	await expect(today.getByRole('link', { name: /^Prüfung starten/ })).toHaveAttribute(
+		'href',
+		`/guugge/${guugge}/pruefung?teil=1&etappe=1`
+	);
+	// Countdown ohne Prozent
+	await expect(p2.getByRole('heading', { name: /^\d+ Tage$/ })).toBeVisible();
+	await expect(p2.getByText(/% bis auftrittsreif/)).toHaveCount(0);
+	// Karte des Stücks: Teil antippen zeigt seine Etappen
+	await p2.getByRole('button', { name: 'Teil B: noch offen' }).click();
+	const sheet = p2.getByRole('dialog', { name: /^Teil B · Takt 9–12/ });
+	await expect(sheet.getByRole('listitem')).toHaveCount(5);
+	await expect(sheet.getByRole('link', { name: 'Teil B üben' })).toHaveAttribute(
+		'href',
+		'/ueben?stimme=trp1&takt=9'
+	);
+	await sheet.getByRole('button', { name: 'Fertig' }).click();
+	// Pausen der Trompete 1 (Teil J–M) sind markiert
+	await expect(p2.getByRole('button', { name: 'Teil J: Pause für dich' })).toBeVisible();
 	await p2.getByRole('button', { name: 'Gesamtplan' }).click();
 	await expect(p2.getByRole('heading', { name: 'Meilensteine' })).toBeVisible();
 	await expect(p2.getByRole('heading', { name: /Plan (anlegen|ändern)/ })).toHaveCount(0);
 
 	// Vom Plan direkt üben, mit der Stimme aus der Guugge
+	await p2.getByRole('button', { name: 'Mein Plan' }).click();
 	await p2.getByRole('link', { name: 'Stück üben →' }).click();
 	await expect(p2).toHaveURL(/\/ueben\?stimme=trp1$/);
 	await expect(p2.getByRole('button', { name: /^Stimme:/ })).toHaveText(/Trp 1/);

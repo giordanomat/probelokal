@@ -81,6 +81,14 @@ export function nextLevel(points: number): Level | null {
 	return LEVELS.find((l) => l.min > points) ?? null;
 }
 
+/** Anteil auf dem Weg zum nächsten Level (0–1), für den Balken in »Mein Plan«; ganz oben 1. */
+export function levelShare(points: number): number {
+	const lv = levelOf(points);
+	const nx = nextLevel(points);
+	if (!nx) return 1;
+	return Math.max(0, Math.min(1, (points - lv.min) / (nx.min - lv.min)));
+}
+
 export function hasUnlock(points: number, unlock: NonNullable<Level['unlock']>): boolean {
 	const n = levelOf(points).n;
 	return LEVELS.some((l) => l.unlock === unlock && l.n <= n);
