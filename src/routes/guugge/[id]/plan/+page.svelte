@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Plan für Bad Touch: »Mein Plan« (Stand der eigenen Stimme gegen den Plan) und »Gesamtplan«
-	// (Wochen und Meilensteine; die Leitung legt ihn an). Logik in src/lib/plan/.
+	// (Zeitstrahl, diese Woche, für die Leitung »So steht die Guugge« und »Plan ändern«; Entwurf
+	// Matthias 17.11.2026). Logik in src/lib/plan/.
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -27,9 +28,21 @@
 		mondayOf,
 		shortDate,
 		todayInZurich,
-		WEEKDAYS
+		weekdayOf,
+		WEEKDAYS,
+		type Day
 	} from '#lib/plan/dates.ts';
-	import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights } from '#lib/plan/plan.ts';
+	import {
+		buildPlan,
+		dueOf,
+		dueTable,
+		expectedStage,
+		phaseSpans,
+		registerCell,
+		sectionWeights,
+		timelineAt,
+		type Phase
+	} from '#lib/plan/plan.ts';
 	import { levelOf, levelShare, nextLevel } from '#lib/game/points.ts';
 	import Mark from '#lib/brand/Mark.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
@@ -62,9 +75,14 @@
 	/** Übersicht der Leitung: nur Register-Durchschnitte, erst ab drei Personen pro Register */
 	let overview = $state<RegisterRow[] | null>(null);
 	let view = $state<'mine' | 'all'>('mine');
-	let showAll = $state(false);
+	/** Blätter im Gesamtplan: alle Wochen (offen bei dieser Woche), Plan ändern */
+	let weeksOpen = $state(false);
+	let weeksFrom = $state(0);
+	let editOpen = $state(false);
 	let busy = $state(false);
 	let error = $state('');
+	/** Fehler beim Speichern, im Formular selbst (auch im Blatt sichtbar) */
+	let formError = $state('');
 	let notice = $state('');
 
 	// Formular der Leitung
@@ -114,10 +132,26 @@
 	let openSection = $state<number | null>(null);
 	const sectionState = (i: number) =>
 		pauses.has(i) ? 'Pause für dich' : stages[i] ? STAGES[stages[i] - 1].name : 'noch offen';
-	const nowWeek = $derived(plan ? plan.weeks.findIndex((w) => w.monday === monday) : -1);
-	const firstShown = $derived(
-		plan ? Math.max(0, Math.min(nowWeek < 0 ? 0 : nowWeek, plan.weeks.length - 3)) : 0
+	// Gesamtplan: Zeitstrahl und die Woche, die ausführlich gezeigt wird
+	const tl = $derived(plan ? timelineAt(plan, today) : null);
+	const spans = $derived(plan ? phaseSpans(plan) : []);
+	/** Vor dem Start die erste, nach dem Ende die letzte Woche */
+	const shownWeek = $derived(
+		plan && tl ? Math.max(0, Math.min(tl.week, plan.weeks.length - 1)) : 0
 	);
+	const PHASE_CLASS: Record<Phase, string> = {
+		Lernen: 'ph-l',
+		Tempo: 'ph-t',
+		Auswendig: 'ph-a',
+		Feinschliff: 'ph-f'
+	};
+	/** Farbe der Meilensteine in der Reihenfolge der Phasen */
+	const MILESTONE_CLASS = ['ph-l', 'ph-t', 'ph-a', 'ph-f'];
+	const weekdayShort = (d: Day) => WEEKDAYS[weekdayOf(d)].slice(0, 2);
+	const dayNo = (d: Day) => `${Number(d.slice(8))}.`;
+	/** Tage im Formular, Montag zuerst (Index wie WEEKDAYS, 0 = Sonntag) */
+	const FORM_DAYS = [1, 2, 3, 4, 5, 6, 0];
+	const minuteChoices = $derived([...new Set([30, 60, 90, 120, fMin])].sort((a, b) => a - b));
 
 	const sectionName = (i: number) => title.sections[i].name;
 	/** Teile ohne Vorzähler */
@@ -154,11 +188,36 @@
 		}
 	}
 
+	/** Blatt »Alle Wochen« öffnen und zur gewünschten Woche rollen */
+	function openWeeks(i: number) {
+		weeksFrom = i;
+		weeksOpen = true;
+	}
+	function scrollToWeek(el: HTMLElement) {
+		// erst nach showModal() im Blatt, sonst rollt nichts
+		if (Number(el.dataset.week) === weeksFrom && weeksFrom > 0)
+			requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
+	}
+
+	/** Blatt »Plan ändern« immer mit dem gespeicherten Stand öffnen */
+	function openEdit() {
+		if (stored) {
+			fStart = stored.start;
+			fPerf = stored.perf;
+			fGp = stored.gp_weekday;
+			fRp = stored.rp_weekday;
+			fMin = stored.minutes_per_week;
+		}
+		formError = '';
+		notice = '';
+		editOpen = true;
+	}
+
 	async function save(e: SubmitEvent) {
 		e.preventDefault();
 		if (!sb || busy) return;
 		busy = true;
-		error = '';
+		formError = '';
 		notice = '';
 		try {
 			const params = {
@@ -187,9 +246,10 @@
 				due
 			);
 			await load();
+			editOpen = false;
 			notice = 'Gespeichert. Alle in der Guugge sehen den Plan.';
 		} catch (err) {
-			error = (err as Error).message;
+			formError = (err as Error).message;
 		} finally {
 			busy = false;
 		}
@@ -453,105 +513,207 @@
 				{/if}
 			{/if}
 		{:else}
-			{#if plan}
+			{#if plan && tl}
+				{@const w = plan.weeks[shownWeek]}
+				{@const nextW = plan.weeks[shownWeek + 1]}
+				<!-- Zeitstrahl: Phasen als Balken, Strich »heute«, Meilensteine darunter -->
 				<section class="card">
-					<h2>Meilensteine</h2>
-					<ul class="list plain">
-						{#each plan.milestones as m (m.text)}
-							<li>{m.text} bis <strong>{shortDate(m.date)}</strong></li>
+					<p class="label">
+						{tl.week < 0
+							? `Start am ${shortDate(plan.firstMonday)}`
+							: tl.week >= plan.weeks.length
+								? 'Plan abgeschlossen'
+								: `Woche ${tl.week + 1} von ${plan.weeks.length} · ${plan.weeks[tl.week].phase}`}
+					</p>
+					<div class="tl">
+						<div class="phases">
+							{#each spans as sp (sp.phase)}
+								<span
+									class="ph {PHASE_CLASS[sp.phase]}"
+									style:width="{(sp.weeks / plan.weeks.length) * 100}%"
+									title="{sp.phase}: {sp.weeks} Wochen"
+								></span>
+							{/each}
+						</div>
+						{#if tl.week >= 0 && tl.week < plan.weeks.length}
+							<div class="nowmark" style:left="{tl.pos * 100}%" aria-hidden="true">
+								<b>heute</b>
+							</div>
+						{/if}
+					</div>
+					<p class="sr">
+						Phasen: {spans.map((sp) => `${sp.phase} ${sp.weeks} Wochen`).join(', ')}.
+					</p>
+					<ul class="ms">
+						{#each plan.milestones as m, i (m.text)}
+							<li>
+								<i class="dot {MILESTONE_CLASS[i]}" aria-hidden="true"></i>{m.text}<b
+									>{shortDate(m.date)}</b
+								>
+							</li>
 						{/each}
 					</ul>
 				</section>
-				<section class="card">
-					<h2>Wochen</h2>
-					{#each plan.weeks as w, i (w.monday)}
-						{#if showAll || (i >= firstShown && i < firstShown + 3)}
-							<div class="week" class:now={i === nowWeek}>
-								<h3>
-									Woche {i + 1} · {w.phase}{i === nowWeek ? ' · diese Woche' : ''}
-									<span class="hint">{shortDate(w.monday)}–{shortDate(w.sunday)}</span>
-								</h3>
-								<ul>
-									{#each w.items as item (item)}<li>{item}</li>{/each}
-								</ul>
-							</div>
-						{/if}
-					{/each}
-					<p>
-						<button class="btn ghost" type="button" onclick={() => (showAll = !showAll)}>
-							{showAll
-								? 'Nur die nächsten Wochen zeigen'
-								: `Alle ${plan.weeks.length} Wochen zeigen`}
-						</button>
+
+				<!-- Diese Woche: Proben mit Wochentag, Etappen, Einzelüben -->
+				<section class="card" data-testid="diese-woche">
+					<p class="label">
+						{tl.week < 0
+							? 'Erste Woche'
+							: tl.week >= plan.weeks.length
+								? 'Letzte Woche'
+								: 'Diese Woche'}
+						· {shortDate(w.monday)}–{shortDate(w.sunday)}
 					</p>
+					<h2 class="wh">{w.headline}</h2>
+					<ul class="items">
+						{#if w.rp}
+							<li>
+								<span class="day rp"
+									><span>{weekdayShort(w.rp.day)}</span><b>{dayNo(w.rp.day)}</b></span
+								>
+								<span>Registerprobe<small>{w.rp.text}</small></span>
+							</li>
+						{/if}
+						<li>
+							<span class="day gp"
+								><span>{weekdayShort(w.gp.day)}</span><b>{dayNo(w.gp.day)}</b></span
+							>
+							<span>Gesamtprobe<small>{w.gp.text}</small></span>
+						</li>
+						{#if w.stages.length}
+							<li>
+								<span class="day"><span>bis So</span><b>{dayNo(w.sunday)}</b></span>
+								<span
+									>{w.phase === 'Feinschliff' ? 'Üben' : 'Etappen'}{#each w.stages as st (st)}<small
+											>{st}</small
+										>{/each}</span
+								>
+							</li>
+						{/if}
+						{#if w.solo}
+							<li>
+								<span class="day"><span>jede</span><b>Wo</b></span>
+								<span>Einzeln üben<small>{w.solo}</small></span>
+							</li>
+						{/if}
+					</ul>
 				</section>
+
+				<section class="card links">
+					{#if nextW}
+						<button
+							type="button"
+							class="more"
+							aria-haspopup="dialog"
+							onclick={() => openWeeks(shownWeek + 1)}
+						>
+							<span><b>Nächste Woche</b> · {nextW.headline}</span><span aria-hidden="true">›</span>
+						</button>
+					{/if}
+					<button
+						type="button"
+						class="more"
+						aria-haspopup="dialog"
+						onclick={() => openWeeks(shownWeek)}
+					>
+						<span><b>Alle {plan.weeks.length} Wochen</b></span><span aria-hidden="true">›</span>
+					</button>
+				</section>
+
+				{#if weeksOpen}
+					<Sheet open label="Alle {plan.weeks.length} Wochen" onclose={() => (weeksOpen = false)}>
+						<div class="weeks">
+							{#each plan.weeks as wk, i (wk.monday)}
+								<div class="week" class:now={i === tl.week} data-week={i} {@attach scrollToWeek}>
+									<h3>
+										Woche {i + 1} · {wk.phase}{i === tl.week ? ' · diese Woche' : ''}
+										<small>{shortDate(wk.monday)}–{shortDate(wk.sunday)}</small>
+									</h3>
+									<ul>
+										{#each wk.items as item (item)}<li>{item}</li>{/each}
+									</ul>
+								</div>
+							{/each}
+						</div>
+					</Sheet>
+				{/if}
 			{:else if !leitung}
 				<section class="card">
 					<h2>Noch kein Gesamtplan.</h2>
-					<p>Den legt die Leitung an. Bis dahin kannst du trotzdem üben.</p>
+					<p class="sub">Den legt die Leitung an. Bis dahin kannst du trotzdem üben.</p>
+				</section>
+			{/if}
+
+			{#if leitung && !stored}
+				<section class="card">
+					<h2>Plan anlegen</h2>
+					{@render planForm()}
 				</section>
 			{/if}
 
 			{#if leitung && overview}
+				<!-- Nur Leitung: Durchschnitte pro Register gegen den Plan, keine Prozent, keine Einzelwerte -->
 				<section class="card">
-					<h2>Übersicht der Register</h2>
-					<p class="hint">
-						Nur Durchschnitte pro Register und erst ab drei Personen mit gewählter Stimme.
-						Einzelwerte siehst du nicht. Pausen zählen als erledigt.
-					</p>
+					<h2 class="label reghead">So steht die Guugge · nur für die Leitung</h2>
 					{#if overview.length}
-						<div class="regs">
+						<div class="regs" style:--cols={sectionNos.length}>
 							{#each overview as r (r.register)}
-								{@const vals = Object.values(r.avg_stage_by_section ?? {})}
-								{@const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0}
 								<div class="reg">
-									<strong>{REGISTER_LABELS[r.register]}</strong>
-									<div class="bar" aria-hidden="true">
-										<i style:width="{Math.round((avg / 5) * 100)}%"></i>
+									<div class="nm">
+										{REGISTER_LABELS[r.register]}
+										{#if r.persons <= 10}
+											<span class="who" aria-hidden="true">
+												{#each Array.from({ length: r.persons }, (_, k) => k) as k (k)}
+													<i class:on={k < r.practiced_this_week}></i>
+												{/each}
+											</span>
+										{:else}
+											<small aria-hidden="true">{r.practiced_this_week}/{r.persons} geübt</small>
+										{/if}
+										<span class="sr"
+											>{r.practiced_this_week} von {r.persons} haben diese Woche geübt</span
+										>
 									</div>
-									<span class="hint"
-										>{Math.round((avg / 5) * 100)} % im Schnitt · {r.practiced_this_week} von {r.persons}
-										haben diese Woche geübt</span
-									>
+									{#if plan}
+										<div class="cells" aria-hidden="true">
+											{#each sectionNos as i (i)}
+												<i
+													class={registerCell(
+														r.avg_stage_by_section?.[String(i)],
+														expectedStage(plan, i, today)
+													)}
+												></i>
+											{/each}
+										</div>
+									{/if}
 								</div>
 							{/each}
+							{#if plan}
+								<div class="reg letters" aria-hidden="true">
+									<span></span>
+									<div class="cells">
+										{#each sectionNos as i (i)}<span>{sectionName(i)}</span>{/each}
+									</div>
+								</div>
+							{/if}
 						</div>
-						<div class="heatwrap">
-							<table class="heat">
-								<thead>
-									<tr>
-										<th></th>
-										{#each title.sections as s, i (i)}{#if i > 0}<th>{s.name}</th>{/if}{/each}
-									</tr>
-								</thead>
-								<tbody>
-									{#if plan}
-										<tr>
-											<th class="hint">Plan</th>
-											{#each sectionNos as i (i)}<td class="exp">{expectedStage(plan, i, today)}</td
-												>{/each}
-										</tr>
-									{/if}
-									{#each overview as r (r.register)}
-										<tr>
-											<th>{REGISTER_LABELS[r.register]}</th>
-											{#each sectionNos as i (i)}
-												{@const v = r.avg_stage_by_section?.[String(i)]}
-												<td
-													style:background={v === undefined
-														? 'var(--surface2)'
-														: `color-mix(in srgb, var(--gruen) ${Math.round((v / 5) * 85 + 10)}%, var(--surface))`}
-													>{v === undefined ? '–' : String(v).replace('.', ',')}</td
-												>
-											{/each}
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-						<p class="hint">Zahl = durchschnittlich erreichte Etappe (0–5) pro Teil.</p>
+						{#if plan}
+							<p class="legend">
+								<span><i class="lg ok"></i>im Plan</span>
+								<span><i class="lg behind1"></i>1 Etappe hinterher</span>
+								<span><i class="lg behind"></i>mehr hinterher</span>
+								<span><i class="lg open"></i>noch nicht dran</span>
+							</p>
+						{:else}
+							<p class="small">Farben pro Teil gibt es, sobald der Plan steht.</p>
+						{/if}
+						<p class="small">
+							Punkte = diese Woche geübt. Nur Durchschnitte, erst ab 3 Personen pro Register. Pausen
+							zählen als erledigt.
+						</p>
 					{:else}
-						<p class="hint">
+						<p class="small">
 							Noch kein Register hat drei Personen mit gewählter Stimme. So bleiben Einzelwerte
 							verborgen.
 						</p>
@@ -559,48 +721,84 @@
 				</section>
 			{/if}
 
-			{#if leitung}
-				<section class="card">
-					<h2>{stored ? 'Plan ändern' : 'Plan anlegen'}</h2>
-					<p class="hint">
-						Aus diesen Angaben entstehen die Wochen: etwa die Hälfte Lernen, dann Tempo, Auswendig
-						und Feinschliff. Die Teile verteilen sich nach Schwierigkeit.
-					</p>
-					<form class="planform" onsubmit={save}>
-						<label class="field">
-							Start
-							<input type="date" required bind:value={fStart} />
-						</label>
-						<label class="field">
-							Auftritt
-							<input type="date" required bind:value={fPerf} />
-						</label>
-						<label class="field">
-							Gesamtprobe
-							<select bind:value={fGp}>
-								{#each WEEKDAYS as d, i (d)}<option value={i}>{d}</option>{/each}
-							</select>
-						</label>
-						<label class="field">
-							Registerprobe
-							<select bind:value={fRp}>
-								<option value={null}>keine</option>
-								{#each WEEKDAYS as d, i (d)}<option value={i}>{d}</option>{/each}
-							</select>
-						</label>
-						<label class="field">
-							Einzeln üben pro Woche (Minuten)
-							<input type="number" min="0" max="600" step="5" required bind:value={fMin} />
-						</label>
-						<button class="btn" type="submit" disabled={busy}
-							>{stored ? 'Plan aktualisieren' : 'Plan speichern'}</button
-						>
-					</form>
-				</section>
+			{#if leitung && stored}
+				<button type="button" class="btn ghost wide" aria-haspopup="dialog" onclick={openEdit}
+					>Plan ändern</button
+				>
+				{#if editOpen}
+					<Sheet open label="Plan ändern" onclose={() => (editOpen = false)}>
+						{@render planForm()}
+					</Sheet>
+				{/if}
 			{/if}
 		{/if}
 	{/if}
 </div>
+
+{#snippet planForm()}
+	<form class="planform" onsubmit={save}>
+		<div class="two">
+			<label class="field">
+				Start
+				<input type="date" required bind:value={fStart} />
+			</label>
+			<label class="field">
+				Auftritt
+				<input type="date" required bind:value={fPerf} />
+			</label>
+		</div>
+		<fieldset class="field">
+			<legend>Gesamtprobe</legend>
+			<div class="daychips">
+				{#each FORM_DAYS as d (d)}
+					<button
+						type="button"
+						aria-label={WEEKDAYS[d]}
+						aria-pressed={fGp === d}
+						onclick={() => (fGp = d)}>{WEEKDAYS[d].slice(0, 2)}</button
+					>
+				{/each}
+			</div>
+		</fieldset>
+		<fieldset class="field">
+			<legend>Registerprobe</legend>
+			<div class="daychips">
+				{#each FORM_DAYS as d (d)}
+					<button
+						type="button"
+						aria-label={WEEKDAYS[d]}
+						aria-pressed={fRp === d}
+						onclick={() => (fRp = d)}>{WEEKDAYS[d].slice(0, 2)}</button
+					>
+				{/each}
+				<button type="button" class="none" aria-pressed={fRp === null} onclick={() => (fRp = null)}
+					>keine</button
+				>
+			</div>
+		</fieldset>
+		<fieldset class="field">
+			<legend>Einzeln üben pro Woche</legend>
+			<div class="daychips">
+				{#each minuteChoices as m (m)}
+					<button
+						type="button"
+						aria-label="{m} Minuten"
+						aria-pressed={fMin === m}
+						onclick={() => (fMin = m)}>{m}</button
+					>
+				{/each}
+			</div>
+		</fieldset>
+		<p class="small">
+			Daraus entstehen die Wochen: etwa die Hälfte Lernen, dann Tempo, Auswendig, Feinschliff. Die
+			Teile verteilen sich nach Schwierigkeit. Alle sehen den Plan sofort.
+		</p>
+		{#if formError}<p class="err" role="alert">{formError}</p>{/if}
+		<div class="btns">
+			<button class="btn" type="submit" disabled={busy}>Plan speichern</button>
+		</div>
+	</form>
+{/snippet}
 
 <style>
 	/* Seite ohne globalen Kopf (wie »Stück üben«), schmal und mittig */
@@ -967,85 +1165,325 @@
 	.stagelist small {
 		color: var(--muted);
 	}
-	/* Gesamtplan */
-	.bar {
-		height: 8px;
-		border-radius: 999px;
-		background: var(--surface2);
-		border: 1px solid var(--line);
+	/* Gesamtplan: Zeitstrahl */
+	.tl {
+		position: relative;
+		margin: 26px 0 4px;
+	}
+	.phases {
+		display: flex;
+		height: 14px;
+		border-radius: 7px;
 		overflow: hidden;
 	}
-	.bar i {
+	.ph {
 		display: block;
+		flex: none;
 		height: 100%;
+	}
+	.ph-l {
+		background: var(--blau);
+	}
+	.ph-t {
+		background: var(--gelb);
+	}
+	.ph-a {
+		background: var(--rot);
+	}
+	.ph-f {
 		background: var(--gruen);
 	}
-	.list {
-		margin: 0;
-		padding-left: 18px;
-		display: flex;
-		flex-direction: column;
+	.nowmark {
+		position: absolute;
+		top: -6px;
+		width: 3px;
+		height: 26px;
+		margin-left: -1px;
+		background: var(--ink);
+		border-radius: 2px;
+	}
+	.nowmark b {
+		position: absolute;
+		top: -18px;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 11px;
+		white-space: nowrap;
+	}
+	.ms {
+		list-style: none;
+		margin: 10px 0 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
 		gap: 6px;
 	}
-	.list.plain li {
-		display: list-item;
+	.ms li {
+		font-size: 12px;
+		color: var(--muted);
+		line-height: 1.25;
+	}
+	.ms b {
+		display: block;
+		color: var(--ink);
+		font-size: 13px;
+	}
+	.dot {
+		display: block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		margin-bottom: 4px;
+	}
+	/* Diese Woche */
+	.wh {
+		font-size: 18px;
+		margin: 2px 0 6px;
+	}
+	.items {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.items li {
+		display: flex;
+		gap: 10px;
+		align-items: flex-start;
+		padding: 7px 0;
+		border-top: 1px solid var(--line);
+		font-size: 15px;
+	}
+	.items li:first-child {
+		border-top: 0;
+	}
+	.items small {
+		display: block;
+		color: var(--muted);
+		font-size: 13px;
+	}
+	.day {
+		flex: none;
+		width: 46px;
+		text-align: center;
+		border-radius: 10px;
+		background: var(--surface2);
+		border: 1px solid var(--line);
+		padding: 3px 0;
+		font-size: 11px;
+		color: var(--muted);
+		line-height: 1.2;
+	}
+	.day span,
+	.day b {
+		display: block;
+	}
+	.day b {
+		font-size: 15px;
+		color: var(--ink);
+	}
+	.day.gp {
+		border-color: var(--gelb);
+	}
+	.day.rp {
+		border-color: var(--blau);
+	}
+	/* Nächste Woche, alle Wochen */
+	.card.links {
+		gap: 0;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+	.more {
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--ink);
+		font: 400 15px var(--font-body);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		min-height: 44px;
+		padding: 0;
+		text-align: left;
+		cursor: pointer;
+	}
+	.more + .more {
+		border-top: 1px solid var(--line);
+	}
+	.more > span:last-child {
+		color: var(--muted);
+		font-size: 20px;
+	}
+	.weeks {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
 	}
 	.week {
 		border-top: 1px solid var(--line);
 		padding-top: 8px;
+		/* Platz für den stehenden Kopf des Blatts */
+		scroll-margin-top: 64px;
 	}
-	.week.now h3 {
-		color: var(--akzent);
+	.week:first-child {
+		border-top: 0;
+		padding-top: 0;
 	}
 	.week h3 {
 		margin: 0;
 		font-size: 15px;
 	}
+	.week h3 small {
+		font-weight: 400;
+		color: var(--muted);
+		margin-left: 4px;
+	}
+	.week.now h3 {
+		color: var(--akzent);
+	}
 	.week ul {
 		margin: 4px 0 0;
 		padding-left: 18px;
+		font-size: 14px;
+	}
+	/* So steht die Guugge (nur Leitung) */
+	.card h2.reghead {
+		font-size: 11px;
+		margin: 0;
 	}
 	.regs {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-		gap: 8px;
-	}
-	.reg {
-		border: 1px solid var(--line);
-		border-radius: 12px;
-		padding: 10px;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 8px;
+		margin-top: 6px;
 	}
-	.heatwrap {
-		overflow-x: auto;
-	}
-	.heat {
-		border-collapse: separate;
-		border-spacing: 3px;
-		font-size: 13px;
-	}
-	.heat th {
-		text-align: left;
-		font-weight: 600;
-		padding: 2px 6px;
-		white-space: nowrap;
-	}
-	.heat td {
-		min-width: 28px;
-		text-align: center;
-		border-radius: 6px;
-		padding: 3px 2px;
-		font-variant-numeric: tabular-nums;
-	}
-	.heat td.exp {
-		color: var(--muted);
-	}
-	.planform {
+	.reg {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 10px;
-		align-items: end;
+		grid-template-columns: 86px 1fr;
+		gap: 8px;
+		align-items: center;
+	}
+	.nm {
+		font-size: 14px;
+		font-weight: 600;
+		min-width: 0;
+	}
+	.nm small {
+		display: block;
+		font-weight: 400;
+		color: var(--muted);
+		font-size: 11px;
+	}
+	.who {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 3px;
+		margin-top: 3px;
+	}
+	.who i {
+		width: 9px;
+		height: 9px;
+		box-sizing: border-box;
+		border-radius: 50%;
+		border: 1.5px solid var(--line);
+	}
+	.who i.on {
+		background: var(--gruen);
+		border-color: var(--gruen);
+	}
+	.cells {
+		display: grid;
+		grid-template-columns: repeat(var(--cols), 1fr);
+		gap: 2px;
+	}
+	.cells i,
+	.lg.open {
+		box-shadow: inset 0 0 0 1px var(--line);
+	}
+	.cells i {
+		height: 18px;
+		border-radius: 3px;
+		background: var(--surface2);
+	}
+	.cells i.ok,
+	.lg.ok {
+		background: var(--gruen);
+	}
+	.cells i.behind1,
+	.lg.behind1 {
+		background: var(--gelb);
+	}
+	.cells i.behind,
+	.lg.behind {
+		background: color-mix(in srgb, var(--rot) 80%, var(--surface2));
+	}
+	.cells i.none {
+		background: repeating-linear-gradient(
+			45deg,
+			var(--surface2) 0 3px,
+			color-mix(in srgb, var(--ink) 8%, var(--surface2)) 3px 6px
+		);
+	}
+	.letters .cells span {
+		font-size: 10px;
+		color: var(--muted);
+		text-align: center;
+	}
+	.btn.wide {
+		width: 100%;
+		min-height: 48px;
+	}
+	/* Formular der Leitung */
+	.planform {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.two {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 8px;
+	}
+	.planform .field {
+		flex: none;
+	}
+	fieldset.field {
+		border: 0;
+		margin: 0;
+		padding: 0;
+	}
+	fieldset.field legend {
+		padding: 0;
+		margin-bottom: 6px;
+	}
+	.daychips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+	.daychips button {
+		flex: 1;
+		min-width: 34px;
+		appearance: none;
+		border: 1px solid var(--line);
+		background: none;
+		color: var(--ink);
+		border-radius: 999px;
+		min-height: 38px;
+		font: 600 14px var(--font-body);
+		cursor: pointer;
+	}
+	.daychips button.none {
+		flex: 1.5;
+	}
+	.daychips button[aria-pressed='true'] {
+		background: var(--chip-on-bg);
+		color: var(--chip-on-fg);
+		border-color: var(--chip-on-bg);
+	}
+	.planform .btns {
+		margin-top: 0;
 	}
 </style>

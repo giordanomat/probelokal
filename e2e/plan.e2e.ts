@@ -33,19 +33,54 @@ test('Leitung legt den Gesamtplan an, Mitglied sieht ihn und seinen Stand', asyn
 	await page.getByRole('button', { name: 'Plan speichern' }).click();
 	await expect(page.getByRole('alert')).toHaveText('Der Auftritt muss nach dem Start liegen.');
 
+	// Tage und Minuten als Knöpfe statt Auswahllisten (Entwurf Matthias 17.11.2026)
 	await page.getByLabel('Auftritt').fill(perf);
-	await page.getByLabel('Gesamtprobe').selectOption('Mittwoch');
-	await page.getByLabel('Registerprobe').selectOption('Montag');
-	await page.getByLabel('Einzeln üben pro Woche (Minuten)').fill('60');
+	await page
+		.getByRole('group', { name: 'Gesamtprobe' })
+		.getByRole('button', { name: 'Mittwoch' })
+		.click();
+	await page
+		.getByRole('group', { name: 'Registerprobe' })
+		.getByRole('button', { name: 'Montag' })
+		.click();
+	await page
+		.getByRole('group', { name: 'Einzeln üben pro Woche' })
+		.getByRole('button', { name: '60 Minuten' })
+		.click();
 	await page.getByRole('button', { name: 'Plan speichern' }).click();
 	await expect(page.getByRole('status')).toHaveText(
 		'Gespeichert. Alle in der Guugge sehen den Plan.'
 	);
-	await expect(page.getByRole('heading', { name: 'Meilensteine' })).toBeVisible();
-	await expect(page.getByText(/^Auftrittsreif bis/)).toBeVisible();
-	await expect(page.getByText('· diese Woche')).toBeVisible();
-	await page.getByRole('button', { name: /^Alle \d+ Wochen zeigen$/ }).click();
-	await expect(page.getByRole('heading', { name: /^Woche 1 · Lernen/ })).toBeVisible();
+	// Zeitstrahl: der Plan beginnt drei Wochen vor heute, also Woche 4
+	await expect(page.getByText(/^Woche 4 von \d+ · Lernen$/)).toBeVisible();
+	await expect(page.getByText('Auftrittsreif')).toBeVisible();
+	// Diese Woche: Proben mit Wochentag
+	const week = page.getByTestId('diese-woche');
+	await expect(week).toContainText('Diese Woche');
+	await expect(week.getByRole('listitem').filter({ hasText: 'Registerprobe' })).toContainText('Mo');
+	await expect(week.getByRole('listitem').filter({ hasText: 'Gesamtprobe' })).toContainText('Mi');
+	await expect(week).toContainText('60 Min. pro Woche');
+	// Alle Wochen im Blatt
+	await page.getByRole('button', { name: /^Alle \d+ Wochen$/ }).click();
+	const weeks = page.getByRole('dialog', { name: /^Alle \d+ Wochen$/ });
+	await expect(weeks.getByRole('heading', { name: /^Woche 1 · Lernen/ })).toBeVisible();
+	await expect(
+		weeks.getByRole('heading', { name: /^Woche 4 · Lernen · diese Woche/ })
+	).toBeVisible();
+	await weeks.getByRole('button', { name: 'Fertig' }).click();
+	// Plan ändern im Blatt, mit dem gespeicherten Stand
+	await page.getByRole('button', { name: 'Plan ändern' }).click();
+	const edit = page.getByRole('dialog', { name: 'Plan ändern' });
+	await expect(
+		edit.getByRole('group', { name: 'Gesamtprobe' }).getByRole('button', { name: 'Mittwoch' })
+	).toHaveAttribute('aria-pressed', 'true');
+	await edit.getByRole('button', { name: '90 Minuten' }).click();
+	await edit.getByRole('button', { name: 'Plan speichern' }).click();
+	await expect(edit).toBeHidden();
+	await expect(page.getByRole('status')).toHaveText(
+		'Gespeichert. Alle in der Guugge sehen den Plan.'
+	);
+	await expect(week).toContainText('90 Min. pro Woche');
 
 	// Mitglied: Trompete 1, sieht den Plan nur lesend und den eigenen Stand
 	const [{ create_invite: token }] = await fake.db.as<{ create_invite: string }>(
@@ -91,8 +126,10 @@ test('Leitung legt den Gesamtplan an, Mitglied sieht ihn und seinen Stand', asyn
 	// Pausen der Trompete 1 (Teil J–M) sind markiert
 	await expect(p2.getByRole('button', { name: 'Teil J: Pause für dich' })).toBeVisible();
 	await p2.getByRole('button', { name: 'Gesamtplan' }).click();
-	await expect(p2.getByRole('heading', { name: 'Meilensteine' })).toBeVisible();
-	await expect(p2.getByRole('heading', { name: /Plan (anlegen|ändern)/ })).toHaveCount(0);
+	await expect(p2.getByText(/^Woche 4 von \d+ · Lernen$/)).toBeVisible();
+	await expect(p2.getByRole('heading', { name: 'Plan anlegen' })).toHaveCount(0);
+	await expect(p2.getByRole('button', { name: 'Plan ändern' })).toHaveCount(0);
+	await expect(p2.getByText('So steht die Guugge')).toHaveCount(0);
 
 	// Vom Plan direkt üben, mit der Stimme aus der Guugge
 	await p2.getByRole('button', { name: 'Mein Plan' }).click();

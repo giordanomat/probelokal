@@ -68,10 +68,12 @@ Drei Trompeten braucht es, weil die Leitung ein Register erst ab drei Personen s
 
 | Prüfung | Soll | Ist | OK? |
 |---|---|---|---|
-| L: »Plan ansehen →«, Start heute, Auftritt in etwa 6 Wochen, Gesamtprobe und Registerprobe wählen, Minuten pro Woche, »Plan speichern« | Wochen und Meilensteine erscheinen | | |
+| L: »Plan ansehen →«, »Gesamtplan«, Start heute, Auftritt in etwa 6 Wochen, Gesamtprobe und Registerprobe per Tages-Knopf, Minuten (30/60/90/120), »Plan speichern« | Zeitstrahl mit Phasen, »heute« und vier Meilensteinen; »Diese Woche« mit Probetagen (Wochentag und Datum stimmen) | | |
+| L: »Alle N Wochen«, dann »Fertig« | Blatt öffnet bei dieser Woche, »Fertig« bleibt beim Rollen sichtbar | | |
+| L: »Plan ändern«, Minuten ändern, »Plan speichern« | Blatt zeigt den gespeicherten Stand, schliesst nach dem Speichern, »Diese Woche« zeigt die neuen Minuten | | |
 | T1: »Mein Plan« | »Heute dran« mit einer Etappe und »Prüfung starten«, Countdown in Tagen, voraus oder hinterher, Übetage der Woche, Karte des Stücks; Teil antippen zeigt Etappen und Termine | | |
 | T1: Teile, in denen Trp 1 nichts spielt | als Pause, zählen als erledigt | | |
-| T1: »Gesamtplan« | sichtbar, aber nicht änderbar | | |
+| T1: »Gesamtplan« | sichtbar, aber ohne »Plan ändern« und ohne »So steht die Guugge« | | |
 
 ## 4 · Etappen (T1 auf B, mit Trompete und Kopfhörer)
 
@@ -129,7 +131,7 @@ Vorher T2 und T3 je eine Etappe ablegen lassen (Quiz reicht), damit es Werte gib
 | L: »Rangliste für die Guugge einschalten« | eingeschaltet | | |
 | T1 macht mit (»Ich mache mit«), T2 nicht | bei L und T1 steht nur T1 in der Rangliste, T2 und T3 nicht | | |
 | L: Belohnung für Level 2 »Getränk nach der Probe«, »Belohnungen speichern« | T1 sieht sie unter »Belohnungen« | | |
-| L: »Gesamtplan« → Übersicht der Register | Trompeten mit Schnitt und »diese Woche geübt«, ohne Namen und Einzelwerte | | |
+| L: »Gesamtplan« → »So steht die Guugge« | Trompeten als Zeile mit Farben pro Teil und Punkten »diese Woche geübt«, ohne Namen, Einzelwerte und Prozent; Farben wirken plausibel (notieren, wenn nicht) | | |
 | Posaunen (nur P1 oder niemand) | erscheinen nicht (unter drei Personen) | | |
 | Irgendwo bei L Punkte oder Etappen von T2 sichtbar? | nein, nirgends | | |
 | T1 macht nicht mehr mit | verschwindet bei L nach dem Neuladen (die Rangliste aktualisiert sich nicht von selbst) | | |

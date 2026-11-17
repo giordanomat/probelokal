@@ -50,6 +50,12 @@
 		border-radius: 22px 22px 0 0;
 		box-shadow: 0 -16px 40px rgb(0 0 0 / 0.45);
 	}
+	/* Der Inhalt rollt, nicht das Fenster: so bleibt der Kopf stehen */
+	dialog[open] {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
 	dialog::backdrop {
 		background: rgb(0 0 0 / 0.5);
 	}
@@ -60,16 +66,23 @@
 		}
 	}
 	.body {
-		padding: 12px max(18px, env(safe-area-inset-right, 0px))
+		min-height: 0;
+		padding: 0 max(18px, env(safe-area-inset-right, 0px))
 			max(22px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
 		overflow-y: auto;
 	}
+	/* Kopf bleibt beim Rollen stehen, damit »Fertig« immer erreichbar ist */
 	.head {
+		position: sticky;
+		top: 0;
+		z-index: 1;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		margin-bottom: 4px;
+		margin: 0 0 4px;
+		padding: 12px 0 6px;
+		background: var(--surface);
 	}
 	.head .label {
 		margin: 0;
