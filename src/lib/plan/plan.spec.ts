@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { BAD_TOUCH, BAD_TOUCH_NOTES } from '../titles/bad-touch';
 import type { RawNote, Section } from '../music/types';
 import { addDays, longDate, mondayOf, shortDate, todayInZurich, weekdayOf } from './dates';
-import { buildPlan, dueOf, dueTable, expectedStage, sectionWeights, type PlanParams } from './plan';
+import {
+	buildPlan,
+	dueOf,
+	dueTable,
+	expectedStage,
+	phaseSpans,
+	registerCell,
+	sectionWeights,
+	timelineAt,
+	type PlanParams
+} from './plan';
 import {
 	countdown,
 	nextExams,
@@ -70,7 +80,7 @@ describe('Gesamtplan', () => {
 	});
 
 	it('Wochentexte wie im Prototyp', () => {
-		expect(PLAN.weeks[0]).toEqual({
+		expect(PLAN.weeks[0]).toMatchObject({
 			monday: '2026-11-02',
 			sunday: '2026-11-08',
 			phase: 'Lernen',
@@ -89,6 +99,53 @@ describe('Gesamtplan', () => {
 			'Gesamtprobe 17.2.: Auftritt simulieren, stehend und auswendig',
 			'Einzeln: 60 Min. pro Woche, z. B. 5 × 12 Min. mit dem Dirigenten'
 		]);
+	});
+
+	it('Woche auch strukturiert, für »Diese Woche« mit Wochentagen (Entwurf 10.11.2026)', () => {
+		expect(PLAN.weeks[1]).toMatchObject({
+			headline: 'Neu: Teil B–D · Festigen: Teil A',
+			rp: { day: '2026-11-09', text: 'Teil B–D langsam zusammen, Einsätze' },
+			gp: { day: '2026-11-11', text: 'Teil B–D neu, Bisheriges durchspielen' },
+			stages: ['Neu: Teil B–D – Etappen 1 und 2', 'Festigen: Teil A – Etappe 2 bis Sonntag'],
+			solo: '60 Min. pro Woche, z. B. 5 × 12 Min. mit dem Dirigenten'
+		});
+		expect(PLAN.weeks[9]).toMatchObject({
+			headline: 'Tempo: Teil A–F',
+			rp: { text: 'schnelle Stellen im Originaltempo' },
+			stages: ['Tempo: Teil A–F – Etappe 4']
+		});
+		expect(PLAN.weeks[15]).toMatchObject({
+			headline: 'Feinschliff',
+			rp: null,
+			gp: { day: '2027-02-17', text: 'Auftritt simulieren, stehend und auswendig' },
+			stages: ['Durchläufe, Übergänge, Dynamik der Leitung']
+		});
+		const none = buildPlan({ ...PARAMS, rpWeekday: null, minutesPerWeek: 0 }, SECTIONS, WEIGHTS);
+		expect(none.weeks[0]).toMatchObject({ rp: null, solo: null });
+	});
+
+	it('Zeitstrahl: Phasen in Wochen, heute als Anteil, Woche von heute', () => {
+		expect(phaseSpans(PLAN)).toEqual([
+			{ phase: 'Lernen', weeks: 9 },
+			{ phase: 'Tempo', weeks: 3 },
+			{ phase: 'Auswendig', weeks: 2 },
+			{ phase: 'Feinschliff', weeks: 2 }
+		]);
+		expect(timelineAt(PLAN, '2026-11-02')).toEqual({ week: 0, pos: 0 });
+		expect(timelineAt(PLAN, '2026-11-12')).toEqual({ week: 1, pos: 10 / 112 });
+		expect(timelineAt(PLAN, '2026-10-01')).toEqual({ week: -1, pos: 0 });
+		expect(timelineAt(PLAN, '2027-03-01')).toEqual({ week: 16, pos: 1 });
+	});
+
+	it('Register-Karte: Durchschnitt gegen den Plan, ohne Prozent', () => {
+		expect(registerCell(undefined, 2)).toBe('none');
+		expect(registerCell(0, 0)).toBe('open');
+		expect(registerCell(2, 2)).toBe('ok');
+		expect(registerCell(1.8, 2)).toBe('ok');
+		expect(registerCell(1.5, 2)).toBe('behind1');
+		expect(registerCell(1, 2)).toBe('behind1');
+		expect(registerCell(0.5, 2)).toBe('behind');
+		expect(registerCell(1, 0)).toBe('ok');
 	});
 
 	it('ohne Registerprobe und Übezeit fehlen die Zeilen', () => {

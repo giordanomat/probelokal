@@ -76,12 +76,17 @@ test('Rangliste mit Opt-in, Belohnungen der Guugge, Übersicht der Leitung ohne 
 	// Übersicht der Leitung im Gesamtplan: Trompeten ja (drei Personen), Posaunen nein
 	await page.goto(`/guugge/${g}/plan`);
 	await page.getByRole('button', { name: 'Gesamtplan' }).click();
-	await expect(page.getByRole('heading', { name: 'Übersicht der Register' })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { name: 'So steht die Guugge · nur für die Leitung' })
+	).toBeVisible();
 	const regs = page.locator('.regs');
 	await expect(regs).toContainText('Trompeten');
 	await expect(regs).toContainText('0 von 3 haben diese Woche geübt');
 	await expect(regs).not.toContainText('Posaunen');
-	await expect(page.locator('table.heat')).not.toContainText('Toni');
+	await expect(regs).not.toContainText('Toni');
+	// ohne Plan keine Farben pro Teil, keine Prozent
+	await expect(page.getByText('Farben pro Teil gibt es, sobald der Plan steht.')).toBeVisible();
+	await expect(regs).not.toContainText('%');
 
 	// Mitglied ohne Opt-in sieht die Rangliste, aber sich selbst nicht; Belohnung der Guugge sichtbar
 	const other = await browser.newContext({ baseURL });
