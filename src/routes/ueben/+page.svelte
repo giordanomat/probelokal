@@ -27,6 +27,14 @@
 	import { Listener, measureRoundTrip, micErrorText } from '#lib/audio/listen.ts';
 	import { StemPlayer } from '#lib/audio/stems.ts';
 	import { setAudioSession } from '#lib/audio/session.ts';
+	import { TapCalibration, type TapcalPhase } from '#lib/audio/tapcal-run.ts';
+	import {
+		loadTapOffset,
+		saveTapOffset,
+		TAPCAL_MEASURED,
+		tapOffsetText,
+		type TapcalOutcome
+	} from '#lib/practice/tapcal.ts';
 	import type { TrackerMessage } from '#lib/pitch/tracker.ts';
 	import Lane from '#lib/lane/Lane.svelte';
 	import { HELP_LABELS, zoomStep, type HelpLevel } from '#lib/lane/geometry.ts';
@@ -131,6 +139,13 @@
 	let lastCoach = 0;
 	/** Gemessene Verzögerung dieses Geräts (s) oder null */
 	let measured = $state<number | null>(null);
+	/** Tippen abgleichen (Entwurf Matthias 18.11.2026): gemessener Versatz dieses Geräts oder null */
+	let tapOffset = $state<number | null>(null);
+	let tapcal: TapCalibration | null = null;
+	let tapcalPhase = $state<TapcalPhase>({ kind: 'wait' });
+	let tapcalDots = $state<boolean[]>([]);
+	let tapcalFlash = $state(false);
+	let tapcalResult = $state<TapcalOutcome | 'nosound' | null>(null);
 	let calibration = $state<'idle' | 'running' | 'failed'>('idle');
 	let calibrationError = $state('');
 	/** Mikrofon liess sich nicht starten */
@@ -144,7 +159,7 @@
 	/** Seite eingehängt (Knöpfe reagieren); für die Browser-Tests als data-ready */
 	let ready = $state(false);
 	/** Offenes Blatt: Mehr, Stimme wählen oder Baustellen */
-	let sheet = $state<'mehr' | 'stimme' | 'bau' | null>(null);
+	let sheet = $state<'mehr' | 'stimme' | 'bau' | 'tippen' | null>(null);
 	/** Höhe der Fläche für die Bahn (füllt, was Kopf und Bedienung übrig lassen) */
 	let laneBoxHeight = $state(0);
 	/** Übebereich aus der Baustellen-Liste statt eines Teils */
@@ -345,7 +360,14 @@
 
 	function frameInfo(atBeat = beat): FrameInfo {
 		// Ohne Ton gibt es keine Ausgabe-Latenz: getippt wird nach der Bahn.
-		return { beat: atBeat, latency: stems?.latency() ?? 0, rate: tempo / 100, target };
+		return {
+			beat: atBeat,
+			latency: stems?.latency() ?? 0,
+			// Der gemessene Versatz enthält die Ausgabe des Tons; ohne Band gilt er nicht
+			tapOffset: audio === 'ok' ? tapOffset : null,
+			rate: tempo / 100,
+			target
+		};
 	}
 
 	/** Verzögerung beim Mithören mit Mikrofon: gemessen oder wie im Prototyp geschätzt. */
@@ -593,7 +615,8 @@
 
 	function doTap() {
 		if (!clock.playing) return;
-		const fb = tapFeedback(session.tap(frameInfo()));
+		// Zeit der Uhr im Moment des Tipps, nicht die des letzten Bildes (bis 16 ms älter)
+		const fb = tapFeedback(session.tap(frameInfo(beatAtTime(title, clock.time()))));
 		if (fb) feedback = fb;
 		flash = true;
 		setTimeout(() => (flash = false), 90);
@@ -908,7 +931,64 @@
 		savePrefs(localStorage, prefs);
 	}
 
+	/** Tippen abgleichen: Klicks starten (aus einer Berührung, wegen iOS), Ablauf beobachten. */
+	function startTapcal() {
+		tapcal?.stop();
+		tapcal = null;
+		tapcalResult = null;
+		if (clock.playing) togglePlay();
+		sheet = 'tippen';
+		let ctx: AudioContext | null;
+		try {
+			ctx = stems?.audioContext() ?? new AudioContext();
+		} catch {
+			ctx = null;
+		}
+		if (!ctx) {
+			tapcalResult = 'nosound';
+			return;
+		}
+		setAudioSession('playback');
+		void ctx.resume();
+		const run = new TapCalibration(ctx);
+		tapcal = run;
+		tapcalDots = Array(TAPCAL_MEASURED).fill(false);
+		const step = () => {
+			if (tapcal !== run) return;
+			tapcalPhase = run.phase();
+			tapcalDots = run.tapped();
+			tapcalFlash = run.sinceClick() < 0.12;
+			if (tapcalPhase.kind === 'done') {
+				const r = run.outcome();
+				tapcalResult = r;
+				tapcal = null;
+				if (r.kind === 'ok') {
+					tapOffset = r.offset.sec;
+					saveTapOffset(localStorage, r.offset.sec);
+				}
+				return;
+			}
+			requestAnimationFrame(step);
+		};
+		requestAnimationFrame(step);
+	}
+
+	function tapcalTap() {
+		tapcal?.tap();
+	}
+
+	function closeTapcal() {
+		tapcal?.stop();
+		tapcal = null;
+		if (sheet === 'tippen') sheet = null;
+	}
+
 	function onKey(e: KeyboardEvent) {
+		if (sheet === 'tippen' && e.code === 'Space') {
+			e.preventDefault();
+			if (!e.repeat) tapcalTap();
+			return;
+		}
 		if (e.code === 'Escape' && fokus) {
 			setFokus(false);
 			return;
@@ -931,6 +1011,7 @@
 		if (fromLink && fromLink !== prefs.voice) setPrefs({ voice: fromLink });
 		bestPoints = loadBestPoints(localStorage);
 		measured = loadLatency(localStorage);
+		tapOffset = loadTapOffset(localStorage);
 		diag = new URLSearchParams(location.search).has('diag');
 		session.setNotes(track.notes);
 		loadBaustellen();
@@ -1034,6 +1115,14 @@
 				{/each}
 			</div>
 			<p class="hint modehint" data-testid="modus-hinweis">{MODE_HINTS[mode]}</p>
+			{#if mode === 'rhythm' && audio === 'ok' && tapOffset === null}
+				<p class="tipbar" data-testid="tippen-hinweis">
+					<span>Noch nicht abgeglichen: Die Bewertung kann ein paar ms daneben liegen.</span>
+					<button type="button" class="tiplink" aria-haspopup="dialog" onclick={startTapcal}
+						>Abgleichen ›</button
+					>
+				</p>
+			{/if}
 		</div>
 	{/if}
 
@@ -1317,7 +1406,11 @@
 	>
 {/if}
 
-<Sheet open={sheet === 'stimme'} label="Deine Stimme" onclose={() => (sheet = null)}>
+<Sheet
+	open={sheet === 'stimme'}
+	label="Deine Stimme"
+	onclose={() => sheet === 'stimme' && (sheet = null)}
+>
 	<div class="voices" role="group" aria-label="Stimme">
 		{#each title.voices as v (v.id)}
 			<button type="button" aria-pressed={v.id === voice.id} onclick={() => chooseVoice(v.id)}
@@ -1327,7 +1420,7 @@
 	</div>
 </Sheet>
 
-<Sheet open={sheet === 'bau'} label="Baustellen" onclose={() => (sheet = null)}>
+<Sheet open={sheet === 'bau'} label="Baustellen" onclose={() => sheet === 'bau' && (sheet = null)}>
 	<p class="hint">Takte, die bei »Rhythmus« oder Mithören noch wackeln.</p>
 	<ul class="bau">
 		{#each baustellen as b (b.bar)}
@@ -1356,7 +1449,7 @@
 	>
 </Sheet>
 
-<Sheet open={sheet === 'mehr'} label="Mehr" onclose={() => (sheet = null)}>
+<Sheet open={sheet === 'mehr'} label="Mehr" onclose={() => sheet === 'mehr' && (sheet = null)}>
 	<div class="group">
 		<p class="label">Hören</p>
 		<div class="line">
@@ -1494,20 +1587,100 @@
 	</div>
 
 	<div class="group">
-		<p class="label">Mikrofon</p>
+		<p class="label">Abgleichen</p>
 		<div class="line">
-			<span>Verzögerung</span>
-			<button type="button" class="mini" disabled={calibration === 'running'} onclick={calibrate}
-				>Verzögerung abgleichen</button
+			<span>Mithören</span>
+			<button
+				type="button"
+				class="mini"
+				aria-label="Verzögerung abgleichen"
+				disabled={calibration === 'running'}
+				onclick={calibrate}>Abgleichen</button
 			>
 		</div>
 		<p class="hint" data-testid="verzoegerung">{latencyText}</p>
+		<div class="line">
+			<span>Tippen</span>
+			<button
+				type="button"
+				class="mini"
+				class:todo={tapOffset === null}
+				aria-label="Tippen abgleichen"
+				aria-haspopup="dialog"
+				onclick={startTapcal}>Abgleichen</button
+			>
+		</div>
+		<p class="hint" data-testid="tippen-stand">
+			{tapOffset === null
+				? 'Noch nicht abgeglichen. Einmal pro Gerät; macht »Rhythmus« und Prüfungen mit Tippen genauer.'
+				: `${tapOffsetText(tapOffset)} Wird beim Rhythmus herausgerechnet.`}
+		</p>
 	</div>
 
 	<div class="group links">
 		<a href={resolve('/aufwaermen')}>Aufwärmen →</a>
 		<a href={resolve('/guugge')}>Meine Guugge →</a>
 	</div>
+</Sheet>
+
+<Sheet open={sheet === 'tippen'} label="Tippen abgleichen" onclose={closeTapcal}>
+	{#if tapcalResult === null}
+		<h2 class="tc-h">Tippe mit dem Klick</h2>
+		<p class="hint">
+			Erst vier Klicks zuhören, dann {TAPCAL_MEASURED}-mal mittippen. Irgendwo auf dem Feld.
+		</p>
+		<button
+			type="button"
+			class="tc-pad"
+			class:flash={tapcalFlash}
+			aria-label="Tippen"
+			data-testid="tippen-feld"
+			onpointerdown={(e) => {
+				e.preventDefault();
+				tapcalTap();
+			}}
+		>
+			<span class="tc-ring" class:listen={tapcalPhase.kind !== 'tap'}>
+				{#if tapcalPhase.kind === 'tap'}
+					<b>{tapcalPhase.n}</b><small>von {TAPCAL_MEASURED}</small>
+				{:else if tapcalPhase.kind === 'listen'}
+					<b>{tapcalPhase.n}</b><small>zuhören</small>
+				{:else}
+					<small>gleich …</small>
+				{/if}
+			</span>
+		</button>
+		<div class="tc-dots" aria-hidden="true">
+			{#each tapcalDots as d, i (i)}<i
+					class:on={d}
+					class:now={tapcalPhase.kind === 'tap' && tapcalPhase.n === i + 1}
+				></i>{/each}
+		</div>
+		<p class="hint tc-center">Auch die Leertaste geht.</p>
+	{:else if tapcalResult === 'nosound'}
+		<h2 class="tc-h">Geht hier nicht</h2>
+		<p class="hint">Dieser Browser kann keine Klicks abspielen.</p>
+	{:else}
+		<div role="status">
+			{#if tapcalResult.kind === 'ok'}
+				<h2 class="tc-h">{tapOffsetText(tapcalResult.offset.sec)}</h2>
+				<p class="hint">Das rechnet die App ab jetzt beim Rhythmus heraus, auf diesem Gerät.</p>
+			{:else}
+				<h2 class="tc-h">
+					{tapcalResult.kind === 'few' ? 'Zu wenige Tipps erkannt.' : 'Zu unregelmässig getippt.'}
+				</h2>
+				<p class="hint">
+					Versuch es nochmals, ganz locker im Takt.{tapOffset === null
+						? ''
+						: ' Der alte Wert bleibt.'}
+				</p>
+			{/if}
+		</div>
+		<div class="tc-btns">
+			<button type="button" class="btn ghost" onclick={startTapcal}>Nochmals</button>
+			<button type="button" class="btn tc-ok" onclick={closeTapcal}>Fertig</button>
+		</div>
+	{/if}
 </Sheet>
 
 <!-- Band ohne mich und eigene Stimme; Quelle setzt StemPlayer. crossorigin, weil /audio/ auf
@@ -1631,6 +1804,115 @@
 	.modehint {
 		font-size: 13px;
 		margin: 4px 6px 0;
+	}
+	/* Hinweis »Tippen abgleichen« im Reiter Rhythmus, bis einmal abgeglichen ist */
+	.tipbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+		margin: 6px 0 0;
+		padding: 6px 10px;
+		border: 2px solid var(--gelb);
+		border-radius: 12px;
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.tiplink {
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--gelb);
+		font: 700 14px var(--font-body);
+		white-space: nowrap;
+		min-height: 36px;
+		cursor: pointer;
+	}
+	.mini.todo {
+		border-color: var(--gelb);
+		color: var(--gelb);
+	}
+	/* Blatt »Tippen abgleichen« */
+	.tc-h {
+		margin: 4px 0 6px;
+		font-size: 21px;
+	}
+	.tc-pad {
+		appearance: none;
+		display: grid;
+		place-items: center;
+		width: min(240px, 70vw);
+		aspect-ratio: 1;
+		margin: 14px auto 10px;
+		border-radius: 50%;
+		border: 2px solid var(--line);
+		background: var(--surface2);
+		cursor: pointer;
+		touch-action: manipulation;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+	.tc-ring {
+		width: 66%;
+		aspect-ratio: 1;
+		border-radius: 50%;
+		display: grid;
+		place-content: center;
+		text-align: center;
+		background: var(--blau);
+		color: #141619;
+		transition: box-shadow 80ms;
+	}
+	.tc-ring.listen {
+		background: var(--surface);
+		color: var(--ink);
+		border: 2px solid var(--blau);
+	}
+	.tc-pad.flash .tc-ring {
+		box-shadow: 0 0 0 14px color-mix(in srgb, var(--blau) 30%, transparent);
+	}
+	.tc-ring b {
+		font-size: 52px;
+		line-height: 1;
+	}
+	.tc-ring small {
+		font-size: 13px;
+		font-weight: 700;
+	}
+	.tc-dots {
+		display: flex;
+		gap: 5px;
+		justify-content: center;
+	}
+	.tc-dots i {
+		width: 14px;
+		height: 14px;
+		box-sizing: border-box;
+		border-radius: 50%;
+		border: 2px solid var(--line);
+	}
+	.tc-dots i.on {
+		background: var(--gruen);
+		border-color: var(--gruen);
+	}
+	.tc-dots i.now {
+		border-color: var(--blau);
+	}
+	.tc-center {
+		text-align: center;
+	}
+	.tc-btns {
+		display: flex;
+		gap: 8px;
+		margin-top: 14px;
+	}
+	.tc-btns .btn {
+		flex: 1;
+		min-height: 48px;
+	}
+	.btn.tc-ok {
+		background: var(--gelb);
+		color: #141619;
 	}
 
 	/* Bahn oder Noten; Rückmeldung und Prüfungsergebnis liegen darüber */

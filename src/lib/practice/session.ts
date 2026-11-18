@@ -57,6 +57,8 @@ export interface FrameInfo {
 	beat: number;
 	/** Ausgabe-Latenz des Geräts in Sekunden (0 ohne Ton) */
 	latency: number;
+	/** Gemessener Versatz beim Tippen (Tippen abgleichen), ersetzt Latenz + 15 ms; null = keiner */
+	tapOffset?: number | null;
 	/** Tempo, 1 = 100 % */
 	rate: number;
 	/** Sprungziel mit Anlauf (Takt) oder null */
@@ -199,7 +201,10 @@ export class PracticeSession {
 	tap(f: FrameInfo): TapResult {
 		if (this.mode !== 'rhythm') return { kind: 'ignored' };
 		if (this.passFrom === null) this.passFrom = Math.max(f.beat - 1, startBeat(f.target));
-		const r = judgeTap(this.ctx(f), tapBeat(f.beat, f.latency, this.spb, f.rate));
+		const r = judgeTap(
+			this.ctx(f),
+			tapBeat(f.beat, f.latency, this.spb, f.rate, f.tapOffset ?? null)
+		);
 		if (r.kind === 'judged') {
 			this.judged.set(r.index, r.verdict);
 			this.deviations.set(r.index, r.deviationSec);
@@ -211,7 +216,7 @@ export class PracticeSession {
 	catchMisses(f: FrameInfo): boolean {
 		if (this.mode !== 'rhythm') return false;
 		if (this.passFrom === null) this.passFrom = Math.max(f.beat, startBeat(f.target));
-		const missed = missedNotes(this.ctx(f), f.beat, f.latency);
+		const missed = missedNotes(this.ctx(f), f.beat, f.latency, f.tapOffset ?? null);
 		for (const i of missed) this.judged.set(i, 'none');
 		return missed.length > 0;
 	}
