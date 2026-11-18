@@ -195,6 +195,7 @@ Mit einer zweiten E-Mail-Adresse ein Wegwerf-Konto anlegen, in die Testguugge ei
 | Du: Mitgliederliste der Testguugge | Wegwerf-Konto ist weg | | |
 | Supabase → Authentication → Users | Wegwerf-Adresse nicht mehr da | | |
 | Wegwerf-Adresse nochmals anmelden | neues, leeres Konto (»Noch in keiner Guugge.«) | | |
+| Vorher (optional): Wegwerf-Konto tritt aus der Testguugge aus und wieder bei | Rückfrage nennt »Etappen und Punkte … werden gelöscht«; nach dem Wiederbeitritt ist »Mein Plan« wieder bei null | | |
 
 ## Bemerkungen
 

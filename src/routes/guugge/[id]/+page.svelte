@@ -134,9 +134,10 @@
 
 	function remove(m: Member) {
 		const self = m.user_id === auth.user?.id;
+		// Austritt löscht Etappen und Punkte in dieser Guugge (Entscheid Matthias 18.11.2026)
 		const text = self
-			? `Aus »${me?.name}« austreten?`
-			: `${m.display_name || 'Diese Person'} aus der Guugge entfernen?`;
+			? `Aus »${me?.name}« austreten? Deine Etappen und Punkte in dieser Guugge werden gelöscht.`
+			: `${m.display_name || 'Diese Person'} aus der Guugge entfernen? Etappen und Punkte dieser Person in der Guugge werden gelöscht.`;
 		if (!confirm(text)) return;
 		void run(async () => {
 			await removeMember(sb!, id, m.user_id);

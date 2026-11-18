@@ -884,3 +884,59 @@ describe('Rangliste: Woche in Schweizer Zeit', () => {
 		).toEqual([{ points: 15, week_points: 10 }]);
 	});
 });
+
+describe('Austritt: Daten in dieser Guugge werden gelöscht (Entscheid Matthias 18.11.2026)', () => {
+	const count = (f: Fixture, sql: string, params: unknown[]) =>
+		f.db.owner<{ n: number }>(`select count(*)::int as n from ${sql}`, params).then((r) => r[0].n);
+
+	it('Etappen, Versuche, Punkte und gelesene Hinweise dieser Guugge weg; anderes bleibt', async () => {
+		const f = await fixture();
+		const me = f.trp[1];
+		// zusätzlich Mitglied der anderen Guugge, mit Punkten dort
+		const [{ create_invite: token }] = await f.db.as<{ create_invite: string }>(
+			f.fremd,
+			`select create_invite($1)`,
+			[f.fremdGuugge]
+		);
+		await f.db.as(me, `select accept_invite($1)`, [token]);
+		await passed(f, me.id, 1, 1);
+		await passed(f, f.trp[0].id, 1, 1);
+		await f.db.as(
+			'service',
+			`insert into points_ledger (user_id, guugge_id, points, reason) values ($1, $2, 25, 'Wochenziel')`,
+			[me.id, f.fremdGuugge]
+		);
+		await f.db.owner(`insert into practice_days (user_id, day) values ($1, current_date)`, [me.id]);
+		await f.db.as(me, `select start_exam($1, 'test-titel', 1, 2, 'grip')`, [f.guugge]);
+		const [{ add_hint: hint }] = await f.db.as<{ add_hint: string }>(
+			f.leitung,
+			`select add_hint($1, 'test-titel', 1, 2, 'alle', 'atem', null, null)`,
+			[f.guugge]
+		);
+		await f.db.as(me, `select mark_hints_read(array[$1]::uuid[])`, [hint]);
+
+		await f.db.as(me, `select remove_member($1, $2)`, [f.guugge, me.id]);
+
+		for (const t of [
+			'exam_results where user_id = $1 and guugge_id = $2',
+			'exam_attempts where user_id = $1 and guugge_id = $2',
+			'points_ledger where user_id = $1 and guugge_id = $2',
+			'hint_reads r join hints h on h.id = r.hint_id where r.user_id = $1 and h.guugge_id = $2'
+		]) {
+			expect(await count(f, t, [me.id, f.guugge]), t).toBe(0);
+		}
+		// bleibt: Punkte in der anderen Guugge, Übetage (gehören zum Konto), Werte der anderen
+		expect(await count(f, 'points_ledger where user_id = $1 and guugge_id = $2', [me.id, f.fremdGuugge])).toBe(1);
+		expect(await count(f, 'practice_days where user_id = $1', [me.id])).toBe(1);
+		expect(await count(f, 'exam_results where user_id = $1', [f.trp[0].id])).toBe(1);
+		expect(await count(f, 'hints where id = $1', [hint])).toBe(1);
+	});
+
+	it('Entfernen durch die Leitung löscht dasselbe', async () => {
+		const f = await fixture();
+		await passed(f, f.pos[0].id, 1, 1);
+		await f.db.as(f.leitung, `select remove_member($1, $2)`, [f.guugge, f.pos[0].id]);
+		expect(await count(f, 'exam_results where user_id = $1', [f.pos[0].id])).toBe(0);
+		expect(await count(f, 'points_ledger where user_id = $1', [f.pos[0].id])).toBe(0);
+	});
+});
