@@ -757,3 +757,110 @@ describe('Hinweise ohne Neuladen (Realtime)', () => {
 		expect(await sees(f.fremd)).toBe(0);
 	});
 });
+
+describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
+	const count = (f: Fixture, sql: string, params: unknown[]) =>
+		f.db.owner<{ n: number }>(`select count(*)::int as n from ${sql}`, params).then((r) => r[0].n);
+
+	it('nicht angemeldet: nichts zu löschen', async () => {
+		const f = await fixture();
+		await expect(f.db.as('anon', `select delete_my_account('löschen')`)).rejects.toThrow(DENIED);
+		await expect(f.db.as('anon', `select my_account_deletion()`)).rejects.toThrow(DENIED);
+	});
+
+	it('ohne »löschen« passiert nichts', async () => {
+		const f = await fixture();
+		await expect(f.db.as(f.trp[1], `select delete_my_account('ja')`)).rejects.toThrow(
+			'Zum Bestätigen »löschen« eintippen.'
+		);
+		expect(await count(f, 'auth.users where id = $1', [f.trp[1].id])).toBe(1);
+	});
+
+	it('Mitglied: Konto und alles Persönliche weg, die anderen bleiben unberührt', async () => {
+		const f = await fixture();
+		const me = f.trp[1].id;
+		await passed(f, me, 1, 1);
+		await passed(f, f.trp[0].id, 1, 1);
+		await f.db.owner(`insert into practice_days (user_id, day) values ($1, current_date)`, [me]);
+		await f.db.as('anon', `select signup('t2@test.ch', true)`);
+		await f.db.as('anon', `select signup('andere@test.ch', true)`);
+		const [{ add_hint: hint }] = await f.db.as<{ add_hint: string }>(
+			f.leitung,
+			`select add_hint($1, 'test-titel', 1, 2, 'alle', 'atem', null, null)`,
+			[f.guugge]
+		);
+		await f.db.as(f.trp[1], `select mark_hints_read(array[$1]::uuid[])`, [hint]);
+
+		expect(await f.db.as(f.trp[1], `select my_account_deletion() as d`)).toEqual([
+			{ d: { blocking: [], alone: [] } }
+		]);
+		await f.db.as(f.trp[1], `select delete_my_account(' Löschen ')`);
+
+		for (const t of [
+			'auth.users where id = $1',
+			'profiles where id = $1',
+			'memberships where user_id = $1',
+			'exam_results where user_id = $1',
+			'points_ledger where user_id = $1',
+			'practice_days where user_id = $1',
+			'hint_reads where user_id = $1'
+		]) {
+			expect(await count(f, t, [me]), t).toBe(0);
+		}
+		expect(await count(f, `signups where email = $1`, ['t2@test.ch'])).toBe(0);
+		expect(await count(f, `signups where email = $1`, ['andere@test.ch'])).toBe(1);
+		// die anderen: Guugge, Mitglieder, Werte und Hinweis bleiben
+		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+		expect(await count(f, 'memberships where guugge_id = $1', [f.guugge])).toBe(5);
+		expect(await count(f, 'exam_results where user_id = $1', [f.trp[0].id])).toBe(1);
+		expect(await count(f, 'hints where id = $1', [hint])).toBe(1);
+	});
+
+	it('einzige Leitung mit anderen Mitgliedern: gesperrt, bis die Leitung abgegeben ist', async () => {
+		const f = await fixture();
+		expect(await f.db.as(f.leitung, `select my_account_deletion() as d`)).toEqual([
+			{ d: { blocking: [{ id: f.guugge, name: 'Schuegu' }], alone: [] } }
+		]);
+		await expect(f.db.as(f.leitung, `select delete_my_account('löschen')`)).rejects.toThrow(
+			'Gib zuerst die Leitung ab: »Schuegu«'
+		);
+		expect(await count(f, 'auth.users where id = $1', [f.leitung.id])).toBe(1);
+
+		// Leitung abgeben, dann geht es; der Hinweis der Leitung bleibt ohne Verfasser
+		const [{ add_hint: hint }] = await f.db.as<{ add_hint: string }>(
+			f.leitung,
+			`select add_hint($1, 'test-titel', 1, 2, 'alle', 'atem', null, null)`,
+			[f.guugge]
+		);
+		await f.db.as(f.leitung, `select set_member_role($1, $2, 'leitung')`, [f.guugge, f.chef.id]);
+		expect(await f.db.as(f.leitung, `select my_account_deletion() as d`)).toEqual([
+			{ d: { blocking: [], alone: [] } }
+		]);
+		await f.db.as(f.leitung, `select delete_my_account('löschen')`);
+		expect(await count(f, 'profiles where id = $1', [f.leitung.id])).toBe(0);
+		expect(
+			await f.db.owner(`select created_by from hints where id = $1`, [hint])
+		).toEqual([{ created_by: null }]);
+		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+	});
+
+	it('Guugge, in der man allein ist, geht mit; fremde Guuggen bleiben', async () => {
+		const f = await fixture();
+		expect(await f.db.as(f.fremd, `select my_account_deletion() as d`)).toEqual([
+			{ d: { blocking: [], alone: [{ id: f.fremdGuugge, name: 'Andere Guugge' }] } }
+		]);
+		await f.db.as(f.fremd, `select delete_my_account('löschen')`);
+		expect(await count(f, 'guuggen where id = $1', [f.fremdGuugge])).toBe(0);
+		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+	});
+
+	it('Hilfsfunktionen sind von aussen nicht aufrufbar', async () => {
+		const f = await fixture();
+		await expect(
+			f.db.as(f.trp[1], `select * from guuggen_blocking_deletion($1)`, [f.leitung.id])
+		).rejects.toThrow(DENIED);
+		await expect(
+			f.db.as(f.trp[1], `select * from guuggen_alone($1)`, [f.fremd.id])
+		).rejects.toThrow(DENIED);
+	});
+});

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { ready } from './practice';
 import { FakeSupabase } from './fake-supabase';
 
 // Punkte für bewertete Durchgänge: »Stück üben« meldet jeden Durchgang in der Schleife beim
@@ -20,6 +21,7 @@ test('Durchgang in der Schleife wird angemeldet, abgeschlossen und neu gestartet
 	await fake.signIn(page, 'lea@test.ch');
 
 	await page.goto('/ueben');
+	await ready(page);
 	await page.getByRole('button', { name: 'Rhythmus', exact: true }).click();
 	await page.getByLabel('Teil').selectOption({ label: 'Teil C · 13–16' });
 	await page.getByRole('button', { name: 'Schleife' }).click();

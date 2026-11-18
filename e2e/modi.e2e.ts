@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { ready } from './practice';
 
 // Übe-Modi in /ueben ohne Ton (ohne Testzugang läuft die Bahn mit der eigenen Uhr). Die Zeiten sind
 // echt: Teil C (T. 13–16) dauert mit Anlauf gut 10 s, die ersten zwei Echo-Takte gut 6 s.
@@ -10,6 +11,8 @@ test('Rhythmus tippen: Rückmeldung, Durchgang in der Schleife, Tempo-Vorschlag,
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/ueben');
+
+	await ready(page);
 
 	await page.getByRole('button', { name: 'Rhythmus', exact: true }).click();
 	await expect(page.getByTestId('modus-hinweis')).toContainText('Tippe bei jedem Ton');
@@ -47,6 +50,7 @@ test('Rhythmus tippen: Rückmeldung, Durchgang in der Schleife, Tempo-Vorschlag,
 test('Echo: erst »Hör zu«, nach zwei Takten »Jetzt du«', async ({ page }) => {
 	test.setTimeout(30_000);
 	await page.goto('/ueben');
+	await ready(page);
 	await page.getByRole('button', { name: 'Echo' }).click();
 	await expect(page.getByTestId('modus-hinweis')).toContainText('Zwei Takte hören');
 

@@ -115,6 +115,23 @@ export const setMemberRole = (sb: SupabaseClient, guugge: string, user: string, 
 export const removeMember = (sb: SupabaseClient, guugge: string, user: string) =>
 	call<void>(sb, 'remove_member', { p_guugge: guugge, p_user: user });
 
+/** Für »Konto löschen«: Guuggen, die sperren (einzige Leitung), und solche, die mitgehen (allein). */
+export interface AccountDeletion {
+	blocking: { id: string; name: string }[];
+	alone: { id: string; name: string }[];
+}
+
+export const myAccountDeletion = (sb: SupabaseClient) =>
+	call<AccountDeletion>(sb, 'my_account_deletion');
+
+/** Das Wort, das zum Löschen eingetippt werden muss (prüft auch die Datenbank). */
+export const DELETE_WORD = 'löschen';
+
+export const confirmsDeletion = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
+
+export const deleteMyAccount = (sb: SupabaseClient, typed: string) =>
+	call<void>(sb, 'delete_my_account', { p_confirm: typed });
+
 export interface StoredPlan {
 	start: string;
 	perf: string;

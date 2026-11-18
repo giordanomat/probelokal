@@ -6,8 +6,9 @@
 // Die Sitzung liegt im Speicher des Browsers (supabase-js, localStorage), pro Gerät.
 
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
-import { accountErrorText, AccountError } from './api.ts';
+import { accountErrorText, AccountError, deleteMyAccount } from './api.ts';
 import { clearBestPoints } from '../game/unlocks.ts';
+import { forgetDevice } from './forget.ts';
 
 export const auth = $state<{ ready: boolean; user: User | null }>({ ready: false, user: null });
 
@@ -66,4 +67,22 @@ export async function signOut(sb: SupabaseClient) {
 	await check(sb.auth.signOut());
 	// Belohnungen auf dem Gerät gehören zum Konto
 	clearBestPoints(localStorage);
+}
+
+/**
+ * Konto löschen (Datenbank-Funktion delete_my_account), danach auf diesem Gerät abmelden und alles
+ * von Probelokal vergessen. Abmelden nur lokal: Das Konto gibt es dann nicht mehr, der Server kennt
+ * die Sitzung nicht und antwortet mit einem Fehler, den supabase-js bei »local« übergeht.
+ */
+export async function deleteAccount(sb: SupabaseClient, typed: string) {
+	await deleteMyAccount(sb, typed);
+	try {
+		await sb.auth.signOut({ scope: 'local' });
+	} catch {
+		// Sitzung ist ohnehin ungültig
+	}
+	await forgetDevice(
+		typeof localStorage === 'undefined' ? undefined : localStorage,
+		typeof caches === 'undefined' ? undefined : caches
+	);
 }
