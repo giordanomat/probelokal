@@ -183,6 +183,19 @@ rollback;
 
 Ungeprüft: Die Abfrage lief bisher nur im Nachbau, nicht im SQL Editor von Supabase. Kommt eine andere Fehlermeldung oder gar keine, Bildschirmfoto an Claude.
 
+## 10 · Konto löschen (seit 18.11.2026; Wegwerf-Konto, nicht dein echtes)
+
+Mit einer zweiten E-Mail-Adresse ein Wegwerf-Konto anlegen, in die Testguugge einladen, eine Etappe ablegen.
+
+| Prüfung | Soll | Ist | OK? |
+|---|---|---|---|
+| Du (einzige Leitung): »Meine Guuggen« → ganz unten »Löschen …« | Blatt mit »Zuerst die Leitung abgeben« und Link zur Testguugge; Feld und Knopf gesperrt. Nichts löschen, »Abbrechen« | | |
+| Wegwerf-Konto: »Löschen …«, »ja« eintippen | Knopf bleibt gesperrt | | |
+| »löschen« eintippen, »Konto löschen« | »Dein Konto ist gelöscht.«; kein Fehler. Kommt »Das hat nicht geklappt«, Bildschirmfoto an Claude (dann darf die Datenbank `auth.users` nicht löschen) | | |
+| Du: Mitgliederliste der Testguugge | Wegwerf-Konto ist weg | | |
+| Supabase → Authentication → Users | Wegwerf-Adresse nicht mehr da | | |
+| Wegwerf-Adresse nochmals anmelden | neues, leeres Konto (»Noch in keiner Guugge.«) | | |
+
 ## Bemerkungen
 
 -

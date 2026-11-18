@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountErrorText } from './api';
+import { accountErrorText, confirmsDeletion } from './api';
 import {
 	hasPendingInvite,
 	inviteUrl,
@@ -85,5 +85,15 @@ describe('Fehlertexte', () => {
 			'Das hat nicht geklappt. Versuch es nochmal.'
 		);
 		expect(accountErrorText(undefined)).toBe('Das hat nicht geklappt. Versuch es nochmal.');
+	});
+});
+
+describe('Konto löschen: Bestätigung', () => {
+	it('nur »löschen«, gross oder klein, mit Leerzeichen am Rand', () => {
+		expect(confirmsDeletion('löschen')).toBe(true);
+		expect(confirmsDeletion('  Löschen ')).toBe(true);
+		expect(confirmsDeletion('loeschen')).toBe(false);
+		expect(confirmsDeletion('ja')).toBe(false);
+		expect(confirmsDeletion('')).toBe(false);
 	});
 });

@@ -72,5 +72,11 @@ Bewertung: getroffen = 1, knapp/falsche Stufe = 0,5. Der Stand eines Teils zähl
 - Mithören funktioniert nur beim Einzelüben mit Kopfhörern.
 - Offline: Stücke vorab aufs Gerät laden (Probelokale ohne Empfang).
 
+### Konto löschen (Entscheid Matthias 18.11.2026, nach Entwurf)
+- Ganz unten unter »Meine Guuggen« eine eigene Karte »Dein Konto · Löschen …«, getrennt von »Abmelden«. Das Blatt sagt, was danach weg ist (E-Mail und Anmeldung, Name, Stimmen, Mitgliedschaften, Etappen, Punkte, Level, Übetage, Platz in der Rangliste, Guuggen, in denen man allein ist) und was für die anderen bleibt (Hinweise der Leitung ohne Namen, Guuggen mit anderen Mitgliedern).
+- Bestätigen durch Eintippen von »löschen«. Sofort, ohne Bedenkzeit. Der Eintrag in der Startliste der Landingpage mit derselben E-Mail geht mit.
+- Wer in einer Guugge mit anderen die einzige Leitung ist, muss die Leitung zuerst abgeben; das Blatt zeigt den Weg in diese Guugge.
+- Danach »Dein Konto ist gelöscht.«; auf dem Gerät sind Einstellungen, Baustellen, Belohnungen und gespeicherte Aufnahmen entfernt (`src/lib/account/forget.ts`).
+
 ## Rollen
 Musikalische Leitung · Registerchef · Mitglied. Im Prototyp nur über die Freigabestufe angenähert; im Produkt echte Rollen pro Guugge.

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { fakeAudio } from './audio';
-import { closeSheet, openMore } from './practice';
+import { closeSheet, openMore, ready } from './practice';
 
 // Mithören mit künstlichem Mikrofon (Chromium spielt ein WAV ab, siehe e2e/global-setup.ts):
 // Sägezahn auf klingendem G4, für Trompete notiert A4 (MIDI 69). Echte Bläser, Handymikrofone und
@@ -74,6 +74,8 @@ test('ohne Mikrofon-Freigabe: verständliche Meldung', async ({ browser }) => {
 			Promise.reject(new DOMException('nein', 'NotAllowedError'));
 	});
 	await page.goto('/ueben');
+	// erst nach dem Hydrieren klicken, sonst geht der Klick ins Leere
+	await ready(page);
 	await page.getByRole('button', { name: 'Mithören' }).click();
 	await expect(page.getByRole('button', { name: 'Mithören' })).toHaveAttribute(
 		'aria-pressed',

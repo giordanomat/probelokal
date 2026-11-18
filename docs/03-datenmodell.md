@@ -29,7 +29,7 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 - Wie Registerchefs Hinweise für ihr Register schreiben dürfen (heute nur Leitung).
 - Ob Baustellen (heute nur lokal) serverseitig gespeichert werden sollen – Vorschlag: nein, bleiben auf dem Gerät.
 - Mehrere Fassungen desselben Titels (Version in `titles.version`, eigene Zeile pro Fassung).
-- Löschkonzept: Konto löschen, Guugge auflösen. Beim Austritt bleiben Etappen, Punkte und Übetage bei der Person.
+- Löschkonzept: **Konto löschen gebaut** (Migration `20261118100000_m2_konto_loeschen`, Funktionen `my_account_deletion` und `delete_my_account`, Entscheid Matthias 18.11.2026): löscht den Eintrag in `auth.users`, daran hängt per `on delete cascade` alles Persönliche; Guuggen, in denen die Person allein ist, und ihr Eintrag in `signups` gehen mit; `hints.created_by` wird `null` (bisher ohne Löschregel, das Löschen wäre daran gescheitert). Einzige Leitung einer Guugge mit anderen: gesperrt. **Ungeprüft** gegen das echte Projekt: ob die Rolle `postgres`, der die Funktion gehört, in `auth.users` löschen darf. Offen: Guugge auflösen; beim Austritt bleiben Etappen, Punkte und Übetage bei der Person (Vorschlag aus dem Entwurf Datenschutz: beim Austritt löschen, noch nicht entschieden).
 - Zweitkonten: Wer als Leitung eigene Zweitkonten einlädt, kann ein Register auf drei Personen bringen und Einzelwerte zurückrechnen. Das verhindern Datenbankregeln nicht; siehe docs/02.
 - Teile ohne Noten für eine Stimme (»Pause für dich«) zählen in `register_overview` noch mit Etappe 0.
 - Woche in `register_overview` und `leaderboard` beginnt Montag 0 Uhr in der Zeitzone der Datenbank (bei Supabase UTC), nicht Schweizer Zeit.
@@ -60,6 +60,8 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 Der Ablauf ist **ungeprüft**, bis er zum ersten Mal läuft: Die CLI liess sich hier nicht installieren, die Downloads von GitHub sind gesperrt. Ebenfalls ungeprüft ist, ob die minimale `supabase/config.toml` der CLI genügt.
 
 ## Angewendet (Stand 25.10.2026, im Supabase-Projekt `qieunfhizsxsyzmrrvci` nachgesehen)
+
+**Mit PR »Konto löschen«:** 15. Migration `20261118100000_m2_konto_loeschen`, wird beim Merge angewendet; danach im Migrationsverlauf nachsehen (15 Zeilen).
 
 **Stand 05.11.2026:** 14 Migrationen im Verlauf, zuletzt `20261103140000_m2_aufwaermen` (von der GitHub-Anbindung beim Merge von PR #9 angewendet; Bildschirm Matthias).
 

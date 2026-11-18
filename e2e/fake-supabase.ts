@@ -241,6 +241,10 @@ export class FakeSupabase {
 
 	private async userFor(email: string) {
 		let id = this.users.get(email);
+		// Konto gelöscht (delete_my_account): beim nächsten Anmelden ein neues, wie bei Supabase
+		if (id && !(await this.db.owner(`select 1 from auth.users where id = $1`, [id])).length) {
+			id = undefined;
+		}
 		if (!id) {
 			id = await this.db.user(email);
 			this.users.set(email, id);
