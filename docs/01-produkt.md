@@ -79,5 +79,11 @@ Bewertung: getroffen = 1, knapp/falsche Stufe = 0,5. Der Stand eines Teils zähl
 - Wer in einer Guugge mit anderen die einzige Leitung ist, muss die Leitung zuerst abgeben; das Blatt zeigt den Weg in diese Guugge.
 - Danach »Dein Konto ist gelöscht.«; auf dem Gerät sind Einstellungen, Baustellen, Belohnungen und gespeicherte Aufnahmen entfernt (`src/lib/account/forget.ts`).
 
+### Guugge auflösen (Entscheid Matthias 18.11.2026, nach Entwurf)
+- Nur für die Leitung (jede Leitung, nicht nur die einzige): ganz unten auf der Seite der Guugge eine rote Karte »Guugge auflösen · Auflösen …«. Das Blatt sagt, was für alle weg ist (die Guugge für alle Mitglieder, Gesamtplan, Hinweise, Etappen und Punkte aller in dieser Guugge, Rangliste, Belohnungen, Einladungslinks) und was bleibt (Konten der Mitglieder, ihre anderen Guuggen, Übetage). Bestätigen mit dem Namen der Guugge (gross/klein egal), weil es alle trifft.
+- Danach »Meine Guuggen« mit »»Name« ist aufgelöst.« Mitglieder werden nicht benachrichtigt; wer die Seite noch offen hat, sieht »Diese Guugge findest du hier nicht.« mit dem Weg zu den eigenen Guuggen.
+- Solange die Guugge ein gekauftes Arrangement (Lizenz) hat, ist das Auflösen gesperrt, mit dem Hinweis, sich bei hallo@probelokal.ch zu melden.
+- Das Blatt zum Bestätigen ist dasselbe wie bei »Konto löschen« (`src/lib/ui/DangerConfirm.svelte`).
+
 ## Rollen
 Musikalische Leitung · Registerchef · Mitglied. Im Prototyp nur über die Freigabestufe angenähert; im Produkt echte Rollen pro Guugge.

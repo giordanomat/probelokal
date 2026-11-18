@@ -129,6 +129,13 @@ export const DELETE_WORD = 'löschen';
 
 export const confirmsDeletion = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
 
+/** Guugge auflösen (nur Leitung); bestätigt mit dem Namen der Guugge, gross/klein egal. */
+export const dissolveGuugge = (sb: SupabaseClient, guugge: string, typedName: string) =>
+	call<void>(sb, 'dissolve_guugge', { p_guugge: guugge, p_name: typedName });
+
+export const namesMatch = (typed: string, name: string) =>
+	typed.trim().toLowerCase() === name.trim().toLowerCase() && name.trim() !== '';
+
 export const deleteMyAccount = (sb: SupabaseClient, typed: string) =>
 	call<void>(sb, 'delete_my_account', { p_confirm: typed });
 

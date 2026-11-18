@@ -200,6 +200,16 @@ Mit einer zweiten E-Mail-Adresse ein Wegwerf-Konto anlegen, in die Testguugge ei
 | Wegwerf-Adresse nochmals anmelden | neues, leeres Konto (»Noch in keiner Guugge.«) | | |
 | Vorher (optional): Wegwerf-Konto tritt aus der Testguugge aus und wieder bei | Rückfrage nennt »Etappen und Punkte … werden gelöscht«; nach dem Wiederbeitritt ist »Mein Plan« wieder bei null | | |
 
+## 11 · Guugge auflösen (seit 18.11.2026; mit einer Wegwerf-Guugge, nicht der Testguugge)
+
+| Prüfung | Soll | Ist | OK? |
+|---|---|---|---|
+| Neue Guugge »Weg« anlegen, T2 einladen | T2 ist Mitglied | | |
+| T2 auf der Seite von »Weg« | keine Karte »Guugge auflösen« | | |
+| Du: ganz unten »Auflösen …«, falschen Namen eintippen | Knopf bleibt gesperrt | | |
+| Richtigen Namen (klein geschrieben geht auch), »Guugge auflösen« | »Meine Guuggen« mit »»Weg« ist aufgelöst.«; kommt ein Fehler, Bildschirmfoto an Claude | | |
+| T2 lädt die Seite von »Weg« neu | »Diese Guugge findest du hier nicht.« mit »Zu meinen Guuggen →« | | |
+
 ## Bemerkungen
 
 -

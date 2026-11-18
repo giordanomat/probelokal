@@ -940,3 +940,64 @@ describe('Austritt: Daten in dieser Guugge werden gelöscht (Entscheid Matthias 
 		expect(await count(f, 'points_ledger where user_id = $1', [f.pos[0].id])).toBe(0);
 	});
 });
+
+describe('Guugge auflösen (Entscheid Matthias 18.11.2026)', () => {
+	const count = (f: Fixture, sql: string, params: unknown[]) =>
+		f.db.owner<{ n: number }>(`select count(*)::int as n from ${sql}`, params).then((r) => r[0].n);
+
+	it('nur die Leitung, nur mit dem richtigen Namen', async () => {
+		const f = await fixture();
+		await expect(
+			f.db.as(f.chef, `select dissolve_guugge($1, 'Schuegu')`, [f.guugge])
+		).rejects.toThrow('Nur die Leitung kann die Guugge auflösen.');
+		await expect(
+			f.db.as(f.leitung, `select dissolve_guugge($1, 'Schuegi')`, [f.guugge])
+		).rejects.toThrow('Zum Bestätigen den Namen der Guugge eintippen.');
+		await expect(f.db.as('anon', `select dissolve_guugge($1, 'Schuegu')`, [f.guugge])).rejects.toThrow(
+			DENIED
+		);
+		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+	});
+
+	it('alles der Guugge weg, Konten, andere Guuggen und Übetage bleiben', async () => {
+		const f = await fixture();
+		await passed(f, f.trp[1].id, 1, 1);
+		await f.db.owner(`insert into practice_days (user_id, day) values ($1, current_date)`, [f.trp[1].id]);
+		const [{ add_hint: hint }] = await f.db.as<{ add_hint: string }>(
+			f.leitung,
+			`select add_hint($1, 'test-titel', 1, 2, 'alle', 'atem', null, null)`,
+			[f.guugge]
+		);
+		await f.db.as(f.trp[1], `select mark_hints_read(array[$1]::uuid[])`, [hint]);
+		await f.db.as(f.leitung, `select create_invite($1)`, [f.guugge]);
+
+		await f.db.as(f.leitung, `select dissolve_guugge($1, '  schuegu ')`, [f.guugge]);
+
+		for (const t of [
+			'guuggen where id = $1',
+			'memberships where guugge_id = $1',
+			'invites where guugge_id = $1',
+			'hints where guugge_id = $1',
+			'exam_results where guugge_id = $1',
+			'points_ledger where guugge_id = $1'
+		]) {
+			expect(await count(f, t, [f.guugge]), t).toBe(0);
+		}
+		expect(await count(f, 'hint_reads where hint_id = $1', [hint])).toBe(0);
+		expect(await count(f, 'profiles where id = $1', [f.trp[1].id])).toBe(1);
+		expect(await count(f, 'practice_days where user_id = $1', [f.trp[1].id])).toBe(1);
+		expect(await count(f, 'guuggen where id = $1', [f.fremdGuugge])).toBe(1);
+	});
+
+	it('mit gekauftem Arrangement gesperrt', async () => {
+		const f = await fixture();
+		await f.db.as('service', `insert into licenses (guugge_id, title_id) values ($1, $2)`, [
+			f.guugge,
+			f.title
+		]);
+		await expect(
+			f.db.as(f.leitung, `select dissolve_guugge($1, 'Schuegu')`, [f.guugge])
+		).rejects.toThrow('gekaufte Arrangements');
+		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+	});
+});
