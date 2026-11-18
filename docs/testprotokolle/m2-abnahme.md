@@ -109,6 +109,9 @@ Vorher die App ganz schliessen und neu öffnen, damit die neue Fassung lädt.
 | Zurufe: Teil G (Takt 28), Teil C (Takt 12) | »Volle Lotte!« vor G, »Die 1 ist Pause!« vor C; keine anderen »Volle Lotte!« vor gewöhnlichen Teilen | | |
 | Zurufe: Mithören, 8 Töne am Stück sauber | »Sehr gut!« o. ä. kurz eingeblendet | | |
 | Achtel mit gleichem Griff | Griff steht einmal darüber, nichts klebt zusammen (kein »1212«) | | |
+| Reiter Rhythmus (mit Testcode) | gelbe Zeile »Noch nicht abgeglichen … Abgleichen ›« | | |
+| »Abgleichen ›«: 4 Klicks zuhören, 12-mal mittippen | Ergebnis »Du tippst … ms nach/vor dem Klick.« Wert notieren (iPhone und iPad, mit und ohne Kopfhörer) | | |
+| Danach Rhythmus tippen | gelbe Zeile weg; Bewertung fühlt sich fair an (nicht systematisch »zu spät«) | | |
 | Gefühl insgesamt | übersichtlich? Was fehlt, was stört? (unter »Bemerkungen«) | | |
 
 ## 5 · Punkte für Üben (T1 auf B)

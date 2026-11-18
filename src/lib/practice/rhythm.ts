@@ -36,9 +36,19 @@ export type TapResult =
 	/** Nächster offener Ton zu weit weg. */
 	| { kind: 'no-note' };
 
-/** Schlag, an dem der Tipp gemeint war: Zeit des Tipps minus Ausgabe- und Touch-Latenz. */
-export function tapBeat(beatNow: number, outputLatencySec: number, spb: number, rate: number) {
-	return beatNow - ((outputLatencySec + TAP_EXTRA_LATENCY_SEC) * rate) / spb;
+/**
+ * Schlag, an dem der Tipp gemeint war: Zeit des Tipps minus Verzögerung. Gemessen (Tippen
+ * abgleichen, src/lib/practice/tapcal.ts) oder sonst Ausgabe-Latenz plus 15 ms für Bildschirm und Touch.
+ */
+export function tapBeat(
+	beatNow: number,
+	outputLatencySec: number,
+	spb: number,
+	rate: number,
+	measuredSec: number | null = null
+) {
+	const delay = measuredSec ?? outputLatencySec + TAP_EXTRA_LATENCY_SEC;
+	return beatNow - (delay * rate) / spb;
 }
 
 /** Tipp dem nächsten offenen Ton zuordnen und bewerten. */
@@ -78,9 +88,14 @@ export function tapFeedback(r: TapResult): { text: string; tone: Tone } | null {
  * Töne, die inzwischen ohne Tipp vorbei sind (mehr als 250 ms nach ihrem Beginn, Latenz eingerechnet).
  * Der Aufrufer markiert sie als 'none'.
  */
-export function missedNotes(ctx: TapContext, beatNow: number, outputLatencySec: number): number[] {
+export function missedNotes(
+	ctx: TapContext,
+	beatNow: number,
+	outputLatencySec: number,
+	measuredSec: number | null = null
+): number[] {
 	const { notes, passFrom, judged, spb, rate } = ctx;
-	const limit = beatNow - ((outputLatencySec + TAP_MAX_SEC) * rate) / spb;
+	const limit = beatNow - (((measuredSec ?? outputLatencySec) + TAP_MAX_SEC) * rate) / spb;
 	const out: number[] = [];
 	for (let i = 0; i < notes.length; i++) {
 		const n = notes[i];
