@@ -864,3 +864,23 @@ describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
 		).rejects.toThrow(DENIED);
 	});
 });
+
+describe('Rangliste: Woche in Schweizer Zeit', () => {
+	it('Montag 0:30 in Zürich zählt zur neuen Woche, Sonntag 23:30 zur alten', async () => {
+		const f = await fixture();
+		await f.db.owner(`update guuggen set rangliste_enabled = true where id = $1`, [f.guugge]);
+		await f.db.as(f.trp[1], `select set_rangliste_opt_in($1, true)`, [f.guugge]);
+		// Montag dieser Woche (Schweizer Kalender) als Ortszeit, in einen Zeitpunkt umgerechnet
+		await f.db.owner(
+			`with mo as (select date_trunc('week', public.today_zurich())::date as d)
+			 insert into points_ledger (user_id, guugge_id, points, reason, created_at)
+			select $1::uuid, $2::uuid, 10, 'neue Woche', ((mo.d + time '00:30') at time zone 'Europe/Zurich') from mo
+			 union all
+			 select $1::uuid, $2::uuid, 5, 'alte Woche', ((mo.d - 1 + time '23:30') at time zone 'Europe/Zurich') from mo`,
+			[f.trp[1].id, f.guugge]
+		);
+		expect(
+			await f.db.as(f.trp[1], `select points, week_points from leaderboard($1)`, [f.guugge])
+		).toEqual([{ points: 15, week_points: 10 }]);
+	});
+});
