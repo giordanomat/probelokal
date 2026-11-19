@@ -73,11 +73,11 @@
 	cursor: default;
 }
 .err {
-	color: var(--rot);
+	color: var(--rot-text);
 	font-weight: 600;
 }
 .ok {
-	color: var(--gruen);
+	color: var(--gruen-text);
 	font-weight: 600;
 }
 .go {

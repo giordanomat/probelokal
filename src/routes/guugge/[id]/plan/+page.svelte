@@ -897,7 +897,7 @@
 	}
 	.why.late,
 	small.late {
-		color: var(--rot);
+		color: var(--rot-text);
 	}
 	.btns {
 		display: flex;
@@ -985,10 +985,10 @@
 		font-size: 14px;
 	}
 	.status.ahead {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.status.behind {
-		color: var(--rot);
+		color: var(--rot-text);
 	}
 	/* Woche und Level */
 	.pair {
@@ -1160,7 +1160,7 @@
 	}
 	.stagelist li.now i {
 		border-color: var(--gelb);
-		color: var(--gelb);
+		color: var(--akzent);
 	}
 	.stagelist small {
 		color: var(--muted);

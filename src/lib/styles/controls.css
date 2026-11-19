@@ -55,7 +55,7 @@
 }
 .mini[aria-pressed='true'] {
 	border-color: var(--rot);
-	color: var(--rot);
+	color: var(--rot-text);
 }
 .toggle {
 	display: inline-flex;
@@ -161,13 +161,13 @@ select {
 	min-height: 1.4em;
 }
 .say[data-tone='ok'] {
-	color: var(--gruen);
+	color: var(--gruen-text);
 }
 .say[data-tone='warn'] {
 	color: var(--akzent);
 }
 .say[data-tone='bad'] {
-	color: var(--rot);
+	color: var(--rot-text);
 }
 .result {
 	display: flex;

@@ -411,11 +411,11 @@
 	}
 	.opt.right {
 		border-color: var(--gruen);
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.opt.wrong {
 		border-color: var(--rot);
-		color: var(--rot);
+		color: var(--rot-text);
 	}
 	.big {
 		font-size: 40px;
@@ -427,7 +427,7 @@
 		font-weight: 700;
 	}
 	.say.ok {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.score {
 		font-size: 44px;
@@ -435,9 +435,9 @@
 		line-height: 1;
 	}
 	.score.ok {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.score.no {
-		color: var(--rot);
+		color: var(--rot-text);
 	}
 </style>

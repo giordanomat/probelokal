@@ -170,7 +170,12 @@
 	<div class="stack">
 		{#if dissolved}<p class="ok" role="status">»{dissolved}« ist aufgelöst.</p>{/if}
 		<section class="card">
-			<p class="label">Meine Guuggen</p>
+			<!-- Bei Guuggen ist »Meine Guuggen« die Hauptüberschrift der Seite (Prüfung 19.11.2026). -->
+			{#if account?.guuggen.length}
+				<h1 class="label">Meine Guuggen</h1>
+			{:else}
+				<p class="label">Meine Guuggen</p>
+			{/if}
 			{#if account === null}
 				<p class="hint">Einen Moment …</p>
 			{:else if account.guuggen.length === 0}
@@ -321,6 +326,9 @@
 		flex-direction: column;
 		gap: 14px;
 	}
+	h1.label {
+		font-weight: inherit;
+	}
 	.list {
 		list-style: none;
 		margin: 0;
@@ -356,7 +364,7 @@
 		appearance: none;
 		border: 0;
 		background: none;
-		color: var(--gelb);
+		color: var(--akzent);
 		font: 700 15px var(--font-body);
 		min-height: 44px;
 		padding: 0 4px;
@@ -367,7 +375,7 @@
 		appearance: none;
 		border: 0;
 		background: none;
-		color: var(--rot);
+		color: var(--rot-text);
 		font: 700 15px var(--font-body);
 		min-height: 44px;
 		padding: 0 4px;

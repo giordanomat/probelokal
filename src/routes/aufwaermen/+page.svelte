@@ -486,8 +486,9 @@
 </section>
 
 <style>
+	/* gesperrt: graue Schrift statt Abschwächen, damit der Kontrast reicht (Prüfung 19.11.2026) */
 	.locked {
-		opacity: 0.7;
+		color: var(--muted);
 	}
 	.lock {
 		margin-left: 6px;

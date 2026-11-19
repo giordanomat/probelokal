@@ -406,7 +406,7 @@
 		appearance: none;
 		border: 0;
 		background: none;
-		color: var(--rot);
+		color: var(--rot-text);
 		font: 700 15px var(--font-body);
 		min-height: 44px;
 		padding: 0 4px;

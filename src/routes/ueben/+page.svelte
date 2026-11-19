@@ -1854,7 +1854,7 @@
 		appearance: none;
 		border: 0;
 		background: none;
-		color: var(--gelb);
+		color: var(--akzent);
 		font: 700 14px var(--font-body);
 		white-space: nowrap;
 		min-height: 36px;
@@ -1862,7 +1862,7 @@
 	}
 	.mini.todo {
 		border-color: var(--gelb);
-		color: var(--gelb);
+		color: var(--akzent);
 	}
 	/* Blatt »Tippen abgleichen« */
 	.tc-h {
@@ -2026,7 +2026,7 @@
 		border-color: var(--gruen);
 	}
 	.call[data-kind='praise'] .big {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.call .kick {
 		font: 500 11px var(--font-mono);
@@ -2097,10 +2097,10 @@
 		font-size: 36px;
 		font-weight: 700;
 		line-height: 1;
-		color: var(--rot);
+		color: var(--rot-text);
 	}
 	.examresult .score.ok {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.examresult a.mini {
 		display: inline-flex;
@@ -2258,11 +2258,11 @@
 		fill: currentColor;
 	}
 	.round.on {
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.round.on i {
 		border-color: var(--gruen);
-		color: var(--gruen);
+		color: var(--gruen-text);
 	}
 	.round:disabled {
 		opacity: 0.45;
@@ -2466,7 +2466,7 @@
 		border: 0;
 		background: none;
 		padding: 0;
-		color: var(--gelb);
+		color: var(--akzent);
 		font: 600 16px var(--font-body);
 		text-decoration: underline;
 		cursor: pointer;

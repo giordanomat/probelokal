@@ -7,7 +7,7 @@
 	const SLIDE_X = (p: number) => 10 + (p - 1) * 36.6;
 </script>
 
-<aside class="panel" aria-live="off">
+<div class="panel" aria-live="off">
 	<div class="now">
 		<div class="kicker">{s.kicker}</div>
 		<div class="big" data-testid="griff">{s.big}</div>
@@ -46,7 +46,7 @@
 		</div>
 		<div class="next">{s.next}</div>
 	</div>
-</aside>
+</div>
 
 <style>
 	.panel {
