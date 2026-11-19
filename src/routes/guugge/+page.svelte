@@ -41,7 +41,7 @@
 	let delError = $state('');
 	let deleted = $state(false);
 	let feedbackOpen = $state(false);
-	const blocked = $derived(!!delInfo?.blocking.length);
+	const blocked = $derived(!!delInfo?.blocking.length || !!delInfo?.licensed?.length);
 
 	const voiceName = (id: string | null) =>
 		BAD_TOUCH_VOICES.find((v) => v.id === id)?.name ?? 'noch keine Stimme';
@@ -297,6 +297,15 @@
 								die Guugge ohne da.
 							</p>
 							<a class="go" href={resolve('/guugge/[id]', { id: g.id })}>Zu {g.name} →</a>
+						</div>
+					{/each}
+					{#each delInfo.licensed ?? [] as g (g.id)}
+						<div class="warn">
+							<strong>Gekaufte Arrangements</strong>
+							<p class="hint">
+								»{g.name}« hat gekaufte Arrangements. Schreib uns an hallo@probelokal.ch, bevor du
+								dein Konto löschst, damit der Kauf nicht verloren geht.
+							</p>
 						</div>
 					{/each}
 				</DangerConfirm>

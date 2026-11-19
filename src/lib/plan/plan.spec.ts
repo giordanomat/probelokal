@@ -145,7 +145,9 @@ describe('Gesamtplan', () => {
 		expect(registerCell(1.5, 2)).toBe('behind1');
 		expect(registerCell(1, 2)).toBe('behind1');
 		expect(registerCell(0.5, 2)).toBe('behind');
-		expect(registerCell(1, 0)).toBe('ok');
+		// noch nicht dran: immer grau, auch wenn Pausen im Register den Schnitt heben (Entscheid Matthias 19.11.2026)
+		expect(registerCell(1, 0)).toBe('open');
+		expect(registerCell(2.5, 0)).toBe('open');
 	});
 
 	it('ohne Registerprobe und Übezeit fehlen die Zeilen', () => {

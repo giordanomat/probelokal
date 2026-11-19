@@ -793,7 +793,7 @@ describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
 		await f.db.as(f.trp[1], `select mark_hints_read(array[$1]::uuid[])`, [hint]);
 
 		expect(await f.db.as(f.trp[1], `select my_account_deletion() as d`)).toEqual([
-			{ d: { blocking: [], alone: [] } }
+			{ d: { blocking: [], alone: [], licensed: [] } }
 		]);
 		await f.db.as(f.trp[1], `select delete_my_account(' Löschen ')`);
 
@@ -820,7 +820,7 @@ describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
 	it('einzige Leitung mit anderen Mitgliedern: gesperrt, bis die Leitung abgegeben ist', async () => {
 		const f = await fixture();
 		expect(await f.db.as(f.leitung, `select my_account_deletion() as d`)).toEqual([
-			{ d: { blocking: [{ id: f.guugge, name: 'Schuegu' }], alone: [] } }
+			{ d: { blocking: [{ id: f.guugge, name: 'Schuegu' }], alone: [], licensed: [] } }
 		]);
 		await expect(f.db.as(f.leitung, `select delete_my_account('löschen')`)).rejects.toThrow(
 			'Gib zuerst die Leitung ab: »Schuegu«'
@@ -835,7 +835,7 @@ describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
 		);
 		await f.db.as(f.leitung, `select set_member_role($1, $2, 'leitung')`, [f.guugge, f.chef.id]);
 		expect(await f.db.as(f.leitung, `select my_account_deletion() as d`)).toEqual([
-			{ d: { blocking: [], alone: [] } }
+			{ d: { blocking: [], alone: [], licensed: [] } }
 		]);
 		await f.db.as(f.leitung, `select delete_my_account('löschen')`);
 		expect(await count(f, 'profiles where id = $1', [f.leitung.id])).toBe(0);
@@ -848,7 +848,7 @@ describe('Konto löschen (Entscheid Matthias 18.11.2026)', () => {
 	it('Guugge, in der man allein ist, geht mit; fremde Guuggen bleiben', async () => {
 		const f = await fixture();
 		expect(await f.db.as(f.fremd, `select my_account_deletion() as d`)).toEqual([
-			{ d: { blocking: [], alone: [{ id: f.fremdGuugge, name: 'Andere Guugge' }] } }
+			{ d: { blocking: [], alone: [{ id: f.fremdGuugge, name: 'Andere Guugge' }], licensed: [] } }
 		]);
 		await f.db.as(f.fremd, `select delete_my_account('löschen')`);
 		expect(await count(f, 'guuggen where id = $1', [f.fremdGuugge])).toBe(0);
@@ -1067,5 +1067,30 @@ describe('Rückmeldung (Entscheid Matthias 19.11.2026)', () => {
 		await send(f, f.trp[1]);
 		await f.db.as(f.trp[1], `select delete_my_account('löschen')`);
 		expect(await f.db.as('service', `select count(*)::int as n from feedback`)).toEqual([{ n: 0 }]);
+	});
+});
+
+describe('Konto löschen mit gekauftem Arrangement (Code-Durchsicht 19.11.2026)', () => {
+	it('allein in einer Guugge mit Lizenz: gesperrt wie beim Auflösen', async () => {
+		const f = await fixture();
+		await f.db.as('service', `insert into licenses (guugge_id, title_id) values ($1, $2)`, [
+			f.fremdGuugge,
+			f.title
+		]);
+		expect(await f.db.as(f.fremd, `select my_account_deletion() as d`)).toEqual([
+			{
+				d: {
+					blocking: [],
+					alone: [{ id: f.fremdGuugge, name: 'Andere Guugge' }],
+					licensed: [{ id: f.fremdGuugge, name: 'Andere Guugge' }]
+				}
+			}
+		]);
+		await expect(f.db.as(f.fremd, `select delete_my_account('löschen')`)).rejects.toThrow(
+			'gekaufte Arrangements'
+		);
+		expect(
+			await f.db.owner(`select count(*)::int as n from guuggen where id = $1`, [f.fremdGuugge])
+		).toEqual([{ n: 1 }]);
 	});
 });

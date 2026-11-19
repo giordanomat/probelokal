@@ -259,14 +259,16 @@ export function timelineAt(plan: Plan, today: Day): { week: number; pos: number 
 
 /**
  * Farbe einer Zelle in »So steht die Guugge« (nur Leitung): Durchschnitt des Registers gegen die
- * laut Plan erwartete Etappe. none = keine Angabe, open = noch nicht dran, ok = im Plan,
+ * laut Plan erwartete Etappe. none = keine Angabe, open = laut Plan noch nicht dran (immer grau), ok = im Plan,
  * behind1 = bis eine Etappe hinterher, behind = mehr. Keine Prozent (Entscheid Matthias 17.11.2026).
  */
 export type RegisterCell = 'none' | 'open' | 'ok' | 'behind1' | 'behind';
 
 export function registerCell(avg: number | undefined, expected: number): RegisterCell {
 	if (avg === undefined) return 'none';
-	if (expected === 0 && avg < 0.5) return 'open';
+	// Laut Plan noch nicht dran: immer grau, auch wenn Pausen im Register (zählen als Etappe 5) den
+	// Schnitt heben (Code-Durchsicht, Entscheid Matthias 19.11.2026)
+	if (expected === 0) return 'open';
 	if (avg >= expected - 0.25) return 'ok';
 	if (avg >= expected - 1) return 'behind1';
 	return 'behind';

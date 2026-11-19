@@ -49,10 +49,14 @@ test('Konto löschen: einzige Leitung gesperrt, Mitglied löscht sich und das Ge
 		localStorage.setItem('probelokal.bau.bad-touch-2-0.trp1', '[]');
 		localStorage.setItem('fremd', '1');
 	});
+	// zwei gleichnamige Guuggen, in denen Toni allein ist (Code-Durchsicht 19.11.2026)
+	await fake.db.as(toni, `select create_guugge('Doppelt')`);
+	await fake.db.as(toni, `select create_guugge('Doppelt')`);
 	await p2.goto('/guugge');
 	await p2.getByRole('button', { name: 'Löschen …' }).click();
 	const s2 = p2.getByRole('dialog', { name: 'Konto löschen' });
 	await expect(s2.getByText('Zuerst die Leitung abgeben')).toHaveCount(0);
+	await expect(s2.getByText('die Guugge »Doppelt« (du bist allein drin)')).toHaveCount(2);
 	const del = s2.getByRole('button', { name: 'Konto löschen' });
 	await expect(del).toBeDisabled();
 	await s2.getByLabel('Zum Bestätigen »löschen« eintippen').fill('ja');

@@ -939,9 +939,10 @@
 		tapcalResult = null;
 		if (clock.playing) togglePlay();
 		sheet = 'tippen';
+		// derselbe AudioContext wie fürs Mithören (Band oder ein einziger Ersatz), nicht jedes Mal neu
 		let ctx: AudioContext | null;
 		try {
-			ctx = stems?.audioContext() ?? new AudioContext();
+			ctx = audioContextForListening();
 		} catch {
 			ctx = null;
 		}
@@ -985,9 +986,18 @@
 	}
 
 	function onKey(e: KeyboardEvent) {
+		// Im Blatt »Tippen abgleichen«: Während der Messung tippt die Leertaste immer mit (auch wenn der
+		// Fokus auf »Fertig« liegt). Danach löst sie Knöpfe wie gewohnt aus und startet nie die
+		// Wiedergabe dahinter.
 		if (sheet === 'tippen' && e.code === 'Space') {
+			if (tapcal) {
+				e.preventDefault();
+				if (!e.repeat) tapcalTap();
+				return;
+			}
+			const target = e.target as HTMLElement | null;
+			if (target && /INPUT|SELECT|TEXTAREA|BUTTON/.test(target.tagName)) return;
 			e.preventDefault();
-			if (!e.repeat) tapcalTap();
 			return;
 		}
 		if (e.code === 'Escape' && fokus) {
@@ -1614,7 +1624,7 @@
 		<p class="hint" data-testid="tippen-stand">
 			{tapOffset === null
 				? 'Noch nicht abgeglichen. Einmal pro Gerät; macht »Rhythmus« und Prüfungen mit Tippen genauer.'
-				: `${tapOffsetText(tapOffset)} Wird beim Rhythmus herausgerechnet.`}
+				: `${tapOffsetText(tapOffset)} ${audio === 'ok' ? 'Wird beim Rhythmus herausgerechnet.' : 'Gilt, sobald die Band spielt.'}`}
 		</p>
 	</div>
 
@@ -1682,7 +1692,11 @@
 		<div role="status">
 			{#if tapcalResult.kind === 'ok'}
 				<h2 class="tc-h">{tapOffsetText(tapcalResult.offset.sec)}</h2>
-				<p class="hint">Das rechnet die App ab jetzt beim Rhythmus heraus, auf diesem Gerät.</p>
+				<p class="hint">
+					{audio === 'ok'
+						? 'Das rechnet die App ab jetzt beim Rhythmus heraus, auf diesem Gerät.'
+						: 'Gespeichert. Die App rechnet es heraus, sobald die Band spielt (mit Testzugang).'}
+				</p>
 			{:else}
 				<h2 class="tc-h">
 					{tapcalResult.kind === 'few' ? 'Zu wenige Tipps erkannt.' : 'Zu unregelmässig getippt.'}
