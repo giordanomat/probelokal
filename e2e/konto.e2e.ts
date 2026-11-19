@@ -77,3 +77,60 @@ test('Konto löschen: einzige Leitung gesperrt, Mitglied löscht sich und das Ge
 	await expect(p2.getByRole('heading', { name: 'Noch in keiner Guugge.' })).toBeVisible();
 	await other.close();
 });
+
+test('Guugge auflösen: nur die Leitung, mit dem Namen, danach weg für alle', async ({
+	page,
+	browser,
+	baseURL
+}) => {
+	const fake = await FakeSupabase.create();
+	await fake.attach(page.context());
+	const lea = { id: await fake.idOf('lea@test.ch') };
+	const [{ create_guugge: g }] = await fake.db.as<{ create_guugge: string }>(
+		lea,
+		`select create_guugge('Schuegu')`
+	);
+	const [{ create_invite: token }] = await fake.db.as<{ create_invite: string }>(
+		lea,
+		`select create_invite($1)`,
+		[g]
+	);
+	const toni = { id: await fake.idOf('toni@test.ch') };
+	await fake.db.as(toni, `select accept_invite($1)`, [token]);
+
+	// Mitglied: keine Karte zum Auflösen
+	const other = await browser.newContext({ baseURL });
+	await fake.attach(other);
+	const p2 = await other.newPage();
+	await fake.signIn(p2, 'toni@test.ch');
+	await p2.goto(`/guugge/${g}`);
+	await expect(p2.getByRole('heading', { name: 'Schuegu' })).toBeVisible();
+	await expect(p2.getByRole('button', { name: 'Auflösen …' })).toHaveCount(0);
+
+	// Leitung: Name muss stimmen
+	await fake.signIn(page, 'lea@test.ch');
+	await page.goto(`/guugge/${g}`);
+	await page.getByRole('button', { name: 'Auflösen …' }).click();
+	const sheet = page.getByRole('dialog', { name: 'Guugge auflösen' });
+	await expect(sheet.getByRole('heading', { name: '»Schuegu« auflösen?' })).toBeVisible();
+	await expect(sheet).toContainText('die Guugge für alle 2 Mitglieder');
+	const go = sheet.getByRole('button', { name: 'Guugge auflösen' });
+	await sheet.getByLabel('Zum Bestätigen den Namen eintippen').fill('Schuegi');
+	await expect(go).toBeDisabled();
+	await sheet.getByLabel('Zum Bestätigen den Namen eintippen').fill('schuegu');
+	await go.click();
+	await expect(page).toHaveURL(/\/guugge\?aufgeloest=Schuegu$/);
+	await expect(page.getByRole('status')).toHaveText('»Schuegu« ist aufgelöst.');
+	expect(await fake.db.owner(`select 1 from guuggen where id = $1`, [g])).toEqual([]);
+
+	// Mitglied mit der alten Seite
+	await p2.reload();
+	await expect(
+		p2.getByRole('heading', { name: 'Diese Guugge findest du hier nicht.' })
+	).toBeVisible();
+	await expect(p2.getByRole('link', { name: 'Zu meinen Guuggen →' })).toHaveAttribute(
+		'href',
+		'/guugge'
+	);
+	await other.close();
+});

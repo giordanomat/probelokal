@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountErrorText, confirmsDeletion } from './api';
+import { accountErrorText, confirmsDeletion, namesMatch } from './api';
 import {
 	hasPendingInvite,
 	inviteUrl,
@@ -95,5 +95,13 @@ describe('Konto löschen: Bestätigung', () => {
 		expect(confirmsDeletion('loeschen')).toBe(false);
 		expect(confirmsDeletion('ja')).toBe(false);
 		expect(confirmsDeletion('')).toBe(false);
+	});
+});
+
+describe('Guugge auflösen: Name zum Bestätigen', () => {
+	it('gross/klein und Leerzeichen am Rand egal, sonst genau', () => {
+		expect(namesMatch(' schuegu ', 'Schuegu')).toBe(true);
+		expect(namesMatch('Schuegi', 'Schuegu')).toBe(false);
+		expect(namesMatch('', '')).toBe(false);
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Eine Guugge: eigene Stimme, Rangliste mitmachen, Mitglieder. Für die Leitung zusätzlich:
-	// einladen, Rollen, Mitglieder entfernen, Rangliste ein/aus. Was erlaubt ist, prüft die
+	// einladen, Rollen, Mitglieder entfernen, Rangliste ein/aus, Guugge auflösen (Entwurf Matthias
+	// 18.11.2026). Was erlaubt ist, prüft die
 	// Datenbank (supabase/migrations/20261028150000); die Oberfläche blendet nur aus.
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -10,9 +11,11 @@
 	import { auth, watchAuth } from '#lib/account/auth.svelte.ts';
 	import {
 		createInvite,
+		dissolveGuugge,
 		guuggeMembers,
 		listHints,
 		myAccount,
+		namesMatch,
 		removeMember,
 		revokeInvites,
 		ROLE_LABELS,
@@ -27,6 +30,8 @@
 	import { voiceQuery } from '#lib/practice/prefs.ts';
 	import { hintsFor } from '#lib/hints/hints.ts';
 	import { watchHints } from '#lib/hints/live.ts';
+	import Sheet from '#lib/ui/Sheet.svelte';
+	import DangerConfirm from '#lib/ui/DangerConfirm.svelte';
 
 	const sb = getSupabase();
 	const ROLES: Role[] = ['mitglied', 'registerchef', 'leitung'];
@@ -43,6 +48,8 @@
 	let busy = $state(false);
 	let error = $state('');
 	let notice = $state('');
+	let dissolveOpen = $state(false);
+	let dissolveError = $state('');
 
 	const id = $derived(page.params.id ?? '');
 	const leitung = $derived(me?.role === 'leitung');
@@ -132,6 +139,22 @@
 		}, 'Alle Einladungslinks gelten nicht mehr.');
 	}
 
+	async function dissolve(typed: string) {
+		if (busy || !me) return;
+		busy = true;
+		dissolveError = '';
+		const name = me.name;
+		try {
+			await dissolveGuugge(sb!, id, typed);
+			dissolveOpen = false;
+			await goto(resolve(`/guugge?aufgeloest=${encodeURIComponent(name)}`));
+		} catch (e) {
+			dissolveError = (e as Error).message;
+		} finally {
+			busy = false;
+		}
+	}
+
 	function remove(m: Member) {
 		const self = m.user_id === auth.user?.id;
 		// Austritt löscht Etappen und Punkte in dieser Guugge (Entscheid Matthias 18.11.2026)
@@ -161,7 +184,8 @@
 {:else if missing}
 	<section class="card">
 		<h1>Diese Guugge findest du hier nicht.</h1>
-		<p>Entweder gibt es sie nicht, oder du bist nicht dabei.</p>
+		<p>Vielleicht hat die Leitung sie aufgelöst, oder du bist nicht (mehr) dabei.</p>
+		<p><a class="go" href={resolve('/guugge')}>Zu meinen Guuggen →</a></p>
 	</section>
 {:else if !me}
 	<p class="hint">Einen Moment …</p>
@@ -316,12 +340,79 @@
 				</p>
 			{/if}
 		</section>
+
+		{#if leitung}
+			<section class="card">
+				<div class="acc">
+					<div>
+						<h2>Guugge auflösen</h2>
+						<p class="hint">Für alle Mitglieder, nicht rückgängig</p>
+					</div>
+					<button
+						type="button"
+						class="linkred"
+						aria-haspopup="dialog"
+						onclick={() => {
+							dissolveError = '';
+							dissolveOpen = true;
+						}}>Auflösen …</button
+					>
+				</div>
+			</section>
+		{/if}
 	</div>
+
+	{#if dissolveOpen && me}
+		<Sheet open label="Guugge auflösen" onclose={() => (dissolveOpen = false)}>
+			<DangerConfirm
+				heading="»{me.name}« auflösen?"
+				goneTitle="Das ist danach für alle weg:"
+				gone={[
+					`die Guugge für ${members.length === 1 ? 'dich' : `alle ${members.length} Mitglieder`}`,
+					'Gesamtplan und Hinweise der Leitung',
+					'Etappen und Punkte aller in dieser Guugge',
+					'Rangliste, Belohnungen, Einladungslinks'
+				]}
+				stay={['die Konten der Mitglieder, ihre anderen Guuggen und Übetage']}
+				confirmLabel="Zum Bestätigen den Namen eintippen"
+				matches={(t) => namesMatch(t, me!.name)}
+				action="Guugge auflösen"
+				{busy}
+				oncancel={() => (dissolveOpen = false)}
+				onconfirm={dissolve}
+			/>
+			{#if dissolveError}<p class="err" role="alert">{dissolveError}</p>{/if}
+		</Sheet>
+	{/if}
 {/if}
 
 {#if error && !me}<p class="err" role="alert">{error}</p>{/if}
 
 <style>
+	.acc {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+	}
+	.acc h2 {
+		margin: 0;
+		font-size: 17px;
+	}
+	.acc .hint {
+		margin: 2px 0 0;
+	}
+	.linkred {
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--rot);
+		font: 700 15px var(--font-body);
+		min-height: 44px;
+		padding: 0 4px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
 	.stack {
 		display: flex;
 		flex-direction: column;

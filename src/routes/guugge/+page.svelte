@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { getSupabase } from '#lib/supabase/client.ts';
 	import { auth, deleteAccount, signOut, watchAuth } from '#lib/account/auth.svelte.ts';
 	import {
@@ -18,6 +19,7 @@
 		type MyAccount
 	} from '#lib/account/api.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
+	import DangerConfirm from '#lib/ui/DangerConfirm.svelte';
 	import { deviceStore, hasPendingInvite } from '#lib/account/invite.ts';
 	import { BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
 
@@ -29,11 +31,12 @@
 	let busy = $state(false);
 	let error = $state('');
 	let saved = $state(false);
+	/** Nach dem Auflösen einer Guugge: ihr Name, für eine kurze Meldung */
+	const dissolved = $derived(page.url.searchParams.get('aufgeloest'));
 
 	// Konto löschen
 	let delOpen = $state(false);
 	let delInfo = $state<AccountDeletion | null>(null);
-	let typed = $state('');
 	let delError = $state('');
 	let deleted = $state(false);
 	const blocked = $derived(!!delInfo?.blocking.length);
@@ -97,7 +100,6 @@
 	async function openDelete() {
 		delOpen = true;
 		delInfo = null;
-		typed = '';
 		delError = '';
 		try {
 			delInfo = await myAccountDeletion(sb!);
@@ -106,8 +108,7 @@
 		}
 	}
 
-	async function removeAccount(e: SubmitEvent) {
-		e.preventDefault();
+	async function removeAccount(typed: string) {
 		if (busy || blocked || !confirmsDeletion(typed)) return;
 		busy = true;
 		delError = '';
@@ -165,6 +166,7 @@
 	</section>
 {:else}
 	<div class="stack">
+		{#if dissolved}<p class="ok" role="status">»{dissolved}« ist aufgelöst.</p>{/if}
 		<section class="card">
 			<p class="label">Meine Guuggen</p>
 			{#if account === null}
@@ -238,61 +240,43 @@
 
 	{#if delOpen}
 		<Sheet open label="Konto löschen" onclose={() => (delOpen = false)}>
-			<h2 class="del-h">Konto endgültig löschen?</h2>
 			{#if delInfo === null && !delError}
+				<h2 class="del-h">Konto endgültig löschen?</h2>
 				<p class="hint">Einen Moment …</p>
 			{:else if delInfo}
-				{#each delInfo.blocking as g (g.id)}
-					<div class="warn">
-						<strong>Zuerst die Leitung abgeben</strong>
-						<p class="hint">
-							In »{g.name}« bist du die einzige Leitung. Mach jemanden zur Leitung, sonst steht die
-							Guugge ohne da.
-						</p>
-						<a class="go" href={resolve('/guugge/[id]', { id: g.id })}>Zu {g.name} →</a>
-					</div>
-				{/each}
-				<p class="what">Das ist danach weg:</p>
-				<ul class="marks gone-list">
-					<li><i aria-hidden="true">×</i>deine E-Mail-Adresse und Anmeldung</li>
-					<li><i aria-hidden="true">×</i>dein Name, deine Stimmen, deine Mitgliedschaften</li>
-					<li><i aria-hidden="true">×</i>Etappen, Punkte, Level und Übetage</li>
-					<li><i aria-hidden="true">×</i>dein Platz in der Rangliste</li>
-					{#each delInfo.alone as g (g.id)}
-						<li><i aria-hidden="true">×</i>die Guugge »{g.name}« (du bist allein drin)</li>
+				<DangerConfirm
+					heading="Konto endgültig löschen?"
+					gone={[
+						'deine E-Mail-Adresse und Anmeldung',
+						'dein Name, deine Stimmen, deine Mitgliedschaften',
+						'Etappen, Punkte, Level und Übetage',
+						'dein Platz in der Rangliste',
+						...delInfo.alone.map((g) => `die Guugge »${g.name}« (du bist allein drin)`)
+					]}
+					stayTitle="Das bleibt für die anderen:"
+					stay={[
+						'Hinweise, die du als Leitung geschrieben hast (ohne deinen Namen)',
+						'Guuggen mit anderen Mitgliedern'
+					]}
+					confirmLabel="Zum Bestätigen »{DELETE_WORD}« eintippen"
+					matches={confirmsDeletion}
+					action="Konto löschen"
+					{busy}
+					{blocked}
+					oncancel={() => (delOpen = false)}
+					onconfirm={removeAccount}
+				>
+					{#each delInfo.blocking as g (g.id)}
+						<div class="warn">
+							<strong>Zuerst die Leitung abgeben</strong>
+							<p class="hint">
+								In »{g.name}« bist du die einzige Leitung. Mach jemanden zur Leitung, sonst steht
+								die Guugge ohne da.
+							</p>
+							<a class="go" href={resolve('/guugge/[id]', { id: g.id })}>Zu {g.name} →</a>
+						</div>
 					{/each}
-				</ul>
-				<p class="what">Das bleibt für die anderen:</p>
-				<ul class="marks stay-list">
-					<li>
-						<i aria-hidden="true">✓</i>Hinweise, die du als Leitung geschrieben hast (ohne deinen
-						Namen)
-					</li>
-					<li><i aria-hidden="true">✓</i>Guuggen mit anderen Mitgliedern</li>
-				</ul>
-				<form class="del-form" onsubmit={removeAccount}>
-					<label class="field">
-						Zum Bestätigen »{DELETE_WORD}« eintippen
-						<input
-							bind:value={typed}
-							disabled={blocked}
-							autocomplete="off"
-							autocapitalize="none"
-							spellcheck="false"
-						/>
-					</label>
-					<div class="del-btns">
-						<button type="button" class="btn ghost" onclick={() => (delOpen = false)}
-							>Abbrechen</button
-						>
-						<button
-							type="submit"
-							class="btn red"
-							disabled={busy || blocked || !confirmsDeletion(typed)}>Konto löschen</button
-						>
-					</div>
-				</form>
-				<p class="hint">Das lässt sich nicht rückgängig machen.</p>
+				</DangerConfirm>
 			{/if}
 			{#if delError}<p class="err" role="alert">{delError}</p>{/if}
 		</Sheet>
@@ -369,76 +353,12 @@
 		color: var(--ink);
 		font-weight: 700;
 	}
-	.what {
-		margin: 10px 0 4px;
-		font-weight: 700;
-		font-size: 14px;
-	}
-	.marks {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		font-size: 15px;
-	}
-	.marks li {
-		display: flex;
-		gap: 8px;
-		align-items: flex-start;
-	}
-	.marks i {
-		flex: none;
-		width: 18px;
-		height: 18px;
-		margin-top: 1px;
-		border-radius: 50%;
-		display: grid;
-		place-items: center;
-		font-style: normal;
-		font-size: 11px;
-		font-weight: 800;
-	}
-	.gone-list i {
-		background: var(--rot);
-		color: #141619;
-	}
-	.stay-list i {
-		border: 1px solid var(--line);
-		color: var(--muted);
-	}
-	.del-form {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		margin-top: 14px;
-	}
-	.del-form .field {
-		flex: none;
-	}
 	.gone .btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		text-decoration: none;
 		padding: 0 22px;
-	}
-	.del-btns {
-		display: flex;
-		gap: 8px;
-	}
-	.del-btns .btn {
-		flex: 1;
-		min-height: 48px;
-	}
-	.btn.red {
-		background: var(--rot);
-		color: #141619;
-	}
-	.btn.red:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
 	}
 	.small {
 		min-height: 36px;
