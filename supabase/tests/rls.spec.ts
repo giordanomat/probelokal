@@ -18,7 +18,8 @@ const TABLES = [
 	'exam_results',
 	'points_ledger',
 	'practice_days',
-	'signups'
+	'signups',
+	'feedback'
 ];
 
 describe('nicht angemeldet', () => {
@@ -999,5 +1000,72 @@ describe('Guugge auflösen (Entscheid Matthias 18.11.2026)', () => {
 			f.db.as(f.leitung, `select dissolve_guugge($1, 'Schuegu')`, [f.guugge])
 		).rejects.toThrow('gekaufte Arrangements');
 		expect(await count(f, 'guuggen where id = $1', [f.guugge])).toBe(1);
+	});
+});
+
+describe('Rückmeldung (Entscheid Matthias 19.11.2026)', () => {
+	const send = (f: Fixture, who: { id: string } | 'anon', body = 'Teil G rot', reply = false) =>
+		f.db.as(who, `select send_feedback('fehler', $1, $2::jsonb, $3)`, [
+			body,
+			JSON.stringify({ page: 'Stück üben', where: 'Teil G · Takt 31', voice: 'Trp 1', device: 'iPhone · Safari 18' }),
+			reply
+		]);
+
+	it('nur angemeldet; lesen kann niemand ausser der Service-Rolle', async () => {
+		const f = await fixture();
+		await expect(send(f, 'anon')).rejects.toThrow(DENIED);
+		await send(f, f.trp[1]);
+		for (const who of [f.trp[1], f.leitung, f.fremd]) {
+			await expect(f.db.as(who, `select * from feedback`)).rejects.toThrow(DENIED);
+		}
+		const rows = await f.db.as<{ kind: string; body: string; context: unknown; email: string | null }>(
+			'service',
+			`select kind, body, context, email from feedback`
+		);
+		expect(rows).toEqual([
+			{
+				kind: 'fehler',
+				body: 'Teil G rot',
+				context: { page: 'Stück üben', where: 'Teil G · Takt 31', voice: 'Trp 1', device: 'iPhone · Safari 18' },
+				email: null
+			}
+		]);
+	});
+
+	it('E-Mail nur, wenn antworten erlaubt ist', async () => {
+		const f = await fixture();
+		await send(f, f.trp[1], 'Bitte antworten', true);
+		expect(await f.db.as('service', `select email, reply_ok from feedback`)).toEqual([
+			{ email: 't2@test.ch', reply_ok: true }
+		]);
+	});
+
+	it('leer oder zu lang abgewiesen; Kontext auf bekannte Felder gekürzt', async () => {
+		const f = await fixture();
+		await expect(send(f, f.trp[1], '   ')).rejects.toThrow('Schreib ein paar Worte.');
+		await expect(send(f, f.trp[1], 'x'.repeat(2001))).rejects.toThrow('Das ist zu lang');
+		await f.db.as(f.trp[1], `select send_feedback('idee', 'ok', $1::jsonb, false)`, [
+			JSON.stringify({ page: 'p'.repeat(300), secret: 'nein', device: 42 })
+		]);
+		const [{ context }] = await f.db.as<{ context: Record<string, string> }>(
+			'service',
+			`select context from feedback`
+		);
+		expect(Object.keys(context)).toEqual(['page']);
+		expect(context.page).toHaveLength(120);
+	});
+
+	it('höchstens 10 pro Person und Tag', async () => {
+		const f = await fixture();
+		for (let i = 0; i < 10; i++) await send(f, f.trp[1], `Nr. ${i}`);
+		await expect(send(f, f.trp[1], 'Nr. 11')).rejects.toThrow('Für heute reicht es');
+		await send(f, f.trp[0], 'andere Person geht');
+	});
+
+	it('geht mit dem Konto', async () => {
+		const f = await fixture();
+		await send(f, f.trp[1]);
+		await f.db.as(f.trp[1], `select delete_my_account('löschen')`);
+		expect(await f.db.as('service', `select count(*)::int as n from feedback`)).toEqual([{ n: 0 }]);
 	});
 });

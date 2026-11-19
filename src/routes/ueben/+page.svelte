@@ -59,6 +59,7 @@
 	} from '#lib/practice/baustellen.ts';
 	import ScoreView from '#lib/score/ScoreView.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
+	import FeedbackSheet from '#lib/feedback/FeedbackSheet.svelte';
 	import Mark from '#lib/brand/Mark.svelte';
 	import ThemeSwitch from '#lib/theme/ThemeSwitch.svelte';
 	import { cachedFile, storeFile, titleCacheName } from '#lib/offline/title-cache.ts';
@@ -159,7 +160,7 @@
 	/** Seite eingehängt (Knöpfe reagieren); für die Browser-Tests als data-ready */
 	let ready = $state(false);
 	/** Offenes Blatt: Mehr, Stimme wählen oder Baustellen */
-	let sheet = $state<'mehr' | 'stimme' | 'bau' | 'tippen' | null>(null);
+	let sheet = $state<'mehr' | 'stimme' | 'bau' | 'tippen' | 'rueckmeldung' | null>(null);
 	/** Höhe der Fläche für die Bahn (füllt, was Kopf und Bedienung übrig lassen) */
 	let laneBoxHeight = $state(0);
 	/** Übebereich aus der Baustellen-Liste statt eines Teils */
@@ -1620,8 +1621,25 @@
 	<div class="group links">
 		<a href={resolve('/aufwaermen')}>Aufwärmen →</a>
 		<a href={resolve('/guugge')}>Meine Guugge →</a>
+		<button
+			type="button"
+			class="feedback-link"
+			aria-haspopup="dialog"
+			onclick={() => (sheet = 'rueckmeldung')}>Rückmeldung geben →</button
+		>
 	</div>
+	<p class="hint">Fehler, Idee oder Lob – direkt an Matthias und Hans.</p>
 </Sheet>
+
+<FeedbackSheet
+	open={sheet === 'rueckmeldung'}
+	onclose={() => sheet === 'rueckmeldung' && (sheet = null)}
+	context={() => ({
+		page: 'Stück üben',
+		where: `${sectionLabel(section)} · Takt ${Math.min(title.bars - 1, Math.floor(bar))}`,
+		voice: voice.short
+	})}
+/>
 
 <Sheet open={sheet === 'tippen'} label="Tippen abgleichen" onclose={closeTapcal}>
 	{#if tapcalResult === null}
@@ -2426,7 +2444,18 @@
 	}
 	.links {
 		display: flex;
-		gap: 18px;
+		flex-wrap: wrap;
+		gap: 10px 18px;
+	}
+	.feedback-link {
+		appearance: none;
+		border: 0;
+		background: none;
+		padding: 0;
+		color: var(--gelb);
+		font: 600 16px var(--font-body);
+		text-decoration: underline;
+		cursor: pointer;
 	}
 	.links a {
 		color: var(--ink);

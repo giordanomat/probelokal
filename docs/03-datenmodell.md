@@ -24,6 +24,8 @@ Grundmodell: `supabase/migrations/0001_grundmodell.sql`, ergänzt um Konten und 
 - **Belohnungen der Guugge:** `guuggen.level_rewards` ({"2": "…"} für Level 2–7, je höchstens 80 Zeichen) über `set_level_rewards` (Leitung) und `guugge_settings` (Mitglieder).
 - **Katalog:** Bad Touch steht per Migration in `titles`, damit Pläne, Hinweise und Ergebnisse darauf verweisen können. `supabase/tests/catalog.spec.ts` prüft, dass der Eintrag zu `src/lib/titles/bad-touch.ts` passt. Weitere Titel legt später die Produktionsstrecke an (docs/06).
 
+- **Rückmeldungen** (`feedback`, seit 19.11.2026): Art, Text, Kontext (nur `page`, `where`, `voice`, `device`, je höchstens 120 Zeichen), `reply_ok`, E-Mail nur bei `reply_ok`. RLS an ohne Regel, keine Rechte für `anon` und `authenticated`; schreiben nur über `send_feedback` (angemeldet, höchstens 10 pro Tag Schweizer Zeit). Lesen im Dashboard. Geht mit dem Profil (`on delete cascade`).
+
 ## Offene Punkte
 
 - Wie Registerchefs Hinweise für ihr Register schreiben dürfen (heute nur Leitung).
@@ -59,7 +61,7 @@ Der Ablauf ist **ungeprüft**, bis er zum ersten Mal läuft: Die CLI liess sich 
 
 ## Angewendet (Stand 25.10.2026, im Supabase-Projekt `qieunfhizsxsyzmrrvci` nachgesehen)
 
-**Stand 18.11.2026:** 15. Migration `20261118100000_m2_konto_loeschen` beim Merge von PR #13 angewendet (von aussen geprüft: `my_account_deletion` und `delete_my_account` existieren und lehnen anonyme Aufrufe ab). 16. Migration `20261118140000_m2_rangliste_woche_zuerich` (Wochen-Rangliste in Schweizer Zeit) beim Merge von PR #14. 17. Migration `20261118160000_m2_austritt_loeschen` beim Merge von PR #15. 18. Migration `20261118180000_m2_guugge_aufloesen` wird beim nächsten Merge angewendet.
+**Stand 18.11.2026:** 15. Migration `20261118100000_m2_konto_loeschen` beim Merge von PR #13 angewendet (von aussen geprüft: `my_account_deletion` und `delete_my_account` existieren und lehnen anonyme Aufrufe ab). 16. Migration `20261118140000_m2_rangliste_woche_zuerich` (Wochen-Rangliste in Schweizer Zeit) beim Merge von PR #14. 17. Migration `20261118160000_m2_austritt_loeschen` beim Merge von PR #15. 18. Migration `20261118180000_m2_guugge_aufloesen` beim Merge von PR #17 (von aussen geprüft: `dissolve_guugge` existiert, lehnt anonyme Aufrufe ab). 19. Migration `20261119100000_m2_rueckmeldung` (Tabelle `feedback`, Funktion `send_feedback`) wird beim nächsten Merge angewendet.
 
 Erledigt aus den offenen Punkten (18.11.2026 nachgesehen): Woche in Schweizer Zeit gilt jetzt überall (`register_overview`, `my_points`, Übetage seit 29.10.2026, `leaderboard` mit der 16. Migration); Pausen zählen in `register_overview` seit 29.10.2026 als erledigt (`titles.voices[].rests`).
 
