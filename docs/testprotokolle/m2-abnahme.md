@@ -210,6 +210,15 @@ Mit einer zweiten E-Mail-Adresse ein Wegwerf-Konto anlegen, in die Testguugge ei
 | Richtigen Namen (klein geschrieben geht auch), »Guugge auflösen« | »Meine Guuggen« mit »»Weg« ist aufgelöst.«; kommt ein Fehler, Bildschirmfoto an Claude | | |
 | T2 lädt die Seite von »Weg« neu | »Diese Guugge findest du hier nicht.« mit »Zu meinen Guuggen →« | | |
 
+## 12 · Rückmeldung (seit 19.11.2026)
+
+| Prüfung | Soll | Ist | OK? |
+|---|---|---|---|
+| »Stück üben« → »Mehr« → »Rückmeldung geben →« | Blatt »Was ist dir aufgefallen?«, Vorschau mit Teil, Takt, Stimme und Gerät | | |
+| »Fehler«, Text, »Schicken« | »Danke! Wir lesen alles.« | | |
+| »Meine Guuggen« → »Schreiben →«, »Ihr dürft mir per Mail antworten« ankreuzen, schicken | »Wir melden uns per Mail bei dir.« | | |
+| Supabase → Table Editor → `feedback` | zwei Zeilen; E-Mail nur bei der zweiten | | |
+
 ## Bemerkungen
 
 -

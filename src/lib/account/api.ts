@@ -129,6 +129,21 @@ export const DELETE_WORD = 'löschen';
 
 export const confirmsDeletion = (typed: string) => typed.trim().toLowerCase() === DELETE_WORD;
 
+/** Rückmeldung an Matthias und Hans (nur mit Konto, höchstens 10 pro Tag). */
+export const sendFeedback = (
+	sb: SupabaseClient,
+	kind: import('../feedback/feedback').FeedbackKind,
+	body: string,
+	context: import('../feedback/feedback').FeedbackContext | null,
+	replyOk: boolean
+) =>
+	call<void>(sb, 'send_feedback', {
+		p_kind: kind,
+		p_body: body,
+		p_context: context,
+		p_reply_ok: replyOk
+	});
+
 /** Guugge auflösen (nur Leitung); bestätigt mit dem Namen der Guugge, gross/klein egal. */
 export const dissolveGuugge = (sb: SupabaseClient, guugge: string, typedName: string) =>
 	call<void>(sb, 'dissolve_guugge', { p_guugge: guugge, p_name: typedName });

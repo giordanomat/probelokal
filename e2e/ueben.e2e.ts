@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { chooseVoice, closeSheet, openMore } from './practice';
+import { chooseVoice, closeSheet, openMore, ready } from './practice';
 
 const canvasBeat = (page: import('@playwright/test').Page) =>
 	page.locator('.lane canvas').getAttribute('data-beat').then(Number);
@@ -9,6 +9,8 @@ test('Bahn: Stimme, Griff, Hilfen und Wiedergabe', async ({ page }) => {
 	page.on('pageerror', (e) => errors.push(e.message));
 	// Keine App-Startseite mehr (Landingpage unter /): Testpersonen bekommen den Link zu /ueben.
 	await page.goto('/ueben');
+	// erst nach dem Hydrieren lesen: vorher steht der Wert vom Server auf der Bahn
+	await ready(page);
 	await expect(page.getByRole('heading', { level: 1, name: 'Bad Touch 2.0' })).toBeVisible();
 	await expect(page.getByRole('figure', { name: /Bahn/ })).toBeVisible();
 
@@ -63,6 +65,7 @@ test('Aufbau: hochkant untereinander, quer die Bedienung rechts, nichts zum Scro
 	]) {
 		await page.setViewportSize({ width: w, height: h });
 		await page.goto('/ueben');
+		await ready(page);
 		// boundingBox wartet nicht: erst warten, bis beides da ist
 		await expect(page.locator('.lane canvas')).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Abspielen' })).toBeVisible();

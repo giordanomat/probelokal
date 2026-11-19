@@ -85,5 +85,10 @@ Bewertung: getroffen = 1, knapp/falsche Stufe = 0,5. Der Stand eines Teils zähl
 - Solange die Guugge ein gekauftes Arrangement (Lizenz) hat, ist das Auflösen gesperrt, mit dem Hinweis, sich bei hallo@probelokal.ch zu melden.
 - Das Blatt zum Bestätigen ist dasselbe wie bei »Konto löschen« (`src/lib/ui/DangerConfirm.svelte`).
 
+### Rückmeldung (Entscheid Matthias 19.11.2026, nach Entwurf)
+- Für den Pilot: Fehler, Idee oder Lob direkt aus der App an Matthias und Hans, nicht an die Leitung. Erreichbar unter »Mehr« in »Stück üben« (»Rückmeldung geben →«) und auf »Meine Guuggen« (Karte »Rückmeldung · Schreiben →«).
+- Blatt: Art (Fehler/Idee/Lob), Text bis 2000 Zeichen, Häkchen »Wo ich gerade war und welches Gerät mitschicken« (Standard: an, mit Vorschau, z. B. »Stück üben · Teil G · Takt 31 · Trp 1 · iPhone · Safari 18«), Häkchen »Ihr dürft mir per Mail antworten« (Standard: aus; nur dann wird die E-Mail-Adresse mitgespeichert). Danach »Danke! Wir lesen alles.«
+- Nur mit Konto, höchstens 10 pro Person und Tag. Geht mit dem Konto. Keine Mail an Matthias und Hans; sie lesen im Supabase-Dashboard (Table Editor → `feedback`), im Pilot etwa einmal pro Woche. Eine Mail bei neuer Rückmeldung ginge später mit einem Brevo-Schlüssel im Server.
+
 ## Rollen
 Musikalische Leitung · Registerchef · Mitglied. Im Prototyp nur über die Freigabestufe angenähert; im Produkt echte Rollen pro Guugge.

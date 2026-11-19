@@ -20,6 +20,7 @@
 	} from '#lib/account/api.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
 	import DangerConfirm from '#lib/ui/DangerConfirm.svelte';
+	import FeedbackSheet from '#lib/feedback/FeedbackSheet.svelte';
 	import { deviceStore, hasPendingInvite } from '#lib/account/invite.ts';
 	import { BAD_TOUCH_VOICES } from '#lib/titles/bad-touch-voices.ts';
 
@@ -39,6 +40,7 @@
 	let delInfo = $state<AccountDeletion | null>(null);
 	let delError = $state('');
 	let deleted = $state(false);
+	let feedbackOpen = $state(false);
 	const blocked = $derived(!!delInfo?.blocking.length);
 
 	const voiceName = (id: string | null) =>
@@ -224,6 +226,21 @@
 		<section class="card">
 			<div class="acc">
 				<div>
+					<h2>Rückmeldung</h2>
+					<p class="hint">Fehler, Idee oder Lob – direkt an Matthias und Hans</p>
+				</div>
+				<button
+					type="button"
+					class="linkgo"
+					aria-haspopup="dialog"
+					onclick={() => (feedbackOpen = true)}>Schreiben →</button
+				>
+			</div>
+		</section>
+
+		<section class="card">
+			<div class="acc">
+				<div>
 					<h2>Dein Konto</h2>
 					<p class="hint">Konto und alle deine Daten löschen</p>
 				</div>
@@ -237,6 +254,12 @@
 			<p class="err" role="alert">{error}</p>
 		{/if}
 	</div>
+
+	<FeedbackSheet
+		open={feedbackOpen}
+		onclose={() => (feedbackOpen = false)}
+		context={() => ({ page: 'Meine Guuggen' })}
+	/>
 
 	{#if delOpen}
 		<Sheet open label="Konto löschen" onclose={() => (delOpen = false)}>
@@ -319,6 +342,17 @@
 	}
 	.acc .hint {
 		margin: 2px 0 0;
+	}
+	.linkgo {
+		appearance: none;
+		border: 0;
+		background: none;
+		color: var(--gelb);
+		font: 700 15px var(--font-body);
+		min-height: 44px;
+		padding: 0 4px;
+		cursor: pointer;
+		white-space: nowrap;
 	}
 	.linkred {
 		appearance: none;
