@@ -55,7 +55,15 @@ test('Tippen abgleichen: Hinweis im Rhythmus, mittippen, Wert bleibt; ohne Tipps
 	);
 	const saved = await page.evaluate(() => Number(localStorage.getItem('probelokal.tippen')));
 	expect(Math.abs(saved)).toBeLessThan(0.1);
-	await sheet.getByRole('button', { name: 'Fertig' }).last().click();
+	// Nach dem Ergebnis löst die Leertaste den Knopf mit Fokus aus (hier »Nochmals«)
+	await sheet.getByRole('button', { name: 'Nochmals' }).focus();
+	await page.keyboard.press('Space');
+	await expect(sheet.getByRole('heading', { name: 'Tippe mit dem Klick' })).toBeVisible();
+	// Während der Messung tippt die Leertaste, auch wenn der Fokus auf »Fertig« liegt
+	await sheet.getByRole('button', { name: 'Fertig' }).focus();
+	await page.keyboard.press('Space');
+	await expect(sheet).toBeVisible();
+	await sheet.getByRole('button', { name: 'Fertig' }).click();
 	await expect(sheet).toBeHidden();
 
 	// Nach dem Neuladen noch da

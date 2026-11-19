@@ -46,11 +46,12 @@
 {@render children?.()}
 <p class="what">{goneTitle}</p>
 <ul class="marks gone">
-	{#each gone as g (g)}<li><i aria-hidden="true">×</i>{g}</li>{/each}
+	<!-- nach Stelle, nicht nach Text: gleichnamige Guuggen ergeben gleiche Zeilen -->
+	{#each gone as g, i (i)}<li><i aria-hidden="true">×</i>{g}</li>{/each}
 </ul>
 <p class="what">{stayTitle}</p>
 <ul class="marks stay">
-	{#each stay as s (s)}<li><i aria-hidden="true">✓</i>{s}</li>{/each}
+	{#each stay as s, i (i)}<li><i aria-hidden="true">✓</i>{s}</li>{/each}
 </ul>
 <form
 	class="dc-form"

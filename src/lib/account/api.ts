@@ -119,6 +119,8 @@ export const removeMember = (sb: SupabaseClient, guugge: string, user: string) =
 export interface AccountDeletion {
 	blocking: { id: string; name: string }[];
 	alone: { id: string; name: string }[];
+	/** Guuggen, in denen man allein ist und die gekaufte Arrangements haben: sperren */
+	licensed: { id: string; name: string }[];
 }
 
 export const myAccountDeletion = (sb: SupabaseClient) =>
