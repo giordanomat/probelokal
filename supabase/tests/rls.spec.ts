@@ -1094,3 +1094,36 @@ describe('Konto löschen mit gekauftem Arrangement (Code-Durchsicht 19.11.2026)'
 		).toEqual([{ n: 1 }]);
 	});
 });
+
+describe('Abfrage für den Pilot (supabase/queries/pilot_wochen.sql)', () => {
+	it('pro Woche nur Summen, ohne Leitung, ohne Namen', async () => {
+		const f = await fixture();
+		const { readFileSync } = await import('node:fs');
+		const sql = readFileSync(
+			new URL('../queries/pilot_wochen.sql', import.meta.url),
+			'utf8'
+		).replace("'Schuegu Pilot'", "'Schuegu'");
+		// diese Woche: zwei Trompeten üben, eine besteht eine Etappe; die Leitung übt auch (zählt nicht)
+		for (const who of [f.trp[0], f.trp[1], f.leitung]) {
+			await f.db.owner(`insert into practice_days (user_id, day) values ($1, public.today_zurich())`, [
+				who.id
+			]);
+		}
+		await passed(f, f.trp[1].id, 1, 1);
+		const rows = await f.db.owner<Record<string, unknown>>(sql);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			personen: 5,
+			haben_geuebt: 2,
+			uebetage_im_schnitt: '0.4',
+			etappen_bestanden: 1
+		});
+		expect(Object.keys(rows[0])).toEqual([
+			'woche_ab',
+			'personen',
+			'haben_geuebt',
+			'uebetage_im_schnitt',
+			'etappen_bestanden'
+		]);
+	});
+});

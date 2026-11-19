@@ -224,6 +224,8 @@ Jeder Meilenstein endet mit einer Abnahme durch Matthias. Was »fertig« heisst,
 
 Zwei bis drei Wochen mit einem echten Gesamtplan. Fragen: Nutzen sie Echo/Etappen? Stimmt die Planaufteilung? Ziehen Ränge und Rangliste – oder stören sie? Ergebnisse in `docs/pilot.md`, Entscheidungen in `docs/01-produkt.md` nachziehen.
 
+**Plan freigegeben 19.11.2026** (`docs/pilot.md`): Leitung Matthias, drei Trompeten (bis 5 Personen), Auswertung nur gesamt (`supabase/queries/pilot_wochen.sql`), Rückmeldungen aus der App. Offen: Auftrittsdatum, Namen. Start erst nach bestandener M2-Abnahme und mit Datenschutz online.
+
 ## M3 · giordanomat-Dirigent
 
 - Übungsbibliothek als Daten (von Matthias abgenommen), echte Vorspiel-Aufnahmen pro Instrument statt Synthese.
